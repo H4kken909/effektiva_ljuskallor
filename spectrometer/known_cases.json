@@ -1,0 +1,487 @@
+{
+ "format": "gryb1-known-cases",
+ "format_version": 1,
+ "about": "Kända fall för beräkningskärnan, ur Räkneexempel i referensen (rev 7). null i en talarray betyder NaN. Talarrayer är float64 om input_dtype inte anges, masker är bool. Toleranser: relativ och absolut 1e-9; masker och NaN-positioner ska stämma exakt. Fall med level Senare gäller normalize, som är bortskuren veckan före Delrapport 2.",
+ "tolerance": {
+  "rtol": 1e-09,
+  "atol": 1e-09
+ },
+ "cases": [
+  {
+   "id": "RX03",
+   "function": "subtract_dark",
+   "inputs": {
+    "image": [
+     [
+      [
+       7,
+       7,
+       7
+      ]
+     ]
+    ],
+    "dark": [
+     [
+      [
+       10,
+       10,
+       10
+      ]
+     ]
+    ]
+   },
+   "expected": {
+    "out": [
+     [
+      [
+       -3,
+       -3,
+       -3
+      ]
+     ]
+    ]
+   },
+   "note": "T02. Shape (1,1,3). I uint8 skulle det bli 253."
+  },
+  {
+   "id": "RX05",
+   "function": "extract_spectrum",
+   "inputs": {
+    "roi": [
+     [
+      10,
+      28,
+      50
+     ],
+     [
+      12,
+      32,
+      54
+     ]
+    ]
+   },
+   "expected": {
+    "out": [
+     11,
+     30,
+     52
+    ]
+   }
+  },
+  {
+   "id": "RX06",
+   "function": "average_spectra",
+   "inputs": {
+    "stack": [
+     [
+      2,
+      10,
+      5
+     ],
+     [
+      4,
+      10,
+      7
+     ]
+    ]
+   },
+   "expected": {
+    "mean": [
+     3,
+     10,
+     6
+    ],
+    "stddev": [
+     1.4142135623730951,
+     0,
+     1.4142135623730951
+    ]
+   },
+   "note": "T03. Kärnan får bara stacken; maskerna i RX06 kombineras i wrappern (mask True, True, False)."
+  },
+  {
+   "id": "RX07",
+   "function": "average_spectra",
+   "inputs": {
+    "stack": [
+     [
+      2,
+      10,
+      5
+     ]
+    ]
+   },
+   "expected": {
+    "mean": [
+     2,
+     10,
+     5
+    ],
+    "stddev": [
+     null,
+     null,
+     null
+    ]
+   },
+   "note": "N = 1 ger bara NaN, ingen varning."
+  },
+  {
+   "id": "RX08",
+   "function": "normalize",
+   "level": "Senare",
+   "inputs": {
+    "signal": [
+     2,
+     4,
+     8,
+     100
+    ],
+    "mask": [
+     true,
+     true,
+     true,
+     false
+    ]
+   },
+   "expected": {
+    "values": [
+     0.25,
+     0.5,
+     1,
+     null
+    ],
+    "normalized": true
+   }
+  },
+  {
+   "id": "RX08b",
+   "function": "normalize",
+   "level": "Senare",
+   "inputs": {
+    "signal": [
+     1,
+     2
+    ],
+    "mask": [
+     false,
+     false
+    ]
+   },
+   "expected": {
+    "values": [
+     null,
+     null
+    ],
+    "normalized": false
+   }
+  },
+  {
+   "id": "RX08c",
+   "function": "normalize",
+   "level": "Senare",
+   "inputs": {
+    "signal": [
+     -1,
+     -2
+    ],
+    "mask": [
+     true,
+     true
+    ]
+   },
+   "expected": {
+    "values": [
+     -1,
+     -2
+    ],
+    "normalized": false
+   }
+  },
+  {
+   "id": "RX09-eval",
+   "function": "evaluate_wavelength",
+   "inputs": {
+    "pixels": [
+     100,
+     150,
+     180,
+     200
+    ],
+    "coefficients": [
+     400,
+     1
+    ]
+   },
+   "expected": {
+    "out": [
+     500,
+     550,
+     580,
+     600
+    ]
+   },
+   "note": "T04: pixel 150 ger 550 nm."
+  },
+  {
+   "id": "RX11",
+   "function": "evaluate_wavelength",
+   "inputs": {
+    "pixels": [
+     100
+    ],
+    "coefficients": [
+     400,
+     1,
+     0.001
+    ]
+   },
+   "expected": {
+    "out": [
+     510
+    ]
+   }
+  },
+  {
+   "id": "RX12-eval",
+   "function": "evaluate_wavelength",
+   "inputs": {
+    "pixels": [
+     100,
+     101,
+     102
+    ],
+    "coefficients": [
+     700,
+     -1
+    ]
+   },
+   "expected": {
+    "out": [
+     600,
+     599,
+     598
+    ]
+   },
+   "note": "Vändningen till stigande våglängd görs i apply_wavelength, inte i kärnan."
+  },
+  {
+   "id": "RX16",
+   "function": "apply_response",
+   "inputs": {
+    "signal": [
+     1,
+     2,
+     2,
+     3,
+     3
+    ],
+    "response": [
+     0.5,
+     1,
+     1,
+     0.005,
+     0.01
+    ],
+    "mask": [
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "min_response": 0.01
+   },
+   "expected": {
+    "values": [
+     2,
+     2,
+     2,
+     null,
+     null
+    ],
+    "mask": [
+     true,
+     true,
+     true,
+     false,
+     false
+    ]
+   },
+   "note": "T16. 0,01 är inte strikt större än 0,01."
+  },
+  {
+   "id": "RX16b",
+   "function": "apply_response",
+   "inputs": {
+    "signal": [
+     1,
+     2
+    ],
+    "response": [
+     0.5,
+     null
+    ],
+    "mask": [
+     true,
+     true
+    ],
+    "min_response": 0.01
+   },
+   "raises": "ValueError",
+   "note": "NaN där masken är True."
+  },
+  {
+   "id": "RX17",
+   "function": "transmission_ratio",
+   "inputs": {
+    "sample": [
+     25,
+     -2,
+     60,
+     5,
+     0.5
+    ],
+    "reference": [
+     50,
+     40,
+     50,
+     0.8,
+     1.0
+    ],
+    "mask": [
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "min_reference": 1.0
+   },
+   "expected": {
+    "values": [
+     0.5,
+     -0.05,
+     1.2,
+     null,
+     null
+    ],
+    "mask": [
+     true,
+     true,
+     true,
+     false,
+     false
+    ]
+   },
+   "note": "T05, T06. Visning 50 %, -5 %, 120 % (varning för T > 1) sker utanför kärnan."
+  },
+  {
+   "id": "ERR-int",
+   "function": "extract_spectrum",
+   "inputs": {
+    "roi": [
+     [
+      1,
+      2
+     ],
+     [
+      3,
+      4
+     ]
+    ]
+   },
+   "input_dtype": "int64",
+   "raises": "ValueError",
+   "note": "Heltalsarray ska avvisas, kärnan konverterar aldrig."
+  },
+  {
+   "id": "ERR-float32",
+   "function": "extract_spectrum",
+   "inputs": {
+    "roi": [
+     [
+      1,
+      2
+     ],
+     [
+      3,
+      4
+     ]
+    ]
+   },
+   "input_dtype": "float32",
+   "raises": "ValueError"
+  },
+  {
+   "id": "ERR-noncontig",
+   "function": "extract_spectrum",
+   "inputs": {
+    "roi": [
+     [
+      1,
+      2,
+      3,
+      4
+     ],
+     [
+      5,
+      6,
+      7,
+      8
+     ]
+    ]
+   },
+   "take_every_second_column": true,
+   "raises": "ValueError",
+   "note": "Varannan kolumn ur en array är inte C-contiguous."
+  },
+  {
+   "id": "ERR-shape",
+   "function": "subtract_dark",
+   "inputs": {
+    "image": [
+     [
+      [
+       1,
+       1,
+       1
+      ]
+     ]
+    ],
+    "dark": [
+     [
+      [
+       1,
+       1,
+       1
+      ],
+      [
+       1,
+       1,
+       1
+      ]
+     ]
+    ]
+   },
+   "raises": "ValueError"
+  },
+  {
+   "id": "ERR-threshold",
+   "function": "transmission_ratio",
+   "inputs": {
+    "sample": [
+     1
+    ],
+    "reference": [
+     2
+    ],
+    "mask": [
+     true
+    ],
+    "min_reference": 0
+   },
+   "raises": "ValueError",
+   "note": "Tröskeln måste vara ändlig och > 0."
+  }
+ ]
+}
