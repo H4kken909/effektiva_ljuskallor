@@ -13,6 +13,3 @@ def _check(name, a):
 
     if not np.all(np.isfinite(a)):
         raise ValueError(f"input.invalid_argument: {name}")
-
-def prepare(image, roi, axis, channel):
-    
