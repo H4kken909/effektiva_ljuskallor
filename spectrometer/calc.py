@@ -2,7 +2,6 @@
 
 import numpy as np
 
-
 # Variables
 ## Channels
 CHANNEL_INDEX = {"blue": 0, "green": 1, "red": 2}
@@ -43,8 +42,8 @@ def prepare(image, roi, axis, channel):
         raise ValueError(f"input.invalid_argument: Width {width} or height {height} of roi are not larger than zero.")
 
     # Check errors so we dont clip
-    height, width = image.shape[:2]
-    if x<0 or y<0 or x+width>width or y+height>height:
+    h, w = image.shape[:2]
+    if x<0 or y<0 or x+width>w or y+height>h:
         raise ValueError(f"input.invalid_argument: Clipping detected: x={x}, y={y}, width={width}, height={height}")
 
     if channel not in CHANNELS:
@@ -54,12 +53,12 @@ def prepare(image, roi, axis, channel):
         raise ValueError(f"input.invalid_argument: axis: {axis} is either not horizontal or vertical")
 
     # Actually getting the ROI!
-    roi_view = image[y:height, x: width] #Går från y till height, x till width bror
-    cut = image.astype(np.float64)
+    roi_view = image[y:y+height, x: x+width] #Går från y till height, x till width bror
+    cut = roi_view.astype(np.float64)
 
     blue = cut[:, :, CHANNEL_INDEX["blue"]]
-    red = cut[:, CHANNEL_INDEX["red"], :]
-    green = cut[CHANNEL_INDEX["green"], :, :]
+    red = cut[:, :, CHANNEL_INDEX["red"]]
+    green = cut[:, :, CHANNEL_INDEX["green"]]
 
     if channel in CHANNEL_INDEX:
         result = cut[:, :, CHANNEL_INDEX[channel]]
