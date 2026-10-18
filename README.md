@@ -1,67 +1,124 @@
-# Spektrometern
+# Effektiva ljuskällor – spectrometer
 
-Ett litet Python-program som gör om en bild av ett spektrum, från en webbkamera eller en bildfil, till en kalibrerad spektralkurva. Det är programvaran i Delrapport 2 i kursen TFYY51 (grupp GRYb1).
+A small Python program that turns a webcam image (or an image file) of a spectrum into a calibrated spectral curve. Built for the course TFYY51 at Linköping University (project group GRYb1), software part of Delrapport 2.
 
-## Installation
+The program is a package, `spectrometer`, with five files:
 
-Kommandona är skrivna för bash på Arch Linux. Numren i parentes är bitarna i planen.
+| File | Responsibility |
+|---|---|
+| `calc.py` | All calculations (NumPy only) |
+| `source.py` | Reads images from a file or the camera |
+| `plot.py` | Draws the spectrum |
+| `files.py` | Writes the measurement folder |
+| `main.py` | Command loop; the only file that imports the other four |
 
-1. Uppdatera systemet och installera programmen (0.0.1). VS Code installeras från AUR som `visual-studio-code-bin`, med tilläggen Python, Pylance och Ruff.
+## Installation on Windows (PowerShell)
 
-   ```bash
-   sudo pacman -S --needed git uv github-cli base-devel psmisc v4l-utils guvcview
+Works on Windows 10 and 11, on both Intel/AMD and ARM (for example Snapdragon). Open PowerShell (Windows key, type `PowerShell`, Enter) and run each block in order.
+
+1. Install the tools:
+
+   ```powershell
+   winget install --id Git.Git -e
+   winget install --id GitHub.cli -e
+   winget install --id astral-sh.uv -e
+   winget install --id Microsoft.VisualStudioCode -e
    ```
 
-2. Klona repot (0.0.2).
+2. Close PowerShell and open a new window. Check that all three print a version number:
 
-   ```bash
-   git clone https://github.com/eliasholmberg05/effektiva_ljuskallor.git
+   ```powershell
+   git --version
+   gh --version
+   uv --version
    ```
 
-3. Gå in i projektmappen (0.0.2).
+3. Log in to GitHub. Answer: `GitHub.com`, `HTTPS`, `Yes`, `Login with a web browser`:
 
-   ```bash
-   cd effektiva_ljuskallor
+   ```powershell
+   gh auth login
+   gh auth status
    ```
 
-4. Byt till grenen (0.0.2).
+4. Clone the repository into a folder without spaces:
 
-   ```bash
-   git switch adrianfemboygaming
+   ```powershell
+   cd C:\
+   git clone https://github.com/eliasholmberg05/effektiva_ljuskallor.git spektro-test
+   cd C:\spektro-test
    ```
 
-5. Installera Python 3.12 (0.0.3). Versionen är låst i `.python-version`.
+5. Create the virtual environment with **x64** Python 3.12. On Windows ARM this x64 Python runs through Windows' built-in emulation. It is required there, because `opencv-python` publishes no Windows ARM64 package, and pip would otherwise try to compile OpenCV and fail with `Unknown compiler(s)`. On Intel/AMD it is the normal Python.
 
-   ```bash
-   uv python install 3.12
+   ```powershell
+   uv python install cpython-3.12-windows-x86_64-none
+   uv venv --seed --python cpython-3.12-windows-x86_64-none
    ```
 
-6. Skapa den virtuella miljön `.venv` (0.0.3).
+6. Allow PowerShell to run the activation script (once per user; answer `Y`), then activate:
 
-   ```bash
-   uv venv --seed
+   ```powershell
+   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+   .\.venv\Scripts\Activate.ps1
    ```
 
-7. Aktivera miljön. Gör det i varje ny terminal (0.0.3).
+   The prompt now starts with `(.venv)`. Check that the right Python is used. The output must be `win-amd64 C:\spektro-test\.venv\Scripts\python.exe`:
 
-   ```bash
-   source .venv/bin/activate
+   ```powershell
+   python -c "import sys, sysconfig; print(sysconfig.get_platform(), sys.executable)"
    ```
 
-8. Installera biblioteken med exakt de versioner som står i filerna (0.0.4).
+7. Install the dependencies:
 
-   ```bash
-   uv pip install -r requirements.txt -r requirements-dev.txt
+   ```powershell
+   python -m pip install -r requirements.txt -r requirements-dev.txt
    ```
 
-Kontroll (0.0.5 till 0.0.8): paketet `spectrometer` och mappen `tests/` finns, och `python -m pytest` säger `no tests ran` och `ruff check .` säger `All checks passed!`.
+## Every new terminal
 
-## Körning
+```powershell
+cd C:\spektro-test
+.\.venv\Scripts\Activate.ps1
+```
 
-## Tester
+## Running
 
-## Kamera
+```powershell
+python -m spectrometer.main tests/data/bilder/rand_x12.png
+```
 
-## Förenklingar
+Paths given to the program are written with `/`, never `\`.
 
-## Öppna punkter
+## Testing
+
+```powershell
+python -m pytest
+ruff check .
+```
+
+Always use `python -m pytest`, not `pytest`, so the tests use the activated environment and find `pyproject.toml`.
+
+## Common errors
+
+| Error | Cause | Fix |
+|---|---|---|
+| `The module '..venv' could not be loaded` | Activation line mistyped | Type exactly `.\.venv\Scripts\Activate.ps1` |
+| `running scripts is disabled on this system` | PowerShell blocks scripts | Step 6, `Set-ExecutionPolicy` |
+| `Unknown compiler(s)` while installing `opencv-python` | ARM64 Python in use | Delete `.venv` (`Remove-Item -Recurse -Force .venv`) and redo step 5 |
+| `No module named matplotlib` | Environment not activated, or step 7 failed | Activate, redo step 7 |
+| `Repository not found` when cloning | GitHub invitation not accepted, or wrong account | Accept the invitation, check `gh auth status` |
+
+## Installation on Linux (Arch)
+
+```bash
+sudo pacman -S --needed git uv tk base-devel unzip psmisc v4l-utils guvcview
+git clone https://github.com/eliasholmberg05/effektiva_ljuskallor.git
+cd effektiva_ljuskallor
+uv python install 3.12
+uv venv --seed
+source .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+python -m spectrometer.main
+```
+
+`tk` is needed for Matplotlib windows, `v4l-utils` for `v4l2-ctl` (camera settings). The camera works only on Linux.
