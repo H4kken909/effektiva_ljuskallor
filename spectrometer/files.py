@@ -1,10 +1,11 @@
 """Saves measurements on the disk and does not compute"""
 
+import csv
+import json
 from datetime import datetime
 from pathlib import Path
 
-import csv
-import json
+import cv2
 
 
 def save_measurement(parent, spectrum, image, settings):
@@ -19,17 +20,17 @@ def save_measurement(parent, spectrum, image, settings):
         folder = Path(parent) / f"{stamp}-{counter}"
         counter += 1
 
-        folder.mkdir(parents=True)
+    folder.mkdir(parents=True)
 
     with open(folder / "spectrum.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
 
-        x_col = "x_pw" if spectrum["x_label"] == "pixel" else "x_nm"
+        x_col = "x_px" if spectrum["x_label"] == "pixel" else "x_nm"
         writer.writerow([x_col, "value", "valid"])
 
         for x, value, ok in zip(spectrum["x"], spectrum["values"], spectrum["mask"]):
             cell = f"{value:.10g}" if ok else ""
-    writer.writerow(f"{x:.10g}", cell, "true" if ok else "false")
+            writer.writerow([f"{x:.10g}", cell, "true" if ok else "false"])
 
     written = cv2.imwrite(str(folder/ "raw.png"), image)
     if not written:

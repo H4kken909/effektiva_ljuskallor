@@ -4,6 +4,7 @@ from pathlib import Path
 
 import cv2
 
+
 def open_source(kind, value):
     """
     Opens source and reads image

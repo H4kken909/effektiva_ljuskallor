@@ -1,9 +1,11 @@
 """Testar att save_measurement skriver rätt spectrum.csv"""
 
 import csv
+
 import numpy as np
 
 from spectrometer import files
+
 
 def small():
     spectrum = {
@@ -27,4 +29,4 @@ def test_csv(tmp_path):
     assert rows[0] == ["x_px", "value", "valid"]
     assert rows[1] == ["0", "1.5", "true"]
     assert rows[2] == ["1", "", "false"]
-    assert rows[index] == ["a", "b", "c"]
+    assert rows[0] == ["x_px", "value", "valid"]

@@ -5,6 +5,7 @@ import numpy as np
 
 from spectrometer import source
 
+
 def test_read_image(tmp_path):
     bild = np.zeros((10, 20, 3), dtype="uint8")
     bild[:, 12] = 200

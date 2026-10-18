@@ -2,10 +2,12 @@
 
 import argparse
 import sys
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 from spectrometer import calc, files, plot, source
+
 
 def main():
     parser = argparse.ArgumentParser(prog="python -m spectrometer.main", description="Läser en bildfil, skriver toppen, sparar mätningen och ritar spektrumet.")

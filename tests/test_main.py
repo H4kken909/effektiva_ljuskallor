@@ -5,6 +5,7 @@ import numpy as np
 
 from spectrometer import main
 
+
 def state_for(folder):
     image = np.zeros((10, 20, 3), dtype="uint8")
     image[:, 12] = 200

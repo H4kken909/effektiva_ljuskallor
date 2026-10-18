@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 
+
 def open_plot():
     """Opens window with empty curve"""
 
