@@ -1,4 +1,4 @@
-kor tests\kommandon\testa_07.txt -W, v0.10.2beta, 2026-10-19:
+kor tests\kommandon\testa_07.txt -W, v0.10.2beta, 2026-10-19 (omgjord efter rättningen av kor och jamfor, 2c268e9):
      1  Skriv help för kommandona. quit eller Ctrl+D avslutar.
      2  spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
      3  spektro> ROI:n kontrolleras vid nästa mätning.
@@ -26,8 +26,6 @@ kor tests\kommandon\testa_07.txt -W, v0.10.2beta, 2026-10-19:
     25  spektro> Avslutar.
 
 jamfor mot facit_07 (tomt = lika):
-warning: in the working copy of 'C:\Users\wowji\AppData\Local\Temp\facit.txt', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'C:\Users\wowji\AppData\Local\Temp\ut.txt', LF will be replaced by CRLF the next time Git touches it
 diff --git "a/C:\\Users\\wowji\\AppData\\Local\\Temp\\facit.txt" "b/C:\\Users\\wowji\\AppData\\Local\\Temp\\ut.txt"
 index bfce471..1ffad6a 100644
 --- "a/C:\\Users\\wowji\\AppData\\Local\\Temp\\facit.txt"
