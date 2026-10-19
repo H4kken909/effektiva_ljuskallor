@@ -1,4 +1,4 @@
-kor tests\kommandon\testa_05.txt -W, v0.10.2beta, 2026-10-19:
+kor tests\kommandon\testa_05.txt -W, v0.10.2beta, 2026-10-19 (omgjord efter rättningen av kor och jamfor, 2c268e9):
      1  Skriv help för kommandona. quit eller Ctrl+D avslutar.
      2  spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
      3  spektro> Fel: input.missing_data: Ingen mätning än. Kör step först.
@@ -11,10 +11,8 @@ kor tests\kommandon\testa_05.txt -W, v0.10.2beta, 2026-10-19:
     10  spektro> Topp 40 vid pixel 0 (3 bilder)
     11  spektro> axis: horizontal
     12  spektro> Topp 200 vid pixel 12 (3 bilder)
-    13  spektro> Sparad i data/20261019-080525
-    14  spektro> Sparad i data/20261019-080525-2
+    13  spektro> Sparad i data/20261019-083120
+    14  spektro> Sparad i data/20261019-083120-2
     15  spektro> Avslutar.
 
 jamfor mot facit_05 (tomt = lika):
-warning: in the working copy of 'C:\Users\wowji\AppData\Local\Temp\facit.txt', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'C:\Users\wowji\AppData\Local\Temp\ut.txt', LF will be replaced by CRLF the next time Git touches it

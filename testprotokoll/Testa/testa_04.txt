@@ -1,4 +1,4 @@
-kor tests\kommandon\testa_04.txt -W, v0.10.2beta, 2026-10-19:
+kor tests\kommandon\testa_04.txt -W, v0.10.2beta, 2026-10-19 (omgjord efter rättningen av kor och jamfor, 2c268e9):
      1  Skriv help för kommandona. quit eller Ctrl+D avslutar.
      2  spektro> help Visa kommandona
      3  quit Avsluta
@@ -43,36 +43,3 @@ kor tests\kommandon\testa_04.txt -W, v0.10.2beta, 2026-10-19:
     42  spektro> Avslutar.
 
 jamfor mot facit_04 (tomt = lika):
-warning: in the working copy of 'C:\Users\wowji\AppData\Local\Temp\facit.txt', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'C:\Users\wowji\AppData\Local\Temp\ut.txt', LF will be replaced by CRLF the next time Git touches it
-diff --git "a/C:\\Users\\wowji\\AppData\\Local\\Temp\\facit.txt" "b/C:\\Users\\wowji\\AppData\\Local\\Temp\\ut.txt"
-index 6dbdda6..b637575 100644
---- "a/C:\\Users\\wowji\\AppData\\Local\\Temp\\facit.txt"
-+++ "b/C:\\Users\\wowji\\AppData\\Local\\Temp\\ut.txt"
-@@ -6,6 +6,15 @@ source file PATH eller camera N
- roi X Y W H i pixlar, eller full för hela bilden
- channel gray, sum, red, green eller blue
- axis horizontal eller vertical
-+frames N: bilder per mätning
-+step mät och skriv toppen
-+save [DIR]: spara senaste mätningen
-+start live med kameran, Ctrl+C stoppar
-+calibrate PATH [DEGREE]: anpassa våglängd till en punktfil
-+dark [N]: mät mörker med blockerad ljusväg
-+response build KNOWNFILE | on | off
-+reference [N]: mät referens utan prov
-+mode direct|transmission
- spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
- spektro> roi: None (hela bilden)
- spektro> ROI:n kontrolleras vid nästa mätning.
-@@ -24,5 +33,10 @@ output_dir: data
- frames: 1
- min_response: 0.01
- min_reference: 1.0
-+kalibrering: nej
-+mörker: nej
-+respons: nej, off
-+referens: nej
-+mode: direct
- Mätning: nej
- spektro> Avslutar.

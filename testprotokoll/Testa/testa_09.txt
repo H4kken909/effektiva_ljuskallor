@@ -1,4 +1,4 @@
-kor tests\kommandon\testa_09.txt -W, v0.10.2beta, 2026-10-19:
+kor tests\kommandon\testa_09.txt -W, v0.10.2beta, 2026-10-19 (omgjord efter rättningen av kor och jamfor, 2c268e9):
      1  Skriv help för kommandona. quit eller Ctrl+D avslutar.
      2  spektro> Fel: input.missing_data: ingen referens, kör reference först
      3  spektro> Fel: input.invalid_argument: mode tar ett ord, direct eller transmission
@@ -21,7 +21,7 @@ kor tests\kommandon\testa_09.txt -W, v0.10.2beta, 2026-10-19:
     20  spektro> channel: red
     21  spektro> source: ('file', 'tests/kommandon/halv_x12.png')
     22  spektro> Topp 0.5 vid pixel 12 (1 bild)
-    23  spektro> Sparad i data/20261019-080538
+    23  spektro> Sparad i data/20261019-083122
     24  spektro> source: ('file', 'tests/kommandon/halv_x12.png')
     25  roi: (10, 0, 3, 2)
     26  axis: horizontal
@@ -47,5 +47,3 @@ kor tests\kommandon\testa_09.txt -W, v0.10.2beta, 2026-10-19:
     46  spektro> Avslutar.
 
 jamfor mot facit_09 (tomt = lika):
-warning: in the working copy of 'C:\Users\wowji\AppData\Local\Temp\facit.txt', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'C:\Users\wowji\AppData\Local\Temp\ut.txt', LF will be replaced by CRLF the next time Git touches it
