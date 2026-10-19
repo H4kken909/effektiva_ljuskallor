@@ -1,0 +1,8 @@
+frames 5 och 30 med rand_x12.png, v0.10.2beta, 2026-10-19:
+     1  Skriv help för kommandona. quit eller Ctrl+D avslutar.
+     2  spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+     3  spektro> frames: 5
+     4  spektro> Topp 200 vid pixel 12 (5 bilder)
+     5  spektro> frames: 30
+     6  spektro> Topp 200 vid pixel 12 (30 bilder)
+     7  spektro> Avslutar.
