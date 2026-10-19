@@ -26,3 +26,13 @@ def test_rx01_gray():
     image = np.array([[[50, 100, 200]]], dtype="uint8")
     result = calc.prepare(image, (0, 0, 1, 1), "horizontal", "gray")
     np.testing.assert_allclose(result, 124.2, rtol=1e-9, atol=1e-9)
+
+
+def test_rx06():
+    stack = np.array([[2, 10, 5], [4, 10, 7]], dtype=np.float64)
+    mean, stddev = calc.average_spectra(stack)
+    np.testing.assert_allclose(mean, [3, 10, 6], rtol=1e-9, atol=1e-9)
+    np.testing.assert_allclose(stddev, [np.sqrt(2), 0, np.sqrt(2)], rtol=1e-9, atol=1e-9)
+    mean1, stddev1 = np.testing.assert_no_warnings(calc.average_spectra, stack[:1])
+    np.testing.assert_allclose(mean1, [2, 10, 5], rtol=1e-9, atol=1e-9)
+    assert np.isnan(stddev1).all()
