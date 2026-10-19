@@ -1,0 +1,28 @@
+Skriv help för kommandona. quit eller Ctrl+D avslutar.
+spektro> help Visa kommandona
+quit Avsluta
+show Visa inställningarna
+source file PATH eller camera N
+roi X Y W H i pixlar, eller full för hela bilden
+channel gray, sum, red, green eller blue
+axis horizontal eller vertical
+spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+spektro> roi: None (hela bilden)
+spektro> ROI:n kontrolleras vid nästa mätning.
+roi: (0, 0, 20, 10)
+spektro> Fel: input.invalid_argument: roi: height saknas
+spektro> Fel: input.invalid_argument: okänd kanal purple, välj gray, sum, red, green, blue
+spektro> channel: red
+spektro> axis: vertical
+spektro> Fel: input.invalid_argument: okänt kommando foo. Skriv help för en lista.
+spektro> source: ('file', 'data/mätning 1.png')
+spektro> source: ('file', 'data/mätning 1.png')
+roi: (0, 0, 20, 10)
+axis: vertical
+channel: red
+output_dir: data
+frames: 1
+min_response: 0.01
+min_reference: 1.0
+Mätning: nej
+spektro> Avslutar.
