@@ -26,3 +26,6 @@ Här skriver `klar` och `anteckna` (verktyg-elias.ps1 och verktyg-elias.sh) en r
 | 2026-10-19 | 05:18 | 0.8.3 del 5 | response build, on och off, respons i measure | FEL (ruff, pytest) | abfa994 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 05:19 | 0.8.3 del 6 | CHANGELOG 0.8 | OK | abfa994 (+ändringar) | Windows DESKTOP-NFJKKB3 | ## [0.8] med en rad per bit |
 | 2026-10-19 | 05:19 | 0.8.3 alla delar | main.py: response och korrigerad signal | FEL (ruff, pytest) | abfa994 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:19 | v0.8.3beta | betatagg pushad, Testa 0.8 kan börja | OK | f39b5fc | Windows DESKTOP-NFJKKB3 | ls-remote visar taggen |
+| 2026-10-19 | 05:19 | v0.8.3 | riktig tagg efter Adrians Godkänt | OK | f39b5fc (+ändringar) | Windows DESKTOP-NFJKKB3 | Godkänt i till-elias.md |
+| 2026-10-19 | 05:20 | 0.9.1 del 1 | transmission_ratio | FEL (ruff, pytest) | f39b5fc (+ändringar) | Windows DESKTOP-NFJKKB3 | |
