@@ -47,13 +47,16 @@ def new_state(settings):
 
 
 def measure(state, src=None):
-    """Mäter frames bilder, gör ett spektrum av varje och tar medel; lägger spektrumet och sista bilden i state.
+    """Mäter ett spektrum med inställningarna och lägger det och råbilden i state.
+
+    Ordning: läs frames bilder, dra av mörkret, ROI, kanal och medel, nm, respons, transmission.
 
     Parametrar: state: programmets state; src: en redan öppen källa som lånas (start), eller None för att öppna och
     stänga källan här.
-    Returnerar: spektrumet, en ordbok med x (P,) float64 i pixlar eller nm (stigande), values (P,) float64 i counts, mask (P,) bool,
+    Returnerar: spektrumet, en ordbok med x (P,) float64 i pixlar eller nm, values (P,) float64, mask (P,) bool,
     x_label och y_label.
-    Fel: ValueError med input.invalid_argument eller input.missing_data, RuntimeError med camera.open_failed eller camera.read_failed.
+    Fel: ValueError med input.invalid_argument eller input.missing_data, RuntimeError med camera.open_failed eller
+    camera.read_failed.
     """
     cfg = state["settings"]
     kind, value = cfg["source"]
@@ -81,12 +84,12 @@ def measure(state, src=None):
             source.close_source(src)
     stack = np.stack(spectra)
     mean, _stddev = calc.average_spectra(stack)
-    values = mean
     if cfg["axis"] == "horizontal":
         first, count = roi[0], roi[2]
     else:
         first, count = roi[1], roi[3]
     x = np.arange(first, first + count).astype("float64")
+    values = mean
     mask = np.isfinite(values)
     x_label = "pixel"
     y_label = "signal (counts)"
@@ -108,9 +111,28 @@ def measure(state, src=None):
         values, mask = calc.apply_response(values, response_at_x, mask, cfg["min_response"])
         y_label = "korrigerad signal (relativ)"
     spectrum = {"x": x, "values": values, "mask": mask, "x_label": x_label, "y_label": y_label}
+    if state["mode"] == "transmission":
+        if state["reference"] is None:
+            raise ValueError("input.missing_data: ingen referens, kör reference först")
+        if not np.array_equal(spectrum["x"], state["reference"]["x"]):
+            raise ValueError(
+                "input.invalid_argument: x-axeln skiljer sig från referensens: "
+                "ROI eller kalibrering ändrades, kör reference igen"
+            )
+        if cfg["channel"] != state["reference"]["channel"]:
+            raise ValueError(
+                f"input.invalid_argument: kanalen {cfg['channel']} skiljer sig från referensens "
+                f"{state['reference']['channel']}, kör reference igen"
+            )
+        spectrum["values"], spectrum["mask"] = calc.transmission_ratio(
+            spectrum["values"], state["reference"]["values"], spectrum["mask"] & state["reference"]["mask"],
+            state["settings"]["min_reference"],
+        )
+        spectrum["y_label"] = "transmission (kvot)"
     state["image"] = image
     state["spectrum"] = spectrum
     return spectrum
+
 
 def _measure_direct(state, n):
     """Mäter med en kopia av state i mode direct, utan respons och med n bilder (lampa och referens).
@@ -185,7 +207,7 @@ def cmd_quit(state, args):
 
 
 def cmd_show(state, args):
-    """Kommandot show: skriver inställningarna, en per rad, och om en mätning finns.
+    """Kommandot show: skriver inställningarna, kalibrering, mörker, respons, referens, mode och om en mätning finns.
 
     Parametrar: state: programmets state; args: orden efter kommandot, inga.
     Returnerar: None
@@ -194,10 +216,21 @@ def cmd_show(state, args):
     _need(args, (), "show")
     for key, value in state["settings"].items():
         print(f"{key}: {value}")
+    calibration = "ja" if state["coefficients"] is not None else "nej"
+    dark = "ja" if state["dark"] is not None else "nej"
+    response = "ja" if state["response"] is not None else "nej"
+    reference = "ja" if state["reference"] is not None else "nej"
+    use = "on" if state["use_response"] else "off"
+    print(f"kalibrering: {calibration}")
+    print(f"mörker: {dark}")
+    print(f"respons: {response}, {use}")
+    print(f"referens: {reference}")
+    print(f"mode: {state['mode']}")
     if state["spectrum"] is not None:
         print("Mätning: ja")
     else:
         print("Mätning: nej")
+
 
 
 def cmd_source(state, args):
@@ -292,7 +325,7 @@ def cmd_frames(state, args):
 
 
 def cmd_step(state, args):
-    """Kommandot step: mäter, skriver toppen och antalet bilder, och varnar vid mättnad.
+    """Kommandot step: mäter, skriver toppen och antalet bilder, och varnar vid mättnad och transmission över 1.
 
     Parametrar: state: programmets state; args: orden efter kommandot, inga.
     Returnerar: None
@@ -308,6 +341,12 @@ def cmd_step(state, args):
         crop = state["image"][state["settings"]["roi"][1]:state["settings"]["roi"][1] + state["settings"]["roi"][3], state["settings"]["roi"][0]:state["settings"]["roi"][0] + state["settings"]["roi"][2]]
     if crop.max() >= 255:
         print("Varning: mättad (255 i råbilden). Sänk exponeringen.")
+    if state["mode"] == "transmission":
+        if np.any(spectrum["values"][spectrum["mask"]] > 1):
+            over = np.count_nonzero(spectrum["values"][spectrum["mask"]] > 1)
+            unit = "position" if over == 1 else "positioner"
+            print(f"Varning: transmission över 100 % på {over} {unit}")
+
 
 
 def cmd_save(state, args):
@@ -323,8 +362,14 @@ def cmd_save(state, args):
     if state["spectrum"] is None:
         raise ValueError("input.missing_data: Ingen mätning än. Kör step först.")
     parent = args[0] if args else state["settings"]["output_dir"]
-    folder = files.save_measurement(parent, state["spectrum"], state["image"], state["settings"])
+    saved = state["settings"].copy()
+    saved["coefficients"] = state["coefficients"].tolist() if state["coefficients"] is not None else None
+    saved["dark"] = state["dark"] is not None
+    saved["use_response"] = state["use_response"]
+    saved["mode"] = state["mode"]
+    folder = files.save_measurement(parent, state["spectrum"], state["image"], saved)
     print(f"Sparad i {folder.as_posix()}")
+
 
 
 def cmd_start(state, args):

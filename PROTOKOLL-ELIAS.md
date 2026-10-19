@@ -30,3 +30,6 @@ Här skriver `klar` och `anteckna` (verktyg-elias.ps1 och verktyg-elias.sh) en r
 | 2026-10-19 | 05:19 | v0.8.3 | riktig tagg efter Adrians Godkänt | OK | f39b5fc (+ändringar) | Windows DESKTOP-NFJKKB3 | Godkänt i till-elias.md |
 | 2026-10-19 | 05:20 | 0.9.1 del 1 | transmission_ratio | FEL (ruff, pytest) | f39b5fc (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 05:22 | 0.9.2 del 3 | reference, mode och dark | FEL (ruff, pytest) | a16a620 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:22 | 0.9.2 alla delar | main.py: reference och mode | FEL (ruff, pytest) | ac8d7aa | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:24 | 0.9.3 del 6 | snabbkollen för hela 0.9 | FEL (ruff, pytest) | ac8d7aa (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:24 | 0.9.3 alla delar | main.py: transmission i measure, show, step och save | FEL (ruff, pytest) | ac8d7aa (+ändringar) | Windows DESKTOP-NFJKKB3 | |
