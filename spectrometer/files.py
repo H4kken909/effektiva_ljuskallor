@@ -14,36 +14,44 @@ import numpy as np
 
 
 def save_measurement(parent, spectrum, image, settings):
-    """Sparar en mätning som en mapp, returnerar mätmappen som Path och kan kasta OSError."""
+    """Sparar en mätning som en mapp med spectrum.csv, raw.png och settings.json.
 
+    Parametrar: parent: föräldramappen (str eller Path); spectrum: ordboken från measure med x, values, mask,
+    x_label och y_label; image: råbilden, (H, W, 3) uint8; settings: inställningarna (bara tal, text, tuple,
+    listor, bool och None).
+    Returnerar: mätmappen som Path, till exempel data/20261016-153012 eller data/20261016-153012-2.
+    Fel: OSError om något inte går att skriva, med files.write_failed om raw.png inte sparas.
+    """
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-
     folder = Path(parent) / stamp
-
     counter = 2
     while folder.exists():
         folder = Path(parent) / f"{stamp}-{counter}"
         counter += 1
-
     folder.mkdir(parents=True)
-
+    transmission = settings.get("mode") == "transmission"  # valfritt (0.9.3): kolumnen absorbance
     with open(folder / "spectrum.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-
         x_col = "x_px" if spectrum["x_label"] == "pixel" else "x_nm"
-        writer.writerow([x_col, "value", "valid"])
-
+        header = [x_col, "value", "valid"]
+        if transmission:
+            header.append("absorbance")
+        writer.writerow(header)
         for x, value, ok in zip(spectrum["x"], spectrum["values"], spectrum["mask"]):
             cell = f"{value:.10g}" if ok else ""
-            writer.writerow([f"{x:.10g}", cell, "true" if ok else "false"])
-
-    written = cv2.imwrite(str(folder/ "raw.png"), image)
+            row = [f"{x:.10g}", cell, "true" if ok else "false"]
+            if transmission:
+                # Absorbans A = -log10(T), tom där T saknas eller är 0 eller mindre. Se rev7, Krav 22.
+                row.append(f"{-math.log10(value):.10g}" if ok and value > 0 else "")
+            writer.writerow(row)
+    raw_path = folder / "raw.png"
+    written = cv2.imwrite(str(raw_path), image)
     if not written:
-        raise OSError(f"files.write_failed: could not save {folder / "raw.png"}")
-
+        raise OSError(f"files.write_failed: raw.png kunde inte sparas: {raw_path}")
     with open(folder / "settings.json", "w", encoding="utf-8") as f:
-        json.dump(settings, f, indent=4, ensure_ascii=False)
+        json.dump(settings, f, indent=2, ensure_ascii=False)
     return folder
+
 
 def load_points(path):
     """
