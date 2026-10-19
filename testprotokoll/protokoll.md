@@ -33,3 +33,5 @@
 | Förberedelse | - | v0.10.2beta | 2026-10-19 | Godkänt | merge 49f96d3, check_install OK, pytest 22 passed, ruff grön |
 | RX06 | Krav 10 | v0.10.2beta | 2026-10-19 | Godkänt | test_rx06 i tests/test_calc.py (b51d96f): medel 3, 10, 6 och spridning med N - 1 (RX06), N = 1 ger NaN utan varning (RX07); kopia med fel facit röd |
 | RX09-RX10 + load_points | Krav 16 | v0.10.2beta | 2026-10-19 | Godkänt | test_rx09_eval och test_fit_rx10 i tests/test_calc.py, test_load_points i tests/test_files.py (fel rubrik, fel antal fält, check inte 0/1), t04.csv; pytest 26 passed |
+| RX09 RX10 load_points | Krav 16 | v0.10.2beta | 2026-10-19 | Godkänt | samma som raden RX09-RX10 + load_points (8d0ca1b), med ID:t som sidan v3 använder |
+| RX03 RX14 RX15 RX16 load_known | Krav 14 | v0.10.2beta | 2026-10-19 | Godkänt | test_rx03, test_rx16, test_response_rx14, test_response_rx15 i tests/test_calc.py, test_load_known_rx14 i tests/test_files.py, rx14_t16.csv; pytest 31 passed |

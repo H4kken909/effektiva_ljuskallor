@@ -46,3 +46,20 @@ def test_load_points(tmp_path):
     np.testing.assert_raises_regex(ValueError, "rad 2: fel antal fält", files.load_points, fel)
     fel.write_text("pixel,wavelength_nm,check\n100,500,2\n", encoding="utf-8")
     np.testing.assert_raises_regex(ValueError, "rad 2: check ska vara 0 eller 1", files.load_points, fel)
+
+
+def test_load_known_rx14(tmp_path):
+    """RX14, T16: load_known ger våglängderna och värdena; våglängder som inte stiger eller färre än två rader ger fel."""
+    known_file = tmp_path / "rx14_t16.csv"
+    known_file.write_text("wavelength_nm,relative_power_per_nm\n500,1\n510,1\n520,2\n530,1\n540,1\n", encoding="utf-8")
+    wavelengths, values = files.load_known(known_file)
+    np.testing.assert_allclose(wavelengths, [500, 510, 520, 530, 540], rtol=1e-9, atol=1e-9)
+    np.testing.assert_allclose(values, [1, 1, 2, 1, 1], rtol=1e-9, atol=1e-9)
+    for text in ("wavelength_nm,relative_power_per_nm\n500,1\n490,1\n", "wavelength_nm,relative_power_per_nm\n500,1\n"):
+        known_file.write_text(text, encoding="utf-8")
+        try:
+            files.load_known(known_file)
+        except ValueError as error:
+            assert "input.invalid_argument" in str(error)
+        else:
+            raise AssertionError(f"load_known godtog {text!r}")
