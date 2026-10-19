@@ -122,3 +122,52 @@ python -m spectrometer.main
 ```
 
 `tk` is needed for Matplotlib windows, `v4l-utils` for `v4l2-ctl` (camera settings). The camera works only on Linux.
+
+## Kamera
+
+Gäller Linux (Arch) och Windows. Pixelvärdena är counts: relativa tal utan enhet. De visar inte ljusets absoluta styrka eller någon verkningsgrad. Stäng andra program som använder kameran (guvcview, Kamera-appen, webbläsaren) först.
+
+1. **Datorn ser kameran.**
+   - Linux: `v4l2-ctl --list-devices`. Kameran har ofta två noder; bara den som listar format under `v4l2-ctl --device=/dev/video0 --list-formats-ext` ger bilder.
+   - Windows: `Get-PnpDevice -Class Camera,Image`. Raden för kameran ska ha Status `OK`.
+2. **Du vet vilket N som ger bilden.** Linux: N i `/dev/videoN`. Windows: kamerans plats i listan, 0 är den första (en inbyggd kamera tar ofta 0 och USB-kameran blir 1). Prova:
+
+   ```
+   python check_install.py --kamera N
+   ```
+
+   Den öppnar kamera N och skriver form, dtype, max och medel för tre bilder (`--bilder K` ändrar antalet). `OBS: mörk första bild` betyder att kameran behöver värmas upp, se Öppna punkter.
+3. **Lås exponering, gain och vitbalans**, så att två mätningar går att jämföra.
+   - Linux (kör före varje mätning; reglagen nollställs när kameran kopplas ur; namnen skiljer mellan kameror, kopiera dem från `v4l2-ctl -d /dev/videoN --list-ctrls`):
+
+     ```bash
+     v4l2-ctl -d /dev/videoN --set-ctrl=auto_exposure=1
+     v4l2-ctl -d /dev/videoN --set-ctrl=white_balance_automatic=0,gain=0
+     v4l2-ctl -d /dev/videoN --get-ctrl=auto_exposure,white_balance_automatic,gain
+     ```
+
+     `auto_exposure=1` betyder manuell. `--get-ctrl` ska ge `auto_exposure: 1`, `white_balance_automatic: 0` och `gain: 0`.
+   - Windows: drivrutinens egen ruta, som öppnas med `cv2.CAP_PROP_SETTINGS`. Byt 0 mot ditt N, ta bort bocken Auto vid exponering och vitbalans, dra förstärkning (gain) till lägsta, och tryck Enter i PowerShell så att kameran släpps:
+
+     ```powershell
+     python -c "import cv2; cap = cv2.VideoCapture(0, cv2.CAP_DSHOW); print(cap.isOpened()); cap.set(cv2.CAP_PROP_SETTINGS, 1); input('Stäng rutan och tryck Enter: '); cap.release()"
+     ```
+4. **`source camera N`.** Starta programmet (`python -m spectrometer.main`) och skriv `source camera N` med ditt N.
+5. **`step` tills toppen ligger mellan 150 och 240 utan `Varning: mättad`.** Ändra bara exponeringen, inte gain. Är toppen under 150: dubbla exponeringen. Står det `Varning: mättad`: halvera den. Kör `step` två gånger efter varje ändring, de första bilderna efter att kameran öppnats kan vara mörkare. Linux: `v4l2-ctl -d /dev/videoN --set-ctrl=exposure_time_absolute=<värde>` i en andra terminal (börja med default från `--list-ctrls`). Windows: avsluta programmet med `quit`, ändra exponeringen i rutan från punkt 3 och starta programmet igen.
+6. **Skriv in värdena här och i protokollet.** Fyll i raderna nedan vid kameran, utan enhet, och ta bort den dators rad du inte använder:
+
+   - Linux: kamera N = _, exposure_time_absolute = _, topp i `step` = _
+   - Windows: kamera N = _, exponering i drivrutinsrutan = _, topp i `step` = _
+
+   Protokollet (en rad per punkt, i PowerShell efter `. .\verktyg-elias.ps1`, i bash efter `. ./verktyg-elias.sh`):
+
+   ```
+   anteckna -Del "0.6.1 del 1" -Vad "Datorn ser kameran, check_install --kamera N" -Not "kamera N"
+   anteckna -Del "0.6.1 del 4" -Vad "Exponeringen står i README, toppen 150-240 utan Varning: mättad" -Not "exponering _, topp _"
+   ```
+
+## Öppna punkter
+
+- Kamerafelet `camera.open_failed: kunde inte öppna /dev/videoN. Kontrollera med v4l2-ctl --list-devices.` nämner `/dev/video` och `v4l2-ctl` också på Windows. Texten är skriven för Linux och ändras bara tillsammans med Adrians facit.
+- Å, ä och ö i sökvägar med OpenCV på Windows: `cv2.imread` kan misslyckas med bildfiler i mappar med å, ä eller ö i namnet, och programmet svarar då att filen inte gick att läsa som bild. Håll projektet och bilderna i en mapp utan å, ä och ö i hela sökvägen. Inte åtgärdat.
+- Uppvärmning: den första bilden efter att kameran öppnats kan vara mörk. `step` öppnar kameran vid varje anrop, så det hjälper inte att köra `step` en gång till. Mät med `python check_install.py --kamera N --bilder 5`. Säger den `OBS: mörk första bild`, överväg att läsa bort några bilder i `open_source`, med antalet från en inställning och inget fast tal i koden.

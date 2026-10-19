@@ -102,3 +102,27 @@ def extract_spectrum(table):
         raise ValueError("input.invalid_argument: table is empty")
 
     return np.mean(table, axis=0)
+
+
+def average_spectra(stack):
+    """Ger medel och spridning av flera spektrum.
+
+    Parametrar: stack: en float64-array med formen (N, P), en rad per bild.
+    Returnerar: mean och stddev, båda (P,) float64; stddev är NaN när N är 1.
+    Fel: ValueError med input.invalid_argument om stack inte är 2D, inte float64 eller är tom.
+    """
+    if stack.ndim != 2:
+        raise ValueError(f"input.invalid_argument: stack måste vara 2D (en rad per bild), fick ndim {stack.ndim}")
+    if stack.dtype != np.float64:
+        raise ValueError("input.invalid_argument: stack måste vara en float64-array")
+    if stack.size == 0:
+        raise ValueError("input.invalid_argument: stack är tom")
+    mean = np.mean(stack, axis=0)
+    n = stack.shape[0]
+    if n == 1:
+        # En enda bild har ingen spridning: NaN utan varning. Se rev7, RX07.
+        stddev = np.full(len(mean), np.nan)
+    else:
+        # Stickprovsstandardavvikelse, delad med N - 1 (ddof=1). Se rev7, RX06.
+        stddev = np.std(stack, axis=0, ddof=1)
+    return mean, stddev
