@@ -44,3 +44,6 @@ Här skriver `klar` och `anteckna` (verktyg-elias.ps1 och verktyg-elias.sh) en r
 | 2026-10-19 | 06:42 | 0.10.2 del 1 | kodkolumnen till kravmatrisen | OK | 8aad51d (+ändringar) | Windows DESKTOP-NFJKKB3 | skickad till Adrian i till-adrian.md |
 | 2026-10-19 | 06:42 | 0.10.2 del 2 | A01 till Adrian | OK | 8aad51d (+ändringar) | Windows DESKTOP-NFJKKB3 | skickad till Adrian i till-adrian.md |
 | 2026-10-19 | 06:42 | 0.10.2 | betataggen v0.10.2beta, hela sviten efter merge av tester | OK | 8aad51d (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 18:21 | 1.0-koll | dump till Claude-sessionen: git, Issues, ruff, pytest, alla filer | OK | 49f96d3 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 18:37 | 1.0-koll 2 | pytest-tempmappen, Issue 7, Adrians svit pa origin/tester i ren kopia | OK | 49f96d3 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 18:46 | 1.0.0 | frysen: origin/tester mergad, Issue #7 väg B (facit_07), CHANGELOG, tagg v1.0.0 | OK, 32 passed, ruff grön | b304314 (+ändringar) | Windows DESKTOP-NFJKKB3 | Adrian frånvarande: A11, A13, A06, A15, A07, Uppgift 16 och frysmappen inte gjorda |
