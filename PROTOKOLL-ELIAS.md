@@ -18,3 +18,6 @@ Här skriver `klar` och `anteckna` (verktyg-elias.ps1 och verktyg-elias.sh) en r
 | 2026-10-19 | 05:11 | 0.8.1 del 4 | CAPTURE_FRAMES, measure, cmd_dark och dark i COMMANDS | FEL (ruff, pytest) | 373f905 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 05:12 | 0.8.1 del 5 | subtract_dark | FEL (ruff, pytest) | 373f905 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 05:12 | 0.8.1 del 6 | prepare godtar float64, mörkret dras av | FEL (ruff, pytest) | 373f905 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:13 | 0.8.1 alla delar | main.py: dark och avdraget i measure | FEL (ruff, pytest) | 1d79a15 | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:14 | 0.8.2 del 1 | build_response | FEL (ruff, pytest) | 1d79a15 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:14 | 0.8.2 del 2 | apply_response | FEL (ruff, pytest) | 1d79a15 (+ändringar) | Windows DESKTOP-NFJKKB3 | |

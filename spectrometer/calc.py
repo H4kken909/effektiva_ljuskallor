@@ -167,3 +167,58 @@ def subtract_dark(image, dark):
         raise ValueError(f"input.invalid_argument: mörkret har formen {dark.shape} men bilden har {image.shape}")
     # Signal utan mörker = bild minus mörker, i float64 så att inget slår runt. Se rev7, RX03.
     return image - dark
+def build_response(wavelengths, measured, known_wavelengths, known_values):
+    """Räknar instrumentets relativa respons ur en lampmätning med känd fördelning.
+
+    measured får ha NaN där lampmätningen saknar värde, därför ingen _check på den.
+
+    Parametrar: wavelengths: lampmätningens våglängder i nm, (P,); measured: lampmätningen i counts, (P,), får ha NaN;
+    known_wavelengths: kända våglängder i stigande nm, (K,); known_values: känd relativ effekt, (K,).
+    Returnerar: responsen, (P,) float64, normerad så att största värdet är 1, NaN där den inte går att räkna.
+    Fel: ValueError med input.invalid_argument vid olika form eller färre än två kända punkter,
+    och med input.missing_data om inget värde är giltigt eller toppen inte är större än 0.
+    """
+    if (
+        wavelengths.shape != measured.shape
+        or known_wavelengths.shape != known_values.shape
+        or known_wavelengths.size < 2
+    ):
+        raise ValueError("input.invalid_argument: olika form eller färre än två kända punkter")
+    # Interpolation utan extrapolation: NaN utanför de kända punkterna. Se rev7, RX15.
+    known_at_lamp = np.interp(wavelengths, known_wavelengths, known_values, left=np.nan, right=np.nan)
+    valid = np.isfinite(measured) & np.isfinite(known_at_lamp) & (known_at_lamp > 0)
+    # Respons = uppmätt delat med känt, där det är giltigt. Se rev7, RX14.
+    ratio = np.full(measured.shape[0], np.nan)
+    np.divide(measured, known_at_lamp, out=ratio, where=valid)
+    if not np.any(valid):
+        raise ValueError("input.missing_data: inget giltigt värde i lampmätningen")
+    peak = np.max(ratio[valid])
+    if peak <= 0:
+        raise ValueError("input.missing_data: toppen är inte större än 0")
+    # Normerad: 1 där instrumentet är känsligast.
+    return ratio / peak
+def apply_response(signal, response, mask, min_response):
+    """Delar signalen med responsen där masken är True och responsen är strikt större än min_response.
+
+    Parametrar: signal: (P,) float64 i counts; response: (P,) float64, relativ, utan enhet;
+    mask: (P,) bool, True där värdet duger; min_response: minsta giltiga respons, utan enhet.
+    Returnerar: (values, mask): values (P,) float64, relativ, NaN där det inte går att räkna, och den nya masken (P,) bool.
+    Fel: ValueError med input.invalid_argument vid olika form, en mask som inte är bool, en tröskel som inte är
+    ändlig och större än 0, eller NaN och inf på en giltig plats.
+    """
+    if signal.shape != response.shape:
+        raise ValueError(f"input.invalid_argument: response har annan form än signal {signal.shape} {response.shape}")
+    if signal.shape != mask.shape:
+        raise ValueError(f"input.invalid_argument: mask har annan form än signal {signal.shape} {mask.shape}")
+    if mask.dtype != np.bool_:
+        raise ValueError(f"input.invalid_argument: mask måste vara en bool-array, fick {mask.dtype}")
+    if not np.isfinite(min_response) or min_response <= 0:
+        raise ValueError(f"input.invalid_argument: min_response måste vara ändligt och större än 0, fick {min_response}")
+    _check("signal", signal[mask])
+    _check("response", response[mask])
+    # Strikt >: exakt min_response är ogiltig. Se rev7, RX16.
+    new_mask = mask & (response > min_response)
+    values = np.full(signal.shape[0], np.nan)
+    # Korrigerad signal = signal delad med responsen, bara där den nya masken är True.
+    np.divide(signal, response, out=values, where=new_mask)
+    return values, new_mask
