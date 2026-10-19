@@ -1,0 +1,8 @@
+source file tests/data/bilder/rand_x12.png
+roi 0 0 20 10
+channel red
+step
+calibrate tests/data/punktfiler/t04.csv
+step
+save
+quit

@@ -33,3 +33,7 @@ Här skriver `klar` och `anteckna` (verktyg-elias.ps1 och verktyg-elias.sh) en r
 | 2026-10-19 | 05:22 | 0.9.2 alla delar | main.py: reference och mode | FEL (ruff, pytest) | ac8d7aa | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 05:24 | 0.9.3 del 6 | snabbkollen för hela 0.9 | FEL (ruff, pytest) | ac8d7aa (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 05:24 | 0.9.3 alla delar | main.py: transmission i measure, show, step och save | FEL (ruff, pytest) | ac8d7aa (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:25 | 0.9.3 | betataggen v0.9.3beta | OK | e4851ea | Windows DESKTOP-NFJKKB3 | Testa 0.9 till Adrian |
+| 2026-10-19 | 05:42 | 0.10.1 del 1 | D1 i ruff | FEL (ruff, pytest) | e4851ea (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:43 | 0.10.1 del 2 | docstrings och kommentarer | FEL (ruff, pytest) | e4851ea (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:45 | 0.10.1 del 3 | README och exempel/del1.txt | FEL (ruff, pytest) | e4851ea (+ändringar) | Windows DESKTOP-NFJKKB3 | |

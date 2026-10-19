@@ -3,4 +3,7 @@ pythonpath = ["."]
 testpaths = ["tests"]
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I", "RUF059"]
+select = ["E4", "E7", "E9", "F", "I", "RUF059", "D1"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D1"]
