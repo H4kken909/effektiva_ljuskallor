@@ -8,3 +8,4 @@ Här skriver `klar` och `anteckna` (verktyg-elias.ps1 och verktyg-elias.sh) en r
 | 2026-10-19 | 04:35 | kodfix 0.0-0.6 | calc, main, source, test_elias (16), check_install, verktyg-elias, PROTOKOLL-ELIAS, README/CHANGELOG | OK, 19 passed, ruff grön | c3ba437 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 04:43 | 0.7.1 del 1 | evaluate_wavelength och fit_wavelength | FEL (ruff, pytest) | 72e74f0 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 04:43 | 0.7.1 del 1 | evaluate_wavelength och fit_wavelength | OK | 72e74f0 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 04:44 | 0.7.2 del 1 | kalibrering/hg_linjer.csv, fem Hg-linjer | OK | cb5ca04 (+ändringar) | Windows DESKTOP-NFJKKB3 | NIST mercurytable2, luftvåglängder |
