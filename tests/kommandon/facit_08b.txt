@@ -13,17 +13,17 @@ a1: 10
 anpassat: pixel 10 till 12
 giltigt: pixel 8 till 14
 residual: 0
-residual: -1.13687e-13
+residual: 0
 inte kontrollerad: inga kontrollpunkter i filen
 spektro> Topp 200 vid våglängd (nm) 520 (1 bild)
-spektro> respons: 3 av 3 positioner giltiga
+spektro> respons: 2 av 3 positioner giltiga
 spektro> respons: on
 spektro> Topp 200 vid våglängd (nm) 520 (1 bild)
 spektro> a0: 395
 a1: 10
 anpassat: pixel 10 till 12
 giltigt: pixel 8 till 14
-residual: 1.13687e-13
+residual: 0
 residual: 0
 inte kontrollerad: inga kontrollpunkter i filen
 spektro> Topp 400 vid våglängd (nm) 515 (1 bild)
