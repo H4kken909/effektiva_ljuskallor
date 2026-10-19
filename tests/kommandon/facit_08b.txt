@@ -16,7 +16,7 @@ residual: 0
 residual: 0
 inte kontrollerad: inga kontrollpunkter i filen
 spektro> Topp 200 vid våglängd (nm) 520 (1 bild)
-spektro> respons: 2 av 3 positioner giltiga
+spektro> respons: 3 av 3 positioner giltiga
 spektro> respons: on
 spektro> Topp 200 vid våglängd (nm) 520 (1 bild)
 spektro> a0: 395
