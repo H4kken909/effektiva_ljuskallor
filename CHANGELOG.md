@@ -2,6 +2,22 @@
 
 Formatet följer Keep a Changelog, och versionsnumren följer semantisk versionering.
 
+## [0.6] - 2026-10-19 - Lagt till webbkameran som källa (V4L2 på Linux, DirectShow på Windows) och kommandot start, som visar spektrumet live tills Ctrl+C eller tills fönstret stängs. measure kan låna en öppen källa, och kameran släpps alltid (T15).
+
+- 0.6.1 source.py: kameran som källa, Linux och Windows. open_source, read_frame och close_source har kameragrenar med camera.open_failed och camera.read_failed. README.md har ## Kamera, med låsta reglage och exponering.
+- 0.6.2 main.py: measure lånar källan och start visar live. Betatagg v0.6.2beta för 0.4-0.6.
+
+## [0.5] - 2026-10-19 - Lagt till medelvärde över flera bilder: average_spectra i calc.py och kommandona frames, step och save i main.py (Krav 12). step skriver toppen och varnar när råbilden är mättad.
+
+- 0.5.1 calc.py: average_spectra ger medel och spridning av flera spektrum, en rad per bild.
+- 0.5.2 main.py: frames, step och save. measure tar medel av frames bilder, och save sparar senaste mätningen i en ny mätmapp.
+
+## [0.4] - 2026-10-19 - Lagt till kommandoraden: en prompt med help, quit, show, source, roi, channel och axis. Ett fel skrivs som en rad och prompten fortsätter (T17).
+
+- 0.4.1 main.py: hjälpfunktionerna AXES, _to_int, _need och _set, och kommandona help, quit och show.
+- 0.4.2 main.py: kommandona source, roi, channel och axis, och ordboken COMMANDS med alla sju.
+- 0.4.3 main.py: prompten fungerar. run_command delar en rad och anropar rätt kommando, och main läser rader tills quit eller Ctrl+D.
+
 ## [0.0] - 2026-10-16 - Lagt till projektmappen: paketet spectrometer med __init__.py och fem tomma programfiler, tests/, pyproject.toml, requirements-filerna, README.md och CHANGELOG.md.
 
 - 0.0.1 Program på datorn: git, uv, github-cli, base-devel, psmisc, v4l-utils och guvcview med pacman, och VS Code med tilläggen Python, Pylance och Ruff.
