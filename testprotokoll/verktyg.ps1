@@ -10,7 +10,8 @@ function nr { $i = 0; $input | ForEach-Object { $i++; "{0,6}  {1}" -f $i, $_ } }
 function kor($fil, [switch]$W) {
   $flaggor = @()
   if ($W) { $flaggor = @("-W", "error") }
-  Get-Content -Encoding UTF8 $fil | python @flaggor -m spectrometer.main
+  # Indata via cmd < fil: en PowerShell 5.1-pipe skickar icke-ASCII som ? till python.
+  cmd /c "python $($flaggor -join ' ') -m spectrometer.main < $fil"
 }
 # lika: byter det som far skilja mellan tva korningar: mappnamnet med tiden och residualer nara 0.
 function lika($rader) {
@@ -24,7 +25,7 @@ function jamfor($facit, $ut) {
   $b = Join-Path $env:TEMP "ut.txt"
   [System.IO.File]::WriteAllText($a, ((lika (Get-Content -Encoding UTF8 $facit)) -join "`n") + "`n")
   [System.IO.File]::WriteAllText($b, ((lika $ut) -join "`n") + "`n")
-  git --no-pager diff --no-index --no-color -b $a $b
+  git -c core.autocrlf=false --no-pager diff --no-index --no-color -b $a $b
 }
 # spara: sparar en korning som den ar, UTF-8 utan BOM. Exempel: spara testprotokoll\utskrift08.txt $ut
 function spara($fil, $ut) {
