@@ -9,20 +9,20 @@ import numpy as np
 from spectrometer import calc, files, plot, source
 
 DEFAULTS = {
-    CAPTURE_FRAMES = 16  # bilder i dark och reference: medlet av flera bilder har mindre brus än en enda
-    "source": ("camera", 0), # ("file", sökväg eller "camera", N)
-    "roi": None, # None är hela bilden, annars (x, y, bredd, höjd) i pixlar
-    "axis": "horizontal", # riktningen spektrumet läses längs
-    "channel": "gray", # färgkanal: gray, sum, red, green eller blue
-    "output_dir": "data", # föräldramappen för mätmapparna
-    "frames": 1, # "bilder per mätning"
-    "min_response": 0.01, # minsta respons, utan enhet
-    "min_reference": 1.0, # minsta referens i counts
-    "response": (cmd_response, "build KNOWNFILE | on | off"),
-
+    "source": ("camera", 0),  # ("file", sökväg) eller ("camera", N)
+    "roi": None,  # None är hela bilden, annars (x, y, bredd, höjd) i pixlar
+    "axis": "horizontal",  # riktningen spektrumet läses längs
+    "channel": "gray",  # färgkanal: gray, sum, red, green eller blue
+    "output_dir": "data",  # föräldramappen för mätmapparna
+    "frames": 1,  # bilder per mätning
+    "min_response": 0.01,  # minsta respons, utan enhet
+    "min_reference": 1.0,  # minsta referens i counts
 }
 
+CAPTURE_FRAMES = 16  # bilder i dark och reference: medlet av flera bilder har mindre brus än en enda
+
 AXES = ("horizontal", "vertical")
+
 
 def new_state(settings):
     """Ger en ny state-ordbok med en kopia av inställningarna.
@@ -42,7 +42,6 @@ def new_state(settings):
         "use_response": False,  # True när responsen ska användas (response on och off)
         "reference": None,  # referensspektrumet med kanal, values i counts (reference)
         "mode": "direct",  # "direct" eller "transmission" (mode)
-        "dark": (cmd_dark, "[N]: mät mörker med blockerad ljusväg"),
     }
 
 
@@ -148,6 +147,7 @@ def _measure_direct(state, n):
     direct_state["settings"]["frames"] = n
     return measure(direct_state)
 
+
 def _to_int(name, text, smallest):
     """Gör om ett ord till ett heltal som är minst smallest.
 
@@ -162,6 +162,7 @@ def _to_int(name, text, smallest):
     if number < smallest:
         raise ValueError(f"input.invalid_argument: {name} ska vara minst {smallest}")
     return number
+
 
 def _need(args, names, command):
     """Kontrollerar att kommandot fick lika många ord som names.
@@ -190,7 +191,6 @@ def _set(state, key, value) -> None:
         state["response"] = None
         state["use_response"] = False
         print("Responsen glömd. Kör response build igen.")
-
 
 
 def cmd_help(state, args):
@@ -242,7 +242,6 @@ def cmd_show(state, args):
         print("Mätning: ja")
     else:
         print("Mätning: nej")
-
 
 
 def cmd_source(state, args):
@@ -360,7 +359,6 @@ def cmd_step(state, args):
             print(f"Varning: transmission över 100 % på {over} {unit}")
 
 
-
 def cmd_save(state, args):
     """Kommandot save [DIR]: sparar senaste mätningen i en ny mätmapp.
 
@@ -381,7 +379,6 @@ def cmd_save(state, args):
     saved["mode"] = state["mode"]
     folder = files.save_measurement(parent, state["spectrum"], state["image"], saved)
     print(f"Sparad i {folder.as_posix()}")
-
 
 
 def cmd_start(state, args):
@@ -470,6 +467,7 @@ def cmd_calibrate(state, args):
     state["pixel_range"] = (low, high)
     state["spectrum"] = None
 
+
 def cmd_dark(state, args):
     """Kommandot dark [N]: mäter mörkret som medel av N bilder med blockerad ljusväg.
 
@@ -503,8 +501,9 @@ def cmd_dark(state, args):
     if state["image"] is not None and np.mean(state["dark"]) >= 0.5 * np.mean(state["image"]):
         print("Varning: mörkret liknar bilden. Var ljusvägen blockerad?")
     if state["reference"] is not None:
-    state["reference"] = None
-    print("referensen togs bort: kör reference igen")
+        # Referensen mättes med det gamla mörkret, så den gäller inte längre.
+        state["reference"] = None
+        print("referensen togs bort: kör reference igen")
 
 
 def cmd_response(state, args):
@@ -542,6 +541,7 @@ def cmd_response(state, args):
         state["spectrum"] = None
         print("respons: off")
 
+
 def cmd_reference(state, args):
     """Kommandot reference [N]: mäter referensen utan prov, utan respons och transmission, och sparar den med kanalen.
 
@@ -564,6 +564,7 @@ def cmd_reference(state, args):
     word = "bild" if N == 1 else "bilder"
     print(f"Referens: {N} {word}, x från {spectrum["x"][0]:g} till {spectrum["x"][-1]:g}")
 
+
 def cmd_mode(state, args):
     """Kommandot mode direct eller mode transmission.
 
@@ -579,6 +580,7 @@ def cmd_mode(state, args):
     state["spectrum"] = None
     print(f"mode: {args[0]}")
 
+
 COMMANDS = {
     "help": (cmd_help, "Visa kommandona"),
     "quit": (cmd_quit, "Avsluta"),
@@ -592,11 +594,11 @@ COMMANDS = {
     "save": (cmd_save, "[DIR]: spara senaste mätningen"),
     "start": (cmd_start, "live med kameran, Ctrl+C stoppar"),
     "calibrate": (cmd_calibrate, "PATH [DEGREE]: anpassa våglängd till en punktfil"),
+    "dark": (cmd_dark, "[N]: mät mörker med blockerad ljusväg"),
+    "response": (cmd_response, "build KNOWNFILE | on | off"),
     "reference": (cmd_reference, "[N]: mät referens utan prov"),
     "mode": (cmd_mode, "direct|transmission"),
-
 }
-
 
 
 def run_command(state, line):

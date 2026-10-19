@@ -12,7 +12,6 @@ import cv2
 import numpy as np
 
 
-
 def save_measurement(parent, spectrum, image, settings):
     """Sparar en mätning som en mapp med spectrum.csv, raw.png och settings.json.
 
@@ -94,6 +93,8 @@ def load_points(path):
     wavelengths = np.array(wavelengths, dtype=np.float64)
     is_check = np.array(is_check, dtype=bool)
     return pixels, wavelengths, is_check
+
+
 def load_known(path):
     """Läser en känd fördelning med kolumnerna wavelength_nm och relative_power_per_nm.
 
