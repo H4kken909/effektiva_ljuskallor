@@ -30,3 +30,4 @@
 | testfiler | - | v0.3.3beta2 | 2026-10-19 | Godkänt | rand_x12.png lika: (10, 20, 3) uint8 6000 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 0, 0, 0, 0, 0, 0, 0] |
 | RX01 RX02 RX05 | Krav 10 | v0.3.3beta2 | 2026-10-19 | Godkänt | testkort RX01.md RX02.md RX05.md, test_calc.py: 3 passed in 0.14s |
 | tester | - | v0.3.3beta2 | 2026-10-19 | Godkänt | grenen tester, verktyg.ps1 (sidans text), tests/test_calc.py, pytest 6 passed, ruff grön |
+| Förberedelse | - | v0.10.2beta | 2026-10-19 | Godkänt | merge 49f96d3, check_install OK, pytest 22 passed, ruff grön |
