@@ -76,3 +76,10 @@ def test_response_rx14():
 def test_response_rx15():
     """RX15: det kända interpoleras till mätningens våglängder; utanför de kända punkterna blir responsen nan."""
     np.testing.assert_allclose(calc.build_response(np.array([505.0, 510.0, 530.0]), np.array([1.25, 3.0, 1.0]), np.array([500.0, 520.0]), np.array([1.0, 2.0])), [0.5, 1.0, np.nan], equal_nan=True)
+
+
+def test_rx17():
+    """RX17, T05, T06: prov delat med referens där referensen är strikt större än min_reference. Negativt prov och värden över 1 tillåts; referens exakt 1.0 är ogiltig."""
+    values, mask = calc.transmission_ratio(np.array([25, -2, 60, 5, 0.5], dtype=np.float64), np.array([50, 40, 50, 0.8, 1.0], dtype=np.float64), np.array([True, True, True, True, True]), min_reference=1.0)
+    np.testing.assert_allclose(values, [0.5, -0.05, 1.2, np.nan, np.nan], rtol=1e-9, atol=1e-9)
+    np.testing.assert_array_equal(mask, [True, True, True, False, False])
