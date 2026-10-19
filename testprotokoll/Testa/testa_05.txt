@@ -11,8 +11,8 @@ kor tests\kommandon\testa_05.txt -W, v0.10.2beta, 2026-10-19 (omgjord efter rät
     10  spektro> Topp 40 vid pixel 0 (3 bilder)
     11  spektro> axis: horizontal
     12  spektro> Topp 200 vid pixel 12 (3 bilder)
-    13  spektro> Sparad i data/20261019-083120
-    14  spektro> Sparad i data/20261019-083120-2
+    13  spektro> Sparad i data/20261019-085030
+    14  spektro> Sparad i data/20261019-085030-2
     15  spektro> Avslutar.
 
 jamfor mot facit_05 (tomt = lika):
