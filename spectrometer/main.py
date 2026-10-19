@@ -445,6 +445,10 @@ def cmd_dark(state, args):
     print(f"mörker: {N} {word}, medel {np.mean(state["dark"]):g}")
     if state["image"] is not None and np.mean(state["dark"]) >= 0.5 * np.mean(state["image"]):
         print("Varning: mörkret liknar bilden. Var ljusvägen blockerad?")
+    if state["reference"] is not None:
+    state["reference"] = None
+    print("referensen togs bort: kör reference igen")
+
 
 def cmd_response(state, args):
     """Kommandot response build KNOWNFILE, response on eller response off.
@@ -481,6 +485,43 @@ def cmd_response(state, args):
         state["spectrum"] = None
         print("respons: off")
 
+def cmd_reference(state, args):
+    """Kommandot reference [N]: mäter referensen utan prov, utan respons och transmission, och sparar den med kanalen.
+
+    Parametrar: state: programmets state; args: inga ord (CAPTURE_FRAMES bilder) eller ett heltal N, minst 1.
+    Returnerar: None
+    Fel: ValueError med input.invalid_argument vid fel ord och input.missing_data utan mörker; samma som measure.
+    """
+    if state["dark"] is None:
+        raise ValueError("input.missing_data: inget mörker, kör dark först")
+    if len(args) > 1:
+        raise ValueError("input.invalid_argument: reference tar högst ett ord (N)")
+    if args:
+        N = _to_int("N", args[0], 1)
+    else:
+        N = CAPTURE_FRAMES
+    spectrum = _measure_direct(state, N)
+    spectrum["channel"] = state["settings"]["channel"]
+    state["reference"] = spectrum
+    state["spectrum"] = None
+    word = "bild" if N == 1 else "bilder"
+    print(f"Referens: {N} {word}, x från {spectrum["x"][0]:g} till {spectrum["x"][-1]:g}")
+
+def cmd_mode(state, args):
+    """Kommandot mode direct eller mode transmission.
+
+    Parametrar: state: programmets state; args: ["direct"] eller ["transmission"].
+    Returnerar: None
+    Fel: ValueError med input.invalid_argument vid fel ord och input.missing_data för transmission utan referens.
+    """
+    if len(args) != 1 or args[0] not in ("direct", "transmission"):
+        raise ValueError("input.invalid_argument: mode tar ett ord, direct eller transmission")
+    if args[0] == "transmission" and state["reference"] is None:
+        raise ValueError("input.missing_data: ingen referens, kör reference först")
+    state["mode"] = args[0]
+    state["spectrum"] = None
+    print(f"mode: {args[0]}")
+
 COMMANDS = {
     "help": (cmd_help, "Visa kommandona"),
     "quit": (cmd_quit, "Avsluta"),
@@ -494,6 +535,9 @@ COMMANDS = {
     "save": (cmd_save, "[DIR]: spara senaste mätningen"),
     "start": (cmd_start, "live med kameran, Ctrl+C stoppar"),
     "calibrate": (cmd_calibrate, "PATH [DEGREE]: anpassa våglängd till en punktfil"),
+    "reference": (cmd_reference, "[N]: mät referens utan prov"),
+    "mode": (cmd_mode, "direct|transmission"),
+
 }
 
 
