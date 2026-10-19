@@ -2,6 +2,12 @@
 
 Formatet följer Keep a Changelog, och versionsnumren följer semantisk versionering.
 
+## [1.0.0] - 2026-10-19
+Kommentarer, README och testprotokoll för Delrapport 2. Koden är fryst och taggad v1.0.0.
+- 0.10.1: README.md och docstrings: provat i en ren klon
+- v0.10.2: underlaget till frysen: kravmatrisen, A01 och betataggen
+- v1.0.0: frysen: Adrians testprotokoll och taggen v1.0.0
+
 ## [0.9] - 2026-10-19
 Lagt till transmission (reference [N] och mode direct|transmission). Kommandon som ändrar mätningen tömmer den gamla.
 - 0.9.1: calc.py: transmissionskvoten

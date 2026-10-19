@@ -41,3 +41,6 @@ Här skriver `klar` och `anteckna` (verktyg-elias.ps1 och verktyg-elias.sh) en r
 | 2026-10-19 | 06:26 | rättelse taggar | v1.0.0, v0.9.3, v0.8.3, v0.9.3beta, v0.8.3beta borttagna: satta utan Adrians Godkänt eller på kod som inte gick att importera | OK | 37b03fb | Windows DESKTOP-NFJKKB3 | kvar: v0.7.3beta, v0.8.3beta2, v0.9.3beta2 |
 | 2026-10-19 | 06:26 | rättelse 0.10.1 del 4 | raden 05:46 gjordes på 6e00857 (trasig kod), A01 görs om nedan | FEL | 37b03fb (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 06:27 | 0.10.1 del 4 | ren klon (A01), README Windows-listan steg 3-10 i C:\Users\jaman\ren-klon | OK | 37b03fb (+ändringar) | Windows DESKTOP-NFJKKB3 | klon av 37b03fb 2026-10-19 06:17; klon-pytest.txt: 19 passed in 0.56s; README rättad: inget |
+| 2026-10-19 | 06:42 | 0.10.2 del 1 | kodkolumnen till kravmatrisen | OK | 8aad51d (+ändringar) | Windows DESKTOP-NFJKKB3 | skickad till Adrian i till-adrian.md |
+| 2026-10-19 | 06:42 | 0.10.2 del 2 | A01 till Adrian | OK | 8aad51d (+ändringar) | Windows DESKTOP-NFJKKB3 | skickad till Adrian i till-adrian.md |
+| 2026-10-19 | 06:42 | 0.10.2 | betataggen v0.10.2beta, hela sviten efter merge av tester | OK | 8aad51d (+ändringar) | Windows DESKTOP-NFJKKB3 | |
