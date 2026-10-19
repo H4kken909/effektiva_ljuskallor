@@ -6,7 +6,7 @@ Formatet följer Keep a Changelog, och versionsnumren följer semantisk versione
 Kommentarer, README och testprotokoll för Delrapport 2. Koden är fryst och taggad v1.0.0.
 - 0.10.1: README.md och docstrings: provat i en ren klon
 - v0.10.2: underlaget till frysen: kravmatrisen, A01 och betataggen
-- v1.0.0: frysen: Adrians testprotokoll och taggen v1.0.0
+- v1.0.0: frysen: koden från v0.10.2beta oförändrad, Adrians tester och testprotokoll till och med Testa 0.9 (pytest grön), Issue #7 väg B (facit_07 efter koden). Inte gjort före taggen: A11, A13, A06, A15, A07, Uppgift 16 och frysmappen.
 
 ## [0.9] - 2026-10-19
 Lagt till transmission (reference [N] och mode direct|transmission). Kommandon som ändrar mätningen tömmer den gamla.
