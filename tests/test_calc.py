@@ -36,3 +36,18 @@ def test_rx06():
     mean1, stddev1 = np.testing.assert_no_warnings(calc.average_spectra, stack[:1])
     np.testing.assert_allclose(mean1, [2, 10, 5], rtol=1e-9, atol=1e-9)
     assert np.isnan(stddev1).all()
+
+
+def test_rx09_eval():
+    pixels = np.array([100, 150, 180, 200], dtype=np.float64)
+    coefficients = np.array([400, 1], dtype=np.float64)
+    np.testing.assert_allclose(calc.evaluate_wavelength(pixels, coefficients), [500, 550, 580, 600], rtol=1e-9, atol=1e-9)
+
+
+def test_fit_rx10():
+    pixels = np.array([100, 150, 200], dtype=np.float64)
+    wavelengths = np.array([500, 551, 600], dtype=np.float64)
+    coefficients = calc.fit_wavelength(pixels, wavelengths, 1)
+    np.testing.assert_allclose(coefficients, [400 + 1/3, 1], rtol=1e-9, atol=1e-9)
+    residuals = wavelengths - calc.evaluate_wavelength(pixels, coefficients)
+    np.testing.assert_allclose(residuals, [-1/3, 2/3, -1/3], rtol=1e-9, atol=1e-9)
