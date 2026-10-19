@@ -11,9 +11,10 @@ CHANNEL_INDEX = {"blue": 0, "green": 1, "red": 2}
 CHANNELS = ("gray", "sum", "red", "green", "blue")
 
 ## Grey weights
-blue_weight:float = 0.114
-green_weight:float = 0.587
-red_weight:float = 0.299
+blue_weight: float = 0.114
+green_weight: float = 0.587
+red_weight: float = 0.299
+
 
 def _check(name, a):
     """Kontrollera att a är en float64-array med bara ändliga tal.
@@ -30,6 +31,7 @@ def _check(name, a):
 
     if not np.all(np.isfinite(a)):
         raise ValueError(f"input.invalid_argument: {name} får bara innehålla ändliga tal")
+
 
 def prepare(image, roi, axis, channel):
     """Skär ut ROI:n som float64, väljer kanal och vänder vid vertical.
@@ -64,7 +66,7 @@ def prepare(image, roi, axis, channel):
         result = blue + green + red
     elif channel == "gray":
         # Gråvärdet är varje färg gånger sin vikt, ihop (vikterna summerar till 1). Se rev7, RX01.
-        result = 0.299 * red + 0.587 * green + 0.114 * blue
+        result = red_weight * red + green_weight * green + blue_weight * blue
     if axis == "vertical":
         result = result.T
     return result
@@ -74,7 +76,7 @@ def extract_spectrum(table):
     """
     Takes the average of the rows in the table, one amount per column.
     Parameters: Table: the table from prepare(), form (rows, columns), float64 (ndarray).
-    Returns: Average per column, form (kolumns,), float64 (ndarray).
+    Returns: Average per column, form (columns,), float64 (ndarray).
     Error: ValueError with input.invalid_argument if table is not float 64, is inf, is NaN, does not have two dimensions or is empty.
     """
 
@@ -82,7 +84,7 @@ def extract_spectrum(table):
 
     # Kontrollera form
     if table.ndim != 2:
-        raise ValueError(f"input.invalid_argument: table must have 2 dimensions, got shaope {table.shape}")
+        raise ValueError(f"input.invalid_argument: table must have 2 dimensions, got shape {table.shape}")
 
     if table.size == 0:
         raise ValueError("input.invalid_argument: table is empty")
@@ -113,6 +115,7 @@ def average_spectra(stack):
         # Stickprovsstandardavvikelse, delad med N - 1 (ddof=1). Se rev7, RX06.
         stddev = np.std(stack, axis=0, ddof=1)
     return mean, stddev
+
 
 def evaluate_wavelength(pixels, coefficients):
     """Ger våglängden i nm vid varje pixel.
@@ -155,6 +158,8 @@ def fit_wavelength(pixels, wavelengths, degree):
         raise ValueError(f"input.invalid_argument: grad {degree} behöver minst {degree + 1} punkter, fick {pixels.size}")
     # Minsta kvadrat-anpassning, koefficienterna i stigande ordning. Se rev7, RX10.
     return poly.polyfit(pixels, wavelengths, degree)
+
+
 def subtract_dark(image, dark):
     """Drar av mörkret från bilden, utan att klippa negativa tal.
 
@@ -168,6 +173,8 @@ def subtract_dark(image, dark):
         raise ValueError(f"input.invalid_argument: mörkret har formen {dark.shape} men bilden har {image.shape}")
     # Signal utan mörker = bild minus mörker, i float64 så att inget slår runt. Se rev7, RX03.
     return image - dark
+
+
 def build_response(wavelengths, measured, known_wavelengths, known_values):
     """Räknar instrumentets relativa respons ur en lampmätning med känd fördelning.
 
@@ -198,6 +205,8 @@ def build_response(wavelengths, measured, known_wavelengths, known_values):
         raise ValueError("input.missing_data: toppen är inte större än 0")
     # Normerad: 1 där instrumentet är känsligast.
     return ratio / peak
+
+
 def apply_response(signal, response, mask, min_response):
     """Delar signalen med responsen där masken är True och responsen är strikt större än min_response.
 
@@ -223,6 +232,7 @@ def apply_response(signal, response, mask, min_response):
     # Korrigerad signal = signal delad med responsen, bara där den nya masken är True.
     np.divide(signal, response, out=values, where=new_mask)
     return values, new_mask
+
 
 def transmission_ratio(sample, reference, mask, min_reference):
     """Delar provet med referensen där masken är True och referensen är strikt större än min_reference.

@@ -4,7 +4,6 @@ Här skriver `klar` och `anteckna` (verktyg-elias.ps1 och verktyg-elias.sh) en r
 
 | Datum | Tid | Del | Vad | Resultat | Commit | Dator | Not |
 |---|---|---|---|---|---|---|---|
-| 2026-10-19 | 14:05 | 0.7.1 del 1 | evaluate_wavelength och fit_wavelength | OK | 3f2a1bc | Windows JAMAN-PC | |
 | 2026-10-19 | 04:35 | kodfix 0.0-0.6 | calc, main, source, test_elias (16), check_install, verktyg-elias, PROTOKOLL-ELIAS, README/CHANGELOG | OK, 19 passed, ruff grön | c3ba437 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 04:43 | 0.7.1 del 1 | evaluate_wavelength och fit_wavelength | FEL (ruff, pytest) | 72e74f0 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 04:43 | 0.7.1 del 1 | evaluate_wavelength och fit_wavelength | OK | 72e74f0 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
@@ -37,3 +36,4 @@ Här skriver `klar` och `anteckna` (verktyg-elias.ps1 och verktyg-elias.sh) en r
 | 2026-10-19 | 05:42 | 0.10.1 del 1 | D1 i ruff | FEL (ruff, pytest) | e4851ea (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 05:43 | 0.10.1 del 2 | docstrings och kommentarer | FEL (ruff, pytest) | e4851ea (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 05:45 | 0.10.1 del 3 | README och exempel/del1.txt | FEL (ruff, pytest) | e4851ea (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 06:11 | rättning 0.8-0.10.1 | main.py importerbar igen (CAPTURE_FRAMES, COMMANDS dark och response), calc, files, README 0.10.1, exempel/ | OK | 6e00857 (+ändringar) | Windows DESKTOP-NFJKKB3 | v0.8.3beta2 och v0.9.3beta2 |
