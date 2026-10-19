@@ -1,0 +1,46 @@
+Skriv help för kommandona. quit eller Ctrl+D avslutar.
+spektro> Fel: input.missing_data: ingen referens, kör reference först
+spektro> Fel: input.invalid_argument: mode tar ett ord, direct eller transmission
+spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+spektro> ROI:n kontrolleras vid nästa mätning.
+roi: (10, 0, 3, 2)
+spektro> channel: red
+spektro> Fel: input.missing_data: inget mörker, kör dark först
+spektro> source: ('file', 'tests/kommandon/svart.png')
+spektro> mörker: 1 bild, medel 0
+spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+spektro> Referens: 1 bild, x från 10 till 12
+spektro> mode: transmission
+spektro> Topp 1 vid pixel 12 (1 bild)
+spektro> roi: (10, 0, 2, 2)
+spektro> Fel: input.invalid_argument: x-axeln skiljer sig från referensens: ROI eller kalibrering ändrades, kör reference igen
+spektro> roi: (10, 0, 3, 2)
+spektro> channel: green
+spektro> Fel: input.invalid_argument: kanalen green skiljer sig från referensens red, kör reference igen
+spektro> channel: red
+spektro> source: ('file', 'tests/kommandon/halv_x12.png')
+spektro> Topp 0.5 vid pixel 12 (1 bild)
+spektro> Sparad i data/ÅÅÅÅMMDD-HHMMSS
+spektro> source: ('file', 'tests/kommandon/halv_x12.png')
+roi: (10, 0, 3, 2)
+axis: horizontal
+channel: red
+output_dir: data
+frames: 1
+min_response: 0.01
+min_reference: 1.0
+kalibrering: nej
+mörker: ja
+respons: nej, off
+referens: ja
+mode: transmission
+Mätning: ja
+spektro> source: ('file', 'tests/kommandon/svart.png')
+spektro> mörker: 1 bild, medel 0
+referensen togs bort: kör reference igen
+spektro> Fel: input.missing_data: ingen referens, kör reference först
+spektro> mode: direct
+spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+spektro> Topp 200 vid pixel 12 (1 bild)
+spektro> Fel: input.invalid_argument: mode tar ett ord, direct eller transmission
+spektro> Avslutar.
