@@ -1,0 +1,51 @@
+kor tests\kommandon\testa_09.txt -W, v0.10.2beta, 2026-10-19:
+     1  Skriv help för kommandona. quit eller Ctrl+D avslutar.
+     2  spektro> Fel: input.missing_data: ingen referens, kör reference först
+     3  spektro> Fel: input.invalid_argument: mode tar ett ord, direct eller transmission
+     4  spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+     5  spektro> ROI:n kontrolleras vid nästa mätning.
+     6  roi: (10, 0, 3, 2)
+     7  spektro> channel: red
+     8  spektro> Fel: input.missing_data: inget mörker, kör dark först
+     9  spektro> source: ('file', 'tests/kommandon/svart.png')
+    10  spektro> mörker: 1 bild, medel 0
+    11  spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+    12  spektro> Referens: 1 bild, x från 10 till 12
+    13  spektro> mode: transmission
+    14  spektro> Topp 1 vid pixel 12 (1 bild)
+    15  spektro> roi: (10, 0, 2, 2)
+    16  spektro> Fel: input.invalid_argument: x-axeln skiljer sig från referensens: ROI eller kalibrering ändrades, kör reference igen
+    17  spektro> roi: (10, 0, 3, 2)
+    18  spektro> channel: green
+    19  spektro> Fel: input.invalid_argument: kanalen green skiljer sig från referensens red, kör reference igen
+    20  spektro> channel: red
+    21  spektro> source: ('file', 'tests/kommandon/halv_x12.png')
+    22  spektro> Topp 0.5 vid pixel 12 (1 bild)
+    23  spektro> Sparad i data/20261019-080538
+    24  spektro> source: ('file', 'tests/kommandon/halv_x12.png')
+    25  roi: (10, 0, 3, 2)
+    26  axis: horizontal
+    27  channel: red
+    28  output_dir: data
+    29  frames: 1
+    30  min_response: 0.01
+    31  min_reference: 1.0
+    32  kalibrering: nej
+    33  mörker: ja
+    34  respons: nej, off
+    35  referens: ja
+    36  mode: transmission
+    37  Mätning: ja
+    38  spektro> source: ('file', 'tests/kommandon/svart.png')
+    39  spektro> mörker: 1 bild, medel 0
+    40  referensen togs bort: kör reference igen
+    41  spektro> Fel: input.missing_data: ingen referens, kör reference först
+    42  spektro> mode: direct
+    43  spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+    44  spektro> Topp 200 vid pixel 12 (1 bild)
+    45  spektro> Fel: input.invalid_argument: mode tar ett ord, direct eller transmission
+    46  spektro> Avslutar.
+
+jamfor mot facit_09 (tomt = lika):
+warning: in the working copy of 'C:\Users\wowji\AppData\Local\Temp\facit.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'C:\Users\wowji\AppData\Local\Temp\ut.txt', LF will be replaced by CRLF the next time Git touches it

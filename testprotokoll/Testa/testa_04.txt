@@ -1,0 +1,78 @@
+kor tests\kommandon\testa_04.txt -W, v0.10.2beta, 2026-10-19:
+     1  Skriv help för kommandona. quit eller Ctrl+D avslutar.
+     2  spektro> help Visa kommandona
+     3  quit Avsluta
+     4  show Visa inställningarna
+     5  source file PATH eller camera N
+     6  roi X Y W H i pixlar, eller full för hela bilden
+     7  channel gray, sum, red, green eller blue
+     8  axis horizontal eller vertical
+     9  frames N: bilder per mätning
+    10  step mät och skriv toppen
+    11  save [DIR]: spara senaste mätningen
+    12  start live med kameran, Ctrl+C stoppar
+    13  calibrate PATH [DEGREE]: anpassa våglängd till en punktfil
+    14  dark [N]: mät mörker med blockerad ljusväg
+    15  response build KNOWNFILE | on | off
+    16  reference [N]: mät referens utan prov
+    17  mode direct|transmission
+    18  spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+    19  spektro> roi: None (hela bilden)
+    20  spektro> ROI:n kontrolleras vid nästa mätning.
+    21  roi: (0, 0, 20, 10)
+    22  spektro> Fel: input.invalid_argument: roi: height saknas
+    23  spektro> Fel: input.invalid_argument: okänd kanal purple, välj gray, sum, red, green, blue
+    24  spektro> channel: red
+    25  spektro> axis: vertical
+    26  spektro> Fel: input.invalid_argument: okänt kommando foo. Skriv help för en lista.
+    27  spektro> source: ('file', 'data/mätning 1.png')
+    28  spektro> source: ('file', 'data/mätning 1.png')
+    29  roi: (0, 0, 20, 10)
+    30  axis: vertical
+    31  channel: red
+    32  output_dir: data
+    33  frames: 1
+    34  min_response: 0.01
+    35  min_reference: 1.0
+    36  kalibrering: nej
+    37  mörker: nej
+    38  respons: nej, off
+    39  referens: nej
+    40  mode: direct
+    41  Mätning: nej
+    42  spektro> Avslutar.
+
+jamfor mot facit_04 (tomt = lika):
+warning: in the working copy of 'C:\Users\wowji\AppData\Local\Temp\facit.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'C:\Users\wowji\AppData\Local\Temp\ut.txt', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/C:\\Users\\wowji\\AppData\\Local\\Temp\\facit.txt" "b/C:\\Users\\wowji\\AppData\\Local\\Temp\\ut.txt"
+index 6dbdda6..b637575 100644
+--- "a/C:\\Users\\wowji\\AppData\\Local\\Temp\\facit.txt"
++++ "b/C:\\Users\\wowji\\AppData\\Local\\Temp\\ut.txt"
+@@ -6,6 +6,15 @@ source file PATH eller camera N
+ roi X Y W H i pixlar, eller full för hela bilden
+ channel gray, sum, red, green eller blue
+ axis horizontal eller vertical
++frames N: bilder per mätning
++step mät och skriv toppen
++save [DIR]: spara senaste mätningen
++start live med kameran, Ctrl+C stoppar
++calibrate PATH [DEGREE]: anpassa våglängd till en punktfil
++dark [N]: mät mörker med blockerad ljusväg
++response build KNOWNFILE | on | off
++reference [N]: mät referens utan prov
++mode direct|transmission
+ spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+ spektro> roi: None (hela bilden)
+ spektro> ROI:n kontrolleras vid nästa mätning.
+@@ -24,5 +33,10 @@ output_dir: data
+ frames: 1
+ min_response: 0.01
+ min_reference: 1.0
++kalibrering: nej
++mörker: nej
++respons: nej, off
++referens: nej
++mode: direct
+ Mätning: nej
+ spektro> Avslutar.
