@@ -1,0 +1,4 @@
+x_nm,value,valid,absorbance
+500,0.5,true,0.3010299957
+501,0.5,true,0.3010299957
+502,,false,

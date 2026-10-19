@@ -1,0 +1,18 @@
+kor tests\kommandon\testa_05.txt -W, v0.10.2beta, 2026-10-19 (omgjord efter rättningen av kor och jamfor, 2c268e9):
+     1  Skriv help för kommandona. quit eller Ctrl+D avslutar.
+     2  spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+     3  spektro> Fel: input.missing_data: Ingen mätning än. Kör step först.
+     4  spektro> Topp 200 vid pixel 12 (1 bild)
+     5  spektro> frames: 3
+     6  spektro> Topp 200 vid pixel 12 (3 bilder)
+     7  spektro> roi: (10, 0, 5, 10)
+     8  spektro> Topp 200 vid pixel 12 (3 bilder)
+     9  spektro> axis: vertical
+    10  spektro> Topp 40 vid pixel 0 (3 bilder)
+    11  spektro> axis: horizontal
+    12  spektro> Topp 200 vid pixel 12 (3 bilder)
+    13  spektro> Sparad i data/20261019-085030
+    14  spektro> Sparad i data/20261019-085030-2
+    15  spektro> Avslutar.
+
+jamfor mot facit_05 (tomt = lika):
