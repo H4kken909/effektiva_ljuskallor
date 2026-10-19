@@ -24,7 +24,7 @@ Testerna visar att räkningarna stämmer med sina tal. De visar inte att instrum
 | A06 | kalibrering | 16 | Elias | Uppgift 11 (steg 16b) | v1.0.0 | 2026-10-19 | Blockerat | kalibrering mot Hg-linjer: uppställningen (kamera, lysrör, lampa, filter) saknas 2026-10-19; görs i efterhand före DR2 om den kommer; raden skriven av Elias; räkningen bevisad av test_rx09_eval, test_fit_rx10, test_load_points och Testa 0.7 |
 | A15 | respons | 14 | Elias | Uppgift 12 (steg 16c) | v1.0.0 | 2026-10-19 | Blockerat | respons mot känd lampa: uppställningen (kamera, lysrör, lampa, filter) saknas 2026-10-19; görs i efterhand före DR2 om den kommer; raden skriven av Elias; kedjan bevisad av test_rx03, test_rx16, test_response_rx14/rx15, test_load_known_rx14, Testa 0.8 och Uppgift 16 |
 | A07 | transmission | 15 | Elias | Uppgift 13 (steg 16d) | v1.0.0 | 2026-10-19 | Blockerat | transmission med färgfilter: uppställningen (kamera, lysrör, lampa, filter) saknas 2026-10-19; görs i efterhand före DR2 om den kommer; raden skriven av Elias; kedjan bevisad av test_rx17, Testa 0.9 och Uppgift 16 |
-| A16 | kodbilagan | 11 | Elias | Uppgift 15 (steg 18) | v1.0.0 | 2026-10-19 | Godkänt | docstrings: 62 def i 7 filer, ingen saknas, ruff --select D1 grön; kod.pdf inte kontrollerad (finns inte än); git diff --stat v0.10.2beta v1.0.0 -- spectrometer tom; körd av Elias |
+| A16 | kodbilagan | 11 | Elias | Uppgift 15 (steg 18) | v1.0.0 | 2026-10-19 | Godkänt | docstrings: 62 def i 7 filer, ingen saknas, ruff --select D1 grön; kod.pdf ur v1.0.0 (1770adb): fem avsnitt (calc.py, source.py, plot.py, files.py, main.py), hash överst, radnummer, 18 sidor, i 2026-10-19_frys/kod.pdf och på releasen v1.0.0; git diff --stat v0.10.2beta v1.0.0 -- spectrometer tom; körd av Elias |
 | A05, A09 | medel över flera bilder | 10 | Adrian | Testa 0.5 och frysrundan (steg 14 och 17), frames 5 och 30 med bildfil | v0.10.2beta | 2026-10-19 | Godkänt | frames 5 och 30 med bildfil: Topp 200 vid pixel 12 (5 bilder) och (30 bilder), ingen varning; Testa\a05_a09.txt; i frysrundan 2026-10-19 igen (Elias): A05_A09/terminal.txt |
 
 Strukna fall, med förenklingen i README som orsak:
@@ -65,6 +65,7 @@ Raderna ur testprotokoll/protokoll.md med taggen v0.10.2beta (Adrians runda) och
 | A07 | Krav 15 | v1.0.0 | 2026-10-19 | Blockerat | transmission med färgfilter: uppställningen (kamera, lysrör, lampa, filter) saknas 2026-10-19; görs i efterhand före DR2 om den kommer; raden skriven av Elias; kedjan bevisad av test_rx17, Testa 0.9 och Uppgift 16 |
 | Uppgift 16 | Krav 14, 15 | v1.0.0 | 2026-10-19 | Godkänt | mörker, respons och transmission med testbilder (RX19, RX14): mörker medel 2 ger 11, 30, 52; respons 3 av 3 ger 52 vid 500-502 nm; transmission 0.5 vid 500 och 501 nm, lucka vid 502; körd av Elias på Windows x64; utskrift16.txt, Uppgift16\ (tre mätmappar), testfiler\rx19_* |
 | A16 | Krav 11 | v1.0.0 | 2026-10-19 | Godkänt | docstrings: 62 def i 7 filer, ingen saknas, ruff --select D1 grön; kod.pdf inte kontrollerad (finns inte än); git diff --stat v0.10.2beta v1.0.0 -- spectrometer tom; körd av Elias |
+| A16 rättad | Krav 11 | v1.0.0 | 2026-10-19 | Godkänt | docstrings: 62 def i 7 filer, ingen saknas, ruff --select D1 grön; kod.pdf ur v1.0.0 (1770adb): fem avsnitt (calc.py, source.py, plot.py, files.py, main.py), hash överst, radnummer, 18 sidor, i 2026-10-19_frys/kod.pdf och på releasen v1.0.0; git diff --stat v0.10.2beta v1.0.0 -- spectrometer tom; körd av Elias |
 | Slutkoll | Krav 9-16 | v1.0.0 | 2026-10-19 | Godkänt | pytest 32 passed, ruff grön, taggar: v1.0.0 v0.10.2beta v0.9.3beta2 v0.8.3beta2 v0.7.3beta v0.6.2beta; körd av Elias |
 
 ## Mappar i frysmappen
@@ -76,4 +77,4 @@ Raderna ur testprotokoll/protokoll.md med taggen v0.10.2beta (Adrians runda) och
 - A17/
 - Testa/
 - Uppgift16/
-- pytest.txt, protokoll.md, kravmatris.md
+- pytest.txt, protokoll.md, kravmatris.md, kod.pdf (Krav 11, ur v1.0.0)
