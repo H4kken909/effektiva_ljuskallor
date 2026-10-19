@@ -31,3 +31,5 @@
 | RX01 RX02 RX05 | Krav 10 | v0.3.3beta2 | 2026-10-19 | Godkänt | testkort RX01.md RX02.md RX05.md, test_calc.py: 3 passed in 0.14s |
 | tester | - | v0.3.3beta2 | 2026-10-19 | Godkänt | grenen tester, verktyg.ps1 (sidans text), tests/test_calc.py, pytest 6 passed, ruff grön |
 | Förberedelse | - | v0.10.2beta | 2026-10-19 | Godkänt | merge 49f96d3, check_install OK, pytest 22 passed, ruff grön |
+| RX06 | Krav 10 | v0.10.2beta | 2026-10-19 | Godkänt | test_rx06 i tests/test_calc.py (b51d96f): medel 3, 10, 6 och spridning med N - 1 (RX06), N = 1 ger NaN utan varning (RX07); kopia med fel facit röd |
+| RX09-RX10 + load_points | Krav 16 | v0.10.2beta | 2026-10-19 | Godkänt | test_rx09_eval och test_fit_rx10 i tests/test_calc.py, test_load_points i tests/test_files.py (fel rubrik, fel antal fält, check inte 0/1), t04.csv; pytest 26 passed |

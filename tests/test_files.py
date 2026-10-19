@@ -30,3 +30,19 @@ def test_csv(tmp_path):
     assert rows[1] == ["0", "1.5", "true"]
     assert rows[2] == ["1", "", "false"]
     assert rows[0] == ["x_px", "value", "valid"]
+
+
+def test_load_points(tmp_path):
+    path = tmp_path / "punkter.csv"
+    path.write_text("pixel,wavelength_nm,check\n100,500,0\n200,600,0\n180,581.5,1\n", encoding="utf-8")
+    pixels, wavelengths, is_check = files.load_points(path)
+    np.testing.assert_array_equal(pixels, [100, 200, 180])
+    np.testing.assert_array_equal(wavelengths, [500, 600, 581.5])
+    np.testing.assert_array_equal(is_check, [False, False, True])
+    fel = tmp_path / "fel.csv"
+    fel.write_text("pixel;wavelength_nm;check\n100;500;0\n", encoding="utf-8")
+    np.testing.assert_raises_regex(ValueError, "rad 1: fel rubrik", files.load_points, fel)
+    fel.write_text("pixel,wavelength_nm,check\n100,500\n", encoding="utf-8")
+    np.testing.assert_raises_regex(ValueError, "rad 2: fel antal fält", files.load_points, fel)
+    fel.write_text("pixel,wavelength_nm,check\n100,500,2\n", encoding="utf-8")
+    np.testing.assert_raises_regex(ValueError, "rad 2: check ska vara 0 eller 1", files.load_points, fel)
