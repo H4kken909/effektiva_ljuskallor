@@ -1,5 +1,7 @@
-"""Saves measurements on the disk and does not compute"""
+"""Sparar mätningar på disk och läser punktfiler och kända fördelningar. Filen räknar inte.
 
+Används av main.py (save, calibrate och response build).
+"""
 import csv
 import json
 import math
@@ -8,6 +10,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+
 
 
 def save_measurement(parent, spectrum, image, settings):
@@ -83,3 +86,38 @@ def load_points(path):
     wavelengths = np.array(wavelengths, dtype=np.float64)
     is_check = np.array(is_check, dtype=bool)
     return pixels, wavelengths, is_check
+def load_known(path):
+    """Läser en känd fördelning med kolumnerna wavelength_nm och relative_power_per_nm.
+
+    Parametrar: path: sökvägen till CSV-filen (str eller Path).
+    Returnerar: (wavelengths, values): våglängder i stigande nm (K,) float64 och relativ effekt per nm (K,) float64.
+    Fel: ValueError med input.invalid_argument, filnamnet och radnumret vid fel rubrik, fel antal fält, ett fält som
+    inte är ett tal, ett ogiltigt värde, en våglängd som inte stiger eller färre än två datarader; OSError om filen saknas.
+    """
+    name = Path(path).name
+    wavelengths = []
+    values = []
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        for line_no, row in enumerate(csv.reader(f), start=1):
+            if not row:
+                continue  # tom rad, en sist i filen är vanlig
+            if line_no == 1:
+                if row != ["wavelength_nm", "relative_power_per_nm"]:
+                    raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel rubrik {row}")
+                continue
+            if len(row) != 2:
+                raise ValueError(f"input.invalid_argument: {name}: fel antal fält, rad {line_no}")
+            try:
+                wavelength = float(row[0])
+                power = float(row[1])
+            except ValueError as err:
+                raise ValueError(f"input.invalid_argument: {name}: fältet är inte ett tal, rad {line_no}") from err
+            if not (math.isfinite(wavelength) and math.isfinite(power)) or power < 0:
+                raise ValueError(f"input.invalid_argument: {name}: ogiltigt värde, rad {line_no}")
+            if wavelengths and wavelength <= wavelengths[-1]:
+                raise ValueError(f"input.invalid_argument: {name}: våglängden stiger inte, rad {line_no}")
+            wavelengths.append(wavelength)
+            values.append(power)
+    if len(wavelengths) < 2:
+        raise ValueError(f"input.invalid_argument: färre än två datarader i {name}")
+    return np.array(wavelengths, dtype=np.float64), np.array(values, dtype=np.float64)

@@ -2,7 +2,13 @@
 
 Formatet följer Keep a Changelog, och versionsnumren följer semantisk versionering.
 
-## [0.7] - <ÅÅÅÅ-MM-DD>
+## [0.8] - <2026-10-19>
+Lagt till mörkerkorrigering (dark [N]) och responskorrigering (response build KNOWNFILE, response on och response off).
+- 0.8.1: main.py: dark och avdraget i measure
+- 0.8.2: calc.py: responsen räknas
+- v0.8.3: main.py: response och korrigerad signal
+
+## [0.7] - <2026-10-19>
 Lagt till våglängdskalibrering: kommandot calibrate PATH [DEGREE], läsning av punktfiler och x-axel i nm.
 - 0.7.1: calc.py: evaluate_wavelength och fit_wavelength
 - 0.7.2: files.py: load_points läser punktfilen
