@@ -9,6 +9,7 @@ import numpy as np
 from spectrometer import calc, files, plot, source
 
 DEFAULTS = {
+    CAPTURE_FRAMES = 16  # bilder i dark och reference: medlet av flera bilder har mindre brus än en enda
     "source": ("camera", 0), # ("file", sökväg eller "camera", N)
     "roi": None, # None är hela bilden, annars (x, y, bredd, höjd) i pixlar
     "axis": "horizontal", # riktningen spektrumet läses längs
@@ -39,6 +40,7 @@ def new_state(settings):
         "use_response": False,  # True när responsen ska användas (response on och off)
         "reference": None,  # referensspektrumet med kanal, values i counts (reference)
         "mode": "direct",  # "direct" eller "transmission" (mode)
+        "dark": (cmd_dark, "[N]: mät mörker med blockerad ljusväg"),
     }
 
 
@@ -61,10 +63,15 @@ def measure(state, src=None):
     try:
         for i in range(frames):
             image = source.read_frame(src)
+            if state["dark"] is not None:
+                corrected = image.astype(np.float64)
+                corrected = calc.subtract_dark(corrected, state["dark"])
+            else:
+                corrected = image
             roi = cfg["roi"]
             if roi is None:
                 roi = (0, 0, image.shape[1], image.shape[0])
-            table = calc.prepare(image, roi, cfg["axis"], cfg["channel"])
+            table = calc.prepare(corrected, roi, cfg["axis"], cfg["channel"])
             values = calc.extract_spectrum(table)
             spectra.append(values)
     finally:
@@ -94,6 +101,7 @@ def measure(state, src=None):
     state["image"] = image
     state["spectrum"] = spectrum
     return spectrum
+
 
 
 def _to_int(name, text, smallest):
@@ -377,6 +385,39 @@ def cmd_calibrate(state, args):
     low, high = valid_range  # packa upp först
     state["pixel_range"] = (low, high)
     state["spectrum"] = None
+
+def cmd_dark(state, args):
+    """Kommandot dark [N]: mäter mörkret som medel av N bilder med blockerad ljusväg.
+
+    Parametrar: state: programmets state; args: inga ord (CAPTURE_FRAMES bilder) eller ett heltal N, minst 1.
+    Returnerar: None
+    Fel: ValueError med input.invalid_argument vid fel ord, RuntimeError från källan. Det gamla mörkret står då kvar.
+    """
+    if len(args) > 1:
+        raise ValueError("input.invalid_argument: dark tar högst ett ord (N)")
+    if args:
+        N = _to_int("N", args[0], 1)
+    else:
+        N = CAPTURE_FRAMES
+    kind, value = state["settings"]["source"]
+    src = source.open_source(kind, value)
+    flat = []
+    try:
+        for _ in range(N):
+            frame = source.read_frame(src).astype(np.float64)
+            shape = frame.shape
+            flat.append(frame.reshape(-1))
+    finally:
+        source.close_source(src)
+    stacked = np.stack(flat)
+    # Mörkret är medlet av N bilder, pixel för pixel och kanal för kanal. Se rev7, RX03.
+    mean_image, _spread = calc.average_spectra(stacked)
+    state["dark"] = mean_image.reshape(shape)
+    state["spectrum"] = None
+    word = "bild" if N == 1 else "bilder"
+    print(f"mörker: {N} {word}, medel {np.mean(state["dark"]):g}")
+    if state["image"] is not None and np.mean(state["dark"]) >= 0.5 * np.mean(state["image"]):
+        print("Varning: mörkret liknar bilden. Var ljusvägen blockerad?")
 
 
 COMMANDS = {
