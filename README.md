@@ -25,7 +25,7 @@ Windows (PowerShell), Windows 10 och 11, Intel/AMD och ARM:
 
 1. `winget install --id Git.Git -e`
 2. `winget install --id astral-sh.uv -e` (stäng PowerShell och öppna ett nytt fönster efteråt, så att `git` och `uv` hittas)
-3. `git clone https://github.com/eliasholmberg05/effektiva_ljuskallor.git`
+3. `git clone https://github.com/H4kken909/effektiva_ljuskallor.git`
 4. `cd effektiva_ljuskallor`
 5. `git switch adrianfemboygaming`
 6. `uv python install cpython-3.12-windows-x86_64-none`
@@ -44,7 +44,7 @@ webbläsare första gången, eller `winget install --id GitHub.cli -e` och `gh a
 Arch Linux (bash):
 
 1. `sudo pacman -S --needed git uv tk base-devel psmisc v4l-utils guvcview`
-2. `git clone https://github.com/eliasholmberg05/effektiva_ljuskallor.git`
+2. `git clone https://github.com/H4kken909/effektiva_ljuskallor.git`
 3. `cd effektiva_ljuskallor`
 4. `git switch adrianfemboygaming`
 5. `uv python install 3.12`
@@ -79,6 +79,7 @@ Vanliga fel:
 
 `python -m spectrometer.main` startar prompten `spektro>`. `help` listar kommandona, `quit` eller Ctrl+D avslutar, och
 ett fel skrivs som en rad `Fel: ...` varefter prompten fortsätter. Sökvägar skrivs med `/`, aldrig `\`.
+Utan `source` mäter programmet från kamera 0; utan kamera, skriv `source file <bild>` först.
 Programmet minns inget mellan två starter: `dark`, `calibrate`, `response build` och `reference` körs om efter varje
 start.
 
@@ -135,6 +136,15 @@ kameran utan kamera och konstiga bildfiler. Resten i `tests/` är Adrians tester
 `PROTOKOLL-ELIAS.md` är Elias logg med en rad per del (`klar` och `anteckna` i `verktyg-elias.ps1`, på Arch
 `verktyg-elias.sh`), och `testprotokoll/` är Adrians. Det testerna inte når (kameran, uppställningen, installationen
 på en ren dator) kontrolleras för hand och står i testprotokollet.
+
+Kommandofilerna i `tests/kommandon/` är Adrians regressionstester: `testa_NN.txt` matas till programmet som i
+exempelkörningen under Körning, och utskriften ska vara lika `facit_NN.txt`, bortsett från mätmappens namn och
+residualer på 1e-10 och mindre. `testa_08b.txt` använder `x12_kand.csv`, en känd fördelning som börjar vid 490 nm, så
+att svaret blir detsamma på x64 och ARM.
+
+Frysmappen `testprotokoll/2026-10-19_frys/` är underlaget till Delrapport 2: `pytest.txt`, DR2-tabellen (`protokoll.md`),
+kravmatrisen (`kravmatris.md`), bevismapparna och kodbilagan `kod.pdf` (Krav 11: de fem filerna i `spectrometer/`
+ur taggen `v1.0.0`, med hashen överst).
 
 Testerna visar att räkningarna stämmer med sina tal. De visar inte att instrumentet mäter rätt: kamerans tal är
 relativa counts, aldrig watt eller verkningsgrad, och mjukvarutester bevisar inte att instrumentet mäter rätt
@@ -209,3 +219,4 @@ Gäller Linux (Arch) och Windows. Pixelvärdena är counts: relativa tal utan en
 - Kamerafelet `camera.open_failed: kunde inte öppna /dev/videoN. Kontrollera med v4l2-ctl --list-devices.` nämner `/dev/video` och `v4l2-ctl` också på Windows. Texten är skriven för Linux och ändras bara tillsammans med Adrians facit.
 - Å, ä och ö i sökvägar med OpenCV på Windows: `cv2.imread` kan misslyckas med bildfiler i mappar med å, ä eller ö i namnet, och programmet svarar då att filen inte gick att läsa som bild. Håll projektet och bilderna i en mapp utan å, ä och ö i hela sökvägen. Inte åtgärdat.
 - Uppvärmning: den första bilden efter att kameran öppnats kan vara mörk. `step` öppnar kameran vid varje anrop, så det hjälper inte att köra `step` en gång till. Mät med `python check_install.py --kamera N --bilder 5`. Säger den `OBS: mörk första bild`, överväg att läsa bort några bilder i `open_source`, med antalet från en inställning och inget fast tal i koden.
+- Kameran är inte provad på uppställningen. Kamerabeviset (0.6.1 del 1 och 4, Krav 13) och fallen A13, A06, A15 och A07 i testprotokollet står som Blockerat tills kameran, lysröret, lampan och filtren finns; då fylls värdena under Kamera, punkt 6, i. Allt annat för 1.0 är gjort.
