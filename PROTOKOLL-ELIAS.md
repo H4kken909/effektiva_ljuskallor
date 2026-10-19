@@ -36,4 +36,5 @@ Här skriver `klar` och `anteckna` (verktyg-elias.ps1 och verktyg-elias.sh) en r
 | 2026-10-19 | 05:42 | 0.10.1 del 1 | D1 i ruff | FEL (ruff, pytest) | e4851ea (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 05:43 | 0.10.1 del 2 | docstrings och kommentarer | FEL (ruff, pytest) | e4851ea (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 05:45 | 0.10.1 del 3 | README och exempel/del1.txt | FEL (ruff, pytest) | e4851ea (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:46 | 0.10.1 del 4 | ren klon (A01) | OK | 6e00857 | Windows DESKTOP-NFJKKB3 | <vad du rättade i README, eller inget> |
 | 2026-10-19 | 06:11 | rättning 0.8-0.10.1 | main.py importerbar igen (CAPTURE_FRAMES, COMMANDS dark och response), calc, files, README 0.10.1, exempel/ | OK | 6e00857 (+ändringar) | Windows DESKTOP-NFJKKB3 | v0.8.3beta2 och v0.9.3beta2 |
