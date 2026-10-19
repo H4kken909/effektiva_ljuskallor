@@ -1,6 +1,6 @@
-"""Coordinates the program. Run with python -m spectrometer.main and imagesource"""
-
+"""Håller ihop programmet: startas med python -m spectrometer.main och styrs med kommandon vid prompten spektro>."""
 import argparse
+import shlex
 import sys
 
 import matplotlib.pyplot as plt
@@ -8,15 +8,333 @@ import numpy as np
 
 from spectrometer import calc, files, plot, source
 
+DEFAULTS = {
+    "source": ("camera", 0), # ("file", sökväg eller "camera", N)
+    "roi": None, # None är hela bilden, annars (x, y, bredd, höjd) i pixlar
+    "axis": "horizontal", # riktningen spektrumet läses längs
+    "channel": "gray", # färgkanal: gray, sum, red, green eller blue
+    "output_dir": "data", # föräldramappen för mätmapparna
+    "frames": 1, # "bilder per mätning"
+    "min_response": 0.01, # minsta respons, utan enhet
+    "min_reference": 1.0, # minsta referens i counts
+}
 
-def main():
-    parser = argparse.ArgumentParser(prog="python -m spectrometer.main", description="Läser en bildfil, skriver toppen, sparar mätningen och ritar spektrumet.")
-    parser.add_argument("path", help="sökvägen till en bildfil")
-    args = parser.parse_args()
+AXES = ("horizontal", "vertical")
 
-    state = new_state(DEFAULTS)
-    state["settings"]["source"] = ("file", args.path)
+def new_state(settings):
+    return {"settings": settings.copy(), "image": None, "spectrum": None}
 
+def measure(state, src=None):
+    """Mäter frames bilder, gör ett spektrum av varje och tar medel; lägger spektrumet och sista bilden i state.
+
+    Parametrar: state: programmets state; src: en redan öppen källa som lånas (start), eller None för att öppna och
+    stänga källan här.
+    Returnerar: spektrumet, en ordbok med x (P,) float64 i pixlar, values (P,) float64 i counts, mask (P,) bool,
+    x_label och y_label.
+    Fel: ValueError med input.invalid_argument, RuntimeError med camera.open_failed eller camera.read_failed.
+    """
+    cfg = state["settings"]
+    kind, value = cfg["source"]
+    frames = cfg["frames"]
+    spectra = []
+    opened_here = src is None
+    if opened_here:
+        src = source.open_source(kind, value)
+    try:
+        for i in range(frames):
+            image = source.read_frame(src)
+            roi = cfg["roi"]
+            if roi is None:
+                roi = (0, 0, image.shape[1], image.shape[0])
+            table = calc.prepare(image, roi, cfg["axis"], cfg["channel"])
+            values = calc.extract_spectrum(table)
+            spectra.append(values)
+    finally:
+        if opened_here:
+            source.close_source(src)
+    stack = np.stack(spectra)
+    mean, _stddev = calc.average_spectra(stack)
+    values = mean
+    if cfg["axis"] == "horizontal":
+        first, count = roi[0], roi[2]
+    else:
+        first, count = roi[1], roi[3]
+    x = np.arange(first, first + count).astype("float64")
+    mask = np.isfinite(values)
+    spectrum = {"x": x, "values": values, "mask": mask, "x_label": "pixel", "y_label": "signal (counts)"}
+    state["image"] = image
+    state["spectrum"] = spectrum
+    return spectrum
+
+def _to_int(name, text, smallest):
+    try:
+        number = int(text)
+    except ValueError as error:
+        raise ValueError(f"input.invalid_argument: {name} ska vara ett heltal, fick {text}") from error
+    if number < smallest:
+        raise ValueError(f"input.invalid_argument: {name} ska vara minst {smallest}")
+    return number
+
+def _need(args, names, command):
+    if len(args) < len(names):
+        missing = names[len(args)]
+        raise ValueError(f"input.invalid_argument: {command}: {missing} saknas")
+    elif len(args) > len(names):
+        raise ValueError(f"input.invalid_argument: {command}: för många ord, väntade {len(names)}")
+
+
+def _set(state, key, value) -> None:
+    """Lägger en inställning i state och glömmer den gamla mätningen.
+
+    Parametrar: state: programmets state; key: nyckeln i settings (str); value: det nya värdet.
+    Returnerar: None
+    Fel: inga.
+    """
+    state["settings"][key] = value
+    state["spectrum"] = None
+
+
+def cmd_help(state, args):
+    """Kommandot help: skriver en rad per kommando ur COMMANDS.
+
+    Parametrar: state: programmets state; args: orden efter kommandot, inga.
+    Returnerar: None
+    Fel: ValueError med input.invalid_argument vid ord efter help.
+    """
+    _need(args, (), "help")
+    for name, entry in COMMANDS.items():
+        _function, help_text = entry
+        print(name, help_text)
+
+
+def cmd_quit(state, args):
+    """Kommandot quit: skriver Avslutar. och ber main att avsluta.
+
+    Parametrar: state: programmets state; args: orden efter kommandot, inga.
+    Returnerar: True
+    Fel: ValueError med input.invalid_argument vid ord efter quit.
+    """
+    _need(args, (), "quit")
+    print("Avslutar.")
+    return True
+
+
+def cmd_show(state, args):
+    """Kommandot show: skriver inställningarna, en per rad, och om en mätning finns.
+
+    Parametrar: state: programmets state; args: orden efter kommandot, inga.
+    Returnerar: None
+    Fel: ValueError med input.invalid_argument vid ord efter show.
+    """
+    _need(args, (), "show")
+    for key, value in state["settings"].items():
+        print(f"{key}: {value}")
+    if state["spectrum"] is not None:
+        print("Mätning: ja")
+    else:
+        print("Mätning: nej")
+
+
+def cmd_source(state, args):
+    """Kommandot source file PATH eller source camera N: byter källa och glömmer den gamla bilden.
+
+    Parametrar: state: programmets state; args: ["file", PATH] eller ["camera", N].
+    Returnerar: None
+    Fel: ValueError med input.invalid_argument om ord saknas, sorten är okänd eller N inte är ett heltal minst 0.
+    """
+    if not args:
+        raise ValueError("input.invalid_argument: source: kind saknas")
+    if args[0] == "file":
+        _need(args, ("kind", "path"), "source")
+        _set(state, "source", ("file", args[1]))
+    elif args[0] == "camera":
+        _need(args, ("kind", "index"), "source")
+        index = _to_int("index", args[1], 0)
+        _set(state, "source", ("camera", index))
+    else:
+        raise ValueError(f"input.invalid_argument: okänd källa {args[0]}, välj file eller camera")
+    state["image"] = None
+    print(f"source: {state['settings']['source']}")
+
+
+def cmd_roi(state, args):
+    """Kommandot roi X Y W H eller roi full: sätter ROI:n i pixlar efter att ha kontrollerat den.
+
+    Parametrar: state: programmets state; args: ["full"] eller fyra heltal x, y, width och height.
+    Returnerar: None
+    Fel: ValueError med input.invalid_argument om ord saknas, inte är heltal, är för små eller ROI:n inte ryms
+    i den senaste bilden. Den gamla ROI:n står då kvar.
+    """
+    if args == ["full"]:
+        _set(state, "roi", None)
+        print("roi: None (hela bilden)")
+        return
+    _need(args, ("x", "y", "width", "height"), "roi")
+    x = _to_int("x", args[0], 0)
+    y = _to_int("y", args[1], 0)
+    width = _to_int("width", args[2], 1)
+    height = _to_int("height", args[3], 1)
+    new_roi = (x, y, width, height)
+    if state["image"] is not None:
+        calc.prepare(state["image"], new_roi, state["settings"]["axis"], state["settings"]["channel"])
+    else:
+        print("ROI:n kontrolleras vid nästa mätning.")
+    _set(state, "roi", new_roi)
+    print(f"roi: {new_roi}")
+
+
+def cmd_channel(state, args):
+    """Kommandot channel NAMN: väljer färgkanal ur calc.CHANNELS.
+
+    Parametrar: state: programmets state; args: ett namn.
+    Returnerar: None
+    Fel: ValueError med input.invalid_argument om namnet saknas eller är okänt.
+    """
+    _need(args, ("name",), "channel")
+    if args[0] not in calc.CHANNELS:
+        allowed = ", ".join(calc.CHANNELS)
+        raise ValueError(f"input.invalid_argument: okänd kanal {args[0]}, välj {allowed}")
+    _set(state, "channel", args[0])
+    print(f"channel: {args[0]}")
+
+
+def cmd_axis(state, args):
+    """Kommandot axis RIKTNING: väljer riktning ur AXES.
+
+    Parametrar: state: programmets state; args: ett namn.
+    Returnerar: None
+    Fel: ValueError med input.invalid_argument om namnet saknas eller är okänt.
+    """
+    _need(args, ("name",), "axis")
+    if args[0] not in AXES:
+        allowed = ", ".join(AXES)
+        raise ValueError(f"input.invalid_argument: okänd riktning {args[0]}, välj {allowed}")
+    _set(state, "axis", args[0])
+    print(f"axis: {args[0]}")
+
+
+def cmd_frames(state, args):
+    """Kommandot frames N: antalet bilder per mätning.
+
+    Parametrar: state: programmets state; args: ett heltal N, minst 1.
+    Returnerar: None
+    Fel: ValueError med input.invalid_argument om N saknas, inte är ett heltal eller är mindre än 1.
+    """
+    _need(args, ("N",), "frames")
+    n = _to_int("N", args[0], 1)
+    _set(state, "frames", n)
+    print(f"frames: {n}")
+
+
+def cmd_step(state, args):
+    """Kommandot step: mäter, skriver toppen och antalet bilder, och varnar vid mättnad.
+
+    Parametrar: state: programmets state; args: orden efter kommandot, inga.
+    Returnerar: None
+    Fel: samma som measure, och ValueError med input.invalid_argument vid ord efter step.
+    """
+    _need(args, (), "step")
+    spectrum = measure(state)
+    i = np.nanargmax(spectrum["values"])
+    word = "bild" if state["settings"]["frames"] == 1 else "bilder"
+    print(f"Topp {spectrum["values"][i]:g} vid {spectrum["x_label"]} {spectrum["x"][i]:g} ({state["settings"]["frames"]} {word})")
+    crop = state["image"]
+    if state["settings"]["roi"] is not None:
+        crop = state["image"][state["settings"]["roi"][1]:state["settings"]["roi"][1] + state["settings"]["roi"][3], state["settings"]["roi"][0]:state["settings"]["roi"][0] + state["settings"]["roi"][2]]
+    if crop.max() >= 255:
+        print("Varning: mättad (255 i råbilden). Sänk exponeringen.")
+
+
+def cmd_save(state, args):
+    """Kommandot save [DIR]: sparar senaste mätningen i en ny mätmapp.
+
+    Parametrar: state: programmets state; args: inga ord (output_dir) eller en föräldramapp.
+    Returnerar: None
+    Fel: ValueError med input.invalid_argument vid fler än ett ord och input.missing_data om ingen mätning finns;
+    OSError om något inte går att skriva.
+    """
+    if len(args) > 1:
+        raise ValueError("input.invalid_argument: save tar högst ett ord (DIR)")
+    if state["spectrum"] is None:
+        raise ValueError("input.missing_data: Ingen mätning än. Kör step först.")
+    parent = args[0] if args else state["settings"]["output_dir"]
+    folder = files.save_measurement(parent, state["spectrum"], state["image"], state["settings"])
+    print(f"Sparad i {folder.as_posix()}")
+
+
+def cmd_start(state, args):
+    """Kommandot start: visar spektrumet live tills Ctrl+C eller tills fönstret stängs.
+
+    Parametrar: state: programmets state; args: orden efter kommandot, inga.
+    Returnerar: None
+    Fel: samma som measure; källan och fönstret stängs alltid i finally.
+    """
+    _need(args, (), "start")
+    print("Live. Tryck Ctrl+C eller stäng fönstret för att stoppa.")
+    kind, value = state["settings"]["source"]
+    src = None
+    win = None
+    try:
+        src = source.open_source(kind, value)
+        win = plot.open_plot()
+        while True:
+            if not plt.fignum_exists(win["fig"].number):
+                print("live stoppad")
+                break
+            spectrum = measure(state, src)
+            plot.draw(win, spectrum["x"], np.where(spectrum["mask"], spectrum["values"], np.nan), spectrum["x_label"], spectrum["y_label"])
+            plt.pause(0.05)
+    except KeyboardInterrupt:
+        print("live stoppad")
+    finally:
+        if src is not None:
+            source.close_source(src)
+        if win is not None:
+            plt.close(win["fig"])
+
+
+COMMANDS = {
+    "help": (cmd_help, "Visa kommandona"),
+    "quit": (cmd_quit, "Avsluta"),
+    "show": (cmd_show, "Visa inställningarna"),
+    "source": (cmd_source, "file PATH eller camera N"),
+    "roi": (cmd_roi, "X Y W H i pixlar, eller full för hela bilden"),
+    "channel": (cmd_channel, "gray, sum, red, green eller blue"),
+    "axis": (cmd_axis, "horizontal eller vertical"),
+    "frames": (cmd_frames, "N: bilder per mätning"),
+    "step": (cmd_step, "mät och skriv toppen"),
+    "save": (cmd_save, "[DIR]: spara senaste mätningen"),
+    "start": (cmd_start, "live med kameran, Ctrl+C stoppar"),
+}
+
+
+def run_command(state, line):
+    """Delar en rad i ord och anropar kommandot.
+
+    Parametrar: state: programmets state; line: raden från prompten (str).
+    Returnerar: svaret från kommandot: True från quit, annars None (också för en tom rad).
+    Fel: ValueError med input.invalid_argument vid citattecken utan slut eller okänt kommando; kommandots egna fel.
+    """
+    try:
+        words = shlex.split(line)
+    except ValueError as error:
+        raise ValueError("input.invalid_argument: citattecken saknar slut") from error
+    if not words:
+        return None  # tom rad: bara en ny prompt
+    if words[0] not in COMMANDS:
+        raise ValueError(f"input.invalid_argument: okänt kommando {words[0]}. Skriv help för en lista.")
+    function, _help_text = COMMANDS[words[0]]
+    return function(state, words[1:])
+
+
+def run_file(state, path):
+    """Mäter en bildfil en gång, som main gjorde i 0.3: skriver toppen, sparar mätningen och ritar spektrumet.
+
+    Parametrar: state: programmets state; path: sökvägen till bildfilen (str).
+    Returnerar: slutkoden, 0 om det gick och 1 vid ett fel (en rad Fel:).
+    Fel: fångar ValueError, RuntimeError och OSError.
+    """
+    state["settings"]["source"] = ("file", path)
     try:
         spectrum = measure(state)
         i = np.argmax(spectrum["values"])
@@ -35,48 +353,37 @@ def main():
     return 0
 
 
-DEFAULTS = {
-    "source": ("camera", 0), # ("file", sökväg eller "camera", N)
-    "roi": None, # None är hela bilden, annars (x, y, bredd, höjd) i pixlar
-    "axis": "horizontal", # riktningen spektrumet läses längs
-    "channel": "gray", # färgkanal: gray, sum, red, green eller blue
-    "output_dir": "data", # föräldramappen för mätmapparna
-    "frames": 1, "bilder per mätning"
-    "min_response": 0.01, # minsta respons, utan enhet
-    "min:reference": 1.0, # minsta referens i counts
-}
+def main():
+    """Kör prompten spektro> tills quit, Ctrl+D eller Ctrl+C vid prompten; ett fel blir en rad Fel:.
 
-def new_state(settings):
-    return {"settings": settings.copy(), "image": None, "spectrum": None}
+    Med en sökväg efter kommandot mäts bara den bildfilen en gång, som i 0.3 (run_file).
+    Parametrar: inga (sökvägen läses av argparse).
+    Returnerar: None för prompten (sys.exit ger då koden 0), annars slutkoden från run_file.
+    Fel: fångar ValueError, RuntimeError och OSError per rad, och KeyboardInterrupt under ett kommando (Avbrutet.).
+    """
+    parser = argparse.ArgumentParser(prog="python -m spectrometer.main", description="Utan sökväg: prompten spektro>. Med sökväg: läser bildfilen, skriver toppen, sparar mätningen och ritar spektrumet.")
+    parser.add_argument("path", nargs="?", help="sökvägen till en bildfil (utan den startar prompten)")
+    args = parser.parse_args()
 
-def measure(state):
-    cfg = state["settings"]
-    kind, value = cfg["source"]
+    state = new_state(DEFAULTS)
+    if args.path is not None:
+        return run_file(state, args.path)
+    print("Skriv help för kommandona. quit eller Ctrl+D avslutar.")
+    while True:
+        try:
+            line = input("spektro> ")
+        except (EOFError, KeyboardInterrupt):
+            print()
+            break
+        try:
+            answer = run_command(state, line)
+            if answer:
+                break
+        except (ValueError, RuntimeError, OSError) as error:
+            print(f"Fel: {error}")
+        except KeyboardInterrupt:
+            print("Avbrutet.")
 
-    handle = source.open_source(kind, value)
-    try:
-        image = source.read_frame(handle)
-    finally:
-        source.close_source(handle)
-    roi = cfg["roi"]
-
-    if cfg["roi"] is None:
-        roi = (0, 0, image.shape[1], image.shape[0])
-
-    table = calc.prepare(image, roi, cfg["axis"], cfg["channel"])
-    values = calc.extract_spectrum(table)
-
-    if cfg["axis"] == "horizontal":
-        first, count = roi[0], roi[2]
-    else:
-        first, count = roi[1], roi[3]
-    x = np.arange(first, first + count).astype("float64")
-    mask = np.isfinite(values)
-
-    spectrum = {"x": x, "values": values, "mask": mask, "x_label": "pixel", "y_label": "signal (counts)"}
-    state["image"] = image
-    state["spectrum"] = spectrum
-    return spectrum
 
 if __name__ == "__main__":
     sys.exit(main())
