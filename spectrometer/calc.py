@@ -32,60 +32,43 @@ def _check(name, a):
         raise ValueError(f"input.invalid_argument: {name} får bara innehålla ändliga tal")
 
 def prepare(image, roi, axis, channel):
-    """
-    Check image and convert ROI to table in float64 for a channel
+    """Skär ut ROI:n som float64, väljer kanal och vänder vid vertical.
 
-    Parameters:
-        image: The image, shape (H, W, 3), uint8 in BGR (ndarray).
-        roi: Region (x, y, width, height) in pixels (tuple).
-        axis: "horiontal" or "vertical" (str).
-        channel: onee of the naems in CHANNELS (str).
-    Returns:
-        2D-array in float64 with spectrum along columns
-    Errors:
-        ValueError with input.invalid_argument if image, roi, axis or channel is invalid.
+    Parametrar: image: bilden, (H, W, 3) uint8 i BGR och counts, eller float64 efter mörkeravdrag;
+    roi: (x, y, width, height) i pixlar; axis: "horizontal" eller "vertical"; channel: ett namn i CHANNELS.
+    Returnerar: tabellen, (rader, kolumner) float64 i counts, med spektrumet längs kolumnerna.
+    Fel: ValueError med input.invalid_argument om bilden, ROI:n, axis eller channel är fel.
     """
-    
-    if not isinstance(image, np.ndarray) or image.dtype != np.uint8:
-        raise ValueError("input.invalid_argument: image must be a uint8 array")
-
+    if not isinstance(image, np.ndarray) or image.dtype not in (np.uint8, np.float64):
+        raise ValueError("input.invalid_argument: image måste vara en uint8- eller float64-array")
     if image.ndim != 3 or image.shape[2] != 3:
-        raise ValueError(f"input.invalid_argument: image must have shape (H, W, 3), got {image.shape}")
-
+        raise ValueError(f"input.invalid_argument: image måste ha formen (H, W, 3), fick {image.shape}")
     x, y, width, height = roi
-
     if width <= 0 or height <= 0:
-        raise ValueError(f"input.invalid_argument: Width {width} or height {height} of roi are not larger than zero.")
-
-    # Check errors so we dont clip
+        raise ValueError(f"input.invalid_argument: roi måste ha bredd och höjd större än 0, fick {roi}")
     h, w = image.shape[:2]
-    if x<0 or y<0 or x+width>w or y+height>h:
-        raise ValueError(f"input.invalid_argument: roi {roi} is outside the image, width {w} and height {h}")
-
+    if x < 0 or y < 0 or x + width > w or y + height > h:
+        raise ValueError(f"input.invalid_argument: roi {roi} ligger utanför bilden ({w} bred, {h} hög)")
     if channel not in CHANNELS:
-        raise ValueError(f"input.invalid_argument: channel {channel} is not in {CHANNELS}")
-
+        raise ValueError(f"input.invalid_argument: okänd kanal {channel}, tillåtna är {CHANNELS}")
     if axis not in ("horizontal", "vertical"):
-        raise ValueError(f"input.invalid_argument: axis {axis} must be horizontal or vertical")
-
-    # Actually getting the ROI!
-    roi_view = image[y:y+height, x: x+width] # Rows y to y+height, kolumns x to x+width
-    cut = roi_view.astype(np.float64)
-
+        raise ValueError(f"input.invalid_argument: okänd riktning {axis}, tillåtna är ('horizontal', 'vertical')")
+    view = image[y:y + height, x:x + width]
+    cut = view.astype(np.float64)
     blue = cut[:, :, CHANNEL_INDEX["blue"]]
-    red = cut[:, :, CHANNEL_INDEX["red"]]
     green = cut[:, :, CHANNEL_INDEX["green"]]
-
+    red = cut[:, :, CHANNEL_INDEX["red"]]
     if channel in CHANNEL_INDEX:
         result = cut[:, :, CHANNEL_INDEX[channel]]
     elif channel == "sum":
         result = blue + green + red
     elif channel == "gray":
-        result = red_weight  * red + green_weight * green + blue_weight * blue
-
+        # Gråvärdet är varje färg gånger sin vikt, ihop (vikterna summerar till 1). Se rev7, RX01.
+        result = 0.299 * red + 0.587 * green + 0.114 * blue
     if axis == "vertical":
         result = result.T
     return result
+
 
 def extract_spectrum(table):
     """
@@ -171,3 +154,16 @@ def fit_wavelength(pixels, wavelengths, degree):
         raise ValueError(f"input.invalid_argument: grad {degree} behöver minst {degree + 1} punkter, fick {pixels.size}")
     # Minsta kvadrat-anpassning, koefficienterna i stigande ordning. Se rev7, RX10.
     return poly.polyfit(pixels, wavelengths, degree)
+def subtract_dark(image, dark):
+    """Drar av mörkret från bilden, utan att klippa negativa tal.
+
+    Parametrar: image och dark: (H, W, 3) float64 i counts.
+    Returnerar: image minus dark, en ny (H, W, 3) float64-array i counts.
+    Fel: ValueError med input.invalid_argument om en array inte är float64 med ändliga tal eller formerna skiljer sig.
+    """
+    _check("image", image)
+    _check("dark", dark)
+    if image.shape != dark.shape:
+        raise ValueError(f"input.invalid_argument: mörkret har formen {dark.shape} men bilden har {image.shape}")
+    # Signal utan mörker = bild minus mörker, i float64 så att inget slår runt. Se rev7, RX03.
+    return image - dark
