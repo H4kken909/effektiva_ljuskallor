@@ -1,0 +1,20 @@
+1 tagg: v0.3.3beta2
+1 tests\test_calc.py lika med testfiler-kopian: True
+2 blue  [[10.]]   ska vara [[10.]]   OK
+2 green [[20.]]   ska vara [[20.]]   OK
+2 red   [[30.]]   ska vara [[30.]]   OK
+2 sum   [[30.]]   ska vara [[60.]]   FEL
+2 gray  [[21.85]]   ska vara [[21.85]]   OK
+3 git restore: calc.py orörd igen
+3 __main__ finns i: main.py:81
+4 tests/test_calc.py::test_rx05 PASSED
+4 tests/test_calc.py::test_rx02 PASSED
+4 tests/test_calc.py::test_rx01_gray PASSED
+4 tests/test_files.py::test_csv PASSED
+4 tests/test_main.py::test_measure_peak PASSED
+4 tests/test_source.py::test_read_image PASSED
+4 pytest -v: 6 passed in 0.73s | pytest -q: 6 passed in 0.46s
+5 med 53: 1 failed, 5 passed in 0.53s | Mismatched elements: 1 / 3 hittad: True
+5 med 52 igen: 6 passed in 0.50s | filen lika med kopian: True
+6 ruff: All checks passed!
+SLUT block 24: FEL kanal sum -> klistra in det här
