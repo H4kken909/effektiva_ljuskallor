@@ -51,3 +51,28 @@ def test_fit_rx10():
     np.testing.assert_allclose(coefficients, [400 + 1/3, 1], rtol=1e-9, atol=1e-9)
     residuals = wavelengths - calc.evaluate_wavelength(pixels, coefficients)
     np.testing.assert_allclose(residuals, [-1/3, 2/3, -1/3], rtol=1e-9, atol=1e-9)
+
+
+def test_rx03():
+    """RX03: mörkret dras av pixel för pixel, och negativa värden klipps inte."""
+    image = np.full((1, 1, 3), 7.0)
+    dark = np.full((1, 1, 3), 10.0)
+    np.testing.assert_allclose(calc.subtract_dark(image, dark), -3.0, rtol=1e-9, atol=1e-9)
+
+
+def test_rx16():
+    """RX16: signal delat med respons där responsen är strikt större än min_response; exakt 0.01 är ogiltig."""
+    values, mask = calc.apply_response(np.array([1.0, 2.0, 2.0, 3.0, 3.0]), np.array([0.5, 1.0, 1.0, 0.005, 0.01]), np.array([True, True, True, True, True]), min_response=0.01)
+    np.testing.assert_allclose(values, [2.0, 2.0, 2.0, np.nan, np.nan], rtol=1e-9, atol=1e-9)
+    np.testing.assert_array_equal(mask, [True, True, True, False, False])
+
+
+def test_response_rx14():
+    """RX14: responsen är uppmätt delat med känt, delat med det största värdet."""
+    x = np.arange(500, 541, 10)
+    np.testing.assert_allclose(calc.build_response(x, np.array([2.0, 4.0, 8.0, 0.02, 0.04]), x, np.array([1.0, 1.0, 2.0, 1.0, 1.0])), [0.5, 1.0, 1.0, 0.005, 0.01], rtol=1e-9, atol=1e-9)
+
+
+def test_response_rx15():
+    """RX15: det kända interpoleras till mätningens våglängder; utanför de kända punkterna blir responsen nan."""
+    np.testing.assert_allclose(calc.build_response(np.array([505.0, 510.0, 530.0]), np.array([1.25, 3.0, 1.0]), np.array([500.0, 520.0]), np.array([1.0, 2.0])), [0.5, 1.0, np.nan], equal_nan=True)
