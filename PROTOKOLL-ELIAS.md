@@ -48,3 +48,4 @@ Här skriver `klar` och `anteckna` (verktyg-elias.ps1 och verktyg-elias.sh) en r
 | 2026-10-19 | 18:37 | 1.0-koll 2 | pytest-tempmappen, Issue 7, Adrians svit pa origin/tester i ren kopia | OK | 49f96d3 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 18:46 | 1.0.0 | frysen: origin/tester mergad, Issue #7 väg B (facit_07), CHANGELOG, tagg v1.0.0 | OK, 32 passed, ruff grön | b304314 (+ändringar) | Windows DESKTOP-NFJKKB3 | Adrian frånvarande: A11, A13, A06, A15, A07, Uppgift 16 och frysmappen inte gjorda |
 | 2026-10-19 | 19:20 | 1.0.0 kontroll | ny klon av v1.0.0 från GitHub: check_install, ruff, pytest, kommandofiler mot facit; GitHub städat | OK | 1770adb (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 20:08 | testrundan v1.0.0 | A11, Testa 0.7 och 0.8b, A13 A06 A15 A07 Blockerat, Uppgift 16, A16, Slutkoll, frysmappen på tester (Adrian frånvarande) | OK | 698b824 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
