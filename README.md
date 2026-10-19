@@ -77,6 +77,12 @@ Vanliga fel:
 
 ## Körning
 
+`py -m spektro` (Windows) eller `python3 -m spektro` (Linux, inte provat än) i projektmappen startar samma
+program med startskärm: maximerat fönster, prismat och fyra gula rader, sedan prompten. Första gången byggs
+`.venv` och `requirements.txt` installeras, så ingen behöver aktivera miljön. `--windowed` lämnar fönstret som
+det är, `--no-splash` går direkt till prompten och `--delay SEK` ändrar pausen mellan raderna. Utan terminal
+(pipad in- eller utmatning) blir utskriften densamma som från `python -m spectrometer.main`.
+
 `python -m spectrometer.main` startar prompten `spektro>`. `help` listar kommandona, `quit` eller Ctrl+D avslutar, och
 ett fel skrivs som en rad `Fel: ...` varefter prompten fortsätter. Sökvägar skrivs med `/`, aldrig `\`.
 Utan `source` mäter programmet från kamera 0; utan kamera, skriv `source file <bild>` först.
