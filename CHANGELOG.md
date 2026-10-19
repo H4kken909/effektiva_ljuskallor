@@ -2,6 +2,12 @@
 
 Formatet följer Keep a Changelog, och versionsnumren följer semantisk versionering.
 
+## [0.7] - <ÅÅÅÅ-MM-DD>
+Lagt till våglängdskalibrering: kommandot calibrate PATH [DEGREE], läsning av punktfiler och x-axel i nm.
+- 0.7.1: calc.py: evaluate_wavelength och fit_wavelength
+- 0.7.2: files.py: load_points läser punktfilen
+- v0.7.3: main.py: calibrate och x-axeln i nm
+
 ## [0.6] - 2026-10-19 - Lagt till webbkameran som källa (V4L2 på Linux, DirectShow på Windows) och kommandot start, som visar spektrumet live tills Ctrl+C eller tills fönstret stängs. measure kan låna en öppen källa, och kameran släpps alltid (T15).
 
 - 0.6.1 source.py: kameran som källa, Linux och Windows. open_source, read_frame och close_source har kameragrenar med camera.open_failed och camera.read_failed. README.md har ## Kamera, med låsta reglage och exponering.
@@ -28,3 +34,4 @@ Formatet följer Keep a Changelog, och versionsnumren följer semantisk versione
 - 0.0.6 .gitignore och README: `.gitignore` och `README.md` med Installation.
 - 0.0.7 CHANGELOG.md: den här filen.
 - 0.0.8 Kontroll av projektmappen: pytest och ruff körda, tagg v0.0.8. Rättat i efterhand i 0.0.8-2 (pyproject.toml, tests/.gitkeep, .gitignore, tom main.py) och 0.0.8-3 (pyproject.toml på rätt plats, README, CHANGELOG, todo.txt ur git).
+

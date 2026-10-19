@@ -22,14 +22,32 @@ DEFAULTS = {
 AXES = ("horizontal", "vertical")
 
 def new_state(settings):
-    return {"settings": settings.copy(), "image": None, "spectrum": None}
+    """Ger en ny state-ordbok med en kopia av inställningarna.
+
+    Parametrar: settings: inställningarna, till exempel DEFAULTS (ändras inte).
+    Returnerar: state, en ordbok med nycklarna nedan.
+    Fel: inga.
+    """
+    return {
+        "settings": settings.copy(),  # inställningarna, skrivs till settings.json
+        "image": None,  # senaste råbilden, (H, W, 3) uint8 i counts, None tills step
+        "spectrum": None,  # senaste mätningen (ordbok från measure), None tills step
+        "coefficients": None,  # kalibreringens koefficienter, float64, a0 först (calibrate)
+        "pixel_range": None,  # kalibreringens giltiga intervall (låg, hög) i pixlar (calibrate)
+        "dark": None,  # mörkret, (H, W, 3) float64 i counts (dark)
+        "response": None,  # responsen: {"x": nm, "values": relativ} (response build)
+        "use_response": False,  # True när responsen ska användas (response on och off)
+        "reference": None,  # referensspektrumet med kanal, values i counts (reference)
+        "mode": "direct",  # "direct" eller "transmission" (mode)
+    }
+
 
 def measure(state, src=None):
     """Mäter frames bilder, gör ett spektrum av varje och tar medel; lägger spektrumet och sista bilden i state.
 
     Parametrar: state: programmets state; src: en redan öppen källa som lånas (start), eller None för att öppna och
     stänga källan här.
-    Returnerar: spektrumet, en ordbok med x (P,) float64 i pixlar, values (P,) float64 i counts, mask (P,) bool,
+    Returnerar: spektrumet, en ordbok med x (P,) float64 i pixlar eller nm (stigande), values (P,) float64 i counts, mask (P,) bool,
     x_label och y_label.
     Fel: ValueError med input.invalid_argument, RuntimeError med camera.open_failed eller camera.read_failed.
     """
@@ -61,10 +79,22 @@ def measure(state, src=None):
         first, count = roi[1], roi[3]
     x = np.arange(first, first + count).astype("float64")
     mask = np.isfinite(values)
-    spectrum = {"x": x, "values": values, "mask": mask, "x_label": "pixel", "y_label": "signal (counts)"}
+    x_label = "pixel"
+    if state["coefficients"] is not None:
+        low, high = state["pixel_range"]
+        inside = (x >= low) & (x <= high)
+        mask = mask & inside
+        x = calc.evaluate_wavelength(x, state["coefficients"])
+        x_label = "våglängd (nm)"
+    if x[0] > x[-1]:
+        x = x[::-1]
+        values = values[::-1]
+        mask = mask[::-1]
+    spectrum = {"x": x, "values": values, "mask": mask, "x_label": x_label, "y_label": "signal (counts)"}
     state["image"] = image
     state["spectrum"] = spectrum
     return spectrum
+
 
 def _to_int(name, text, smallest):
     try:
@@ -293,6 +323,62 @@ def cmd_start(state, args):
             plt.close(win["fig"])
 
 
+def cmd_calibrate(state, args):
+    """Kommandot calibrate PATH [DEGREE]: anpassar våglängden till en punktfil och prövar den mot kontrollpunkterna.
+
+    Parametrar: state: programmets state; args: punktfilens sökväg och valfritt graden 1 eller 2.
+    Returnerar: None
+    Fel: ValueError med input.invalid_argument vid fel ord, fel i punktfilen, för få punkter eller en linje som inte
+    är monoton i det giltiga intervallet; OSError om filen saknas. Den gamla kalibreringen står då kvar.
+    """
+    if not args:
+        _need(args, ("PATH",), "calibrate")  # kommatecknet är obligatoriskt
+    if len(args) > 2:
+        raise ValueError("input.invalid_argument: calibrate tar högst två ord (PATH DEGREE)")
+    if len(args) == 2:
+        degree = _to_int("DEGREE", args[1], 1)
+    else:
+        degree = 1
+    pixels, wavelengths, is_check = files.load_points(args[0])
+    fit_pixels = pixels[~is_check]
+    check_pixels = pixels[is_check]
+    fit_wavelengths = wavelengths[~is_check]
+    check_wavelengths = wavelengths[is_check]
+    coefficients = calc.fit_wavelength(fit_pixels, fit_wavelengths, degree)  # bara anpassningspunkter
+    print(f"a0: {coefficients[0]:g}")
+    print(f"a1: {coefficients[1]:g}")
+    if degree == 2:
+        print(f"a2: {coefficients[2]:g}")
+    width = np.max(fit_pixels) - np.min(fit_pixels)
+    valid_range = (max(np.min(fit_pixels) - width, 0), np.max(fit_pixels) + width)
+    print(f"anpassat: pixel {np.min(fit_pixels):g} till {np.max(fit_pixels):g}")
+    print(f"giltigt: pixel {valid_range[0]:g} till {valid_range[1]:g}")
+    # Linjen måste vara monoton i det giltiga intervallet, annars får två pixlar samma våglängd.
+    test_pixels = np.arange(valid_range[0], valid_range[1] + 1, dtype=np.float64)
+    diffs = np.diff(calc.evaluate_wavelength(test_pixels, coefficients))
+    if not (np.all(diffs > 0) or np.all(diffs < 0)):
+        raise ValueError(
+            f"input.invalid_argument: inte monoton mellan pixel {valid_range[0]:g} och {valid_range[1]:g}"
+        )
+    residuals = fit_wavelengths - calc.evaluate_wavelength(fit_pixels, coefficients)
+    for residual in residuals:
+        print(f"residual: {residual:g}")
+    check_errors = check_wavelengths - calc.evaluate_wavelength(check_pixels, coefficients)
+    # Lokalt steg: hur många nm en pixel är vid kontrollpunkten.
+    step = np.abs(calc.evaluate_wavelength(check_pixels + 1, coefficients) - calc.evaluate_wavelength(check_pixels, coefficients))
+    # varna när abs(fel) är större än steget
+    for pixel, error, s in zip(check_pixels, check_errors, step):
+        print(f"kontrollfel vid pixel {pixel:g}: {error:g}")
+        if abs(error) > s:
+            print(f"Varning: kontrollfelet {error:g} nm är större än steget {s:g} nm.")
+    if check_pixels.size == 0:
+        print("inte kontrollerad: inga kontrollpunkter i filen")
+    state["coefficients"] = coefficients
+    low, high = valid_range  # packa upp först
+    state["pixel_range"] = (low, high)
+    state["spectrum"] = None
+
+
 COMMANDS = {
     "help": (cmd_help, "Visa kommandona"),
     "quit": (cmd_quit, "Avsluta"),
@@ -305,7 +391,9 @@ COMMANDS = {
     "step": (cmd_step, "mät och skriv toppen"),
     "save": (cmd_save, "[DIR]: spara senaste mätningen"),
     "start": (cmd_start, "live med kameran, Ctrl+C stoppar"),
+    "calibrate": (cmd_calibrate, "PATH [DEGREE]: anpassa våglängd till en punktfil"),
 }
+
 
 
 def run_command(state, line):
