@@ -1,0 +1,20 @@
+source file tests/data/bilder/rand_x12.png
+roi 10 0 3 2
+channel red
+response build tests/data/kanda_fordelningar/rx14_t16.csv
+response on
+source file tests/kommandon/svart.png
+dark 1
+source file tests/data/bilder/rand_x12.png
+calibrate tests/kommandon/x12_500.csv
+step
+response build tests/data/kanda_fordelningar/rx14_t16.csv
+response on
+step
+calibrate tests/kommandon/x12_495.csv
+step
+response off
+step
+roi 10 0 3 2
+response on
+quit

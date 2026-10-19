@@ -1,0 +1,38 @@
+kor tests\kommandon\testa_08b.txt -W, v0.10.2beta, 2026-10-19 (omgjord efter rättningen av kor och jamfor, 2c268e9):
+     1  Skriv help för kommandona. quit eller Ctrl+D avslutar.
+     2  spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+     3  spektro> ROI:n kontrolleras vid nästa mätning.
+     4  roi: (10, 0, 3, 2)
+     5  spektro> channel: red
+     6  spektro> Fel: input.missing_data: inget mörker, kör dark först
+     7  spektro> Fel: input.missing_data: ingen respons, kör response build först
+     8  spektro> source: ('file', 'tests/kommandon/svart.png')
+     9  spektro> mörker: 1 bild, medel 0
+    10  spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+    11  spektro> a0: 400
+    12  a1: 10
+    13  anpassat: pixel 10 till 12
+    14  giltigt: pixel 8 till 14
+    15  residual: 5.68434e-14
+    16  residual: 0
+    17  inte kontrollerad: inga kontrollpunkter i filen
+    18  spektro> Topp 200 vid våglängd (nm) 520 (1 bild)
+    19  spektro> respons: 2 av 3 positioner giltiga
+    20  spektro> respons: on
+    21  spektro> Topp 200 vid våglängd (nm) 520 (1 bild)
+    22  spektro> a0: 395
+    23  a1: 10
+    24  anpassat: pixel 10 till 12
+    25  giltigt: pixel 8 till 14
+    26  residual: 1.13687e-13
+    27  residual: 0
+    28  inte kontrollerad: inga kontrollpunkter i filen
+    29  spektro> Topp 400 vid våglängd (nm) 515 (1 bild)
+    30  spektro> respons: off
+    31  spektro> Topp 200 vid våglängd (nm) 515 (1 bild)
+    32  spektro> Responsen glömd. Kör response build igen.
+    33  roi: (10, 0, 3, 2)
+    34  spektro> Fel: input.missing_data: ingen respons, kör response build först
+    35  spektro> Avslutar.
+
+jamfor mot facit_08b (tomt = lika):
