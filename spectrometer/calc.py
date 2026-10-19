@@ -1,6 +1,9 @@
-"""All räkning i programmet. Filen importerar bara NumPy."""
+"""All räkning i programmet, bara med NumPy: spektrum, medel, våglängd, mörker, respons och transmission.
 
+Används av main.py. Filen vet ingenting om state, filer eller kameran.
+"""
 import numpy as np
+from numpy.polynomial import polynomial as poly
 
 # Variables
 ## Channels
@@ -126,3 +129,45 @@ def average_spectra(stack):
         # Stickprovsstandardavvikelse, delad med N - 1 (ddof=1). Se rev7, RX06.
         stddev = np.std(stack, axis=0, ddof=1)
     return mean, stddev
+
+def evaluate_wavelength(pixels, coefficients):
+    """Ger våglängden i nm vid varje pixel.
+
+    Parametrar: pixels: pixlar räknade i hela bilden, (P,) float64; coefficients: 2 eller 3 koefficienter,
+    float64, a0 först (nm, nm per pixel, nm per pixel i kvadrat).
+    Returnerar: våglängderna i nm, (P,) float64.
+    Fel: ValueError med input.invalid_argument om en array inte är float64 med ändliga tal,
+    eller om coefficients inte har 2 eller 3 värden.
+    """
+    _check("pixels", pixels)
+    _check("coefficients", coefficients)
+    if coefficients.size not in (2, 3):
+        raise ValueError(f"input.invalid_argument: coefficients ska ha 2 eller 3 värden, fick {coefficients.size}")
+    # Våglängd = a0 + a1·p (+ a2·p²), a0 först. Se rev7, RX09.
+    return poly.polyval(pixels, coefficients)
+
+
+def fit_wavelength(pixels, wavelengths, degree):
+    """Anpassar ett polynom av grad 1 eller 2 till anpassningspunkterna.
+
+    Parametrar: pixels: pixlar i hela bilden, (K,) float64; wavelengths: kända våglängder i nm, (K,) float64;
+    degree: 1 eller 2.
+    Returnerar: degree + 1 koefficienter, float64, a0 först.
+    Fel: ValueError med input.invalid_argument om graden inte är 1 eller 2, arrayerna är fel,
+    samma pixel står två gånger eller punkterna är för få.
+    """
+    if degree not in (1, 2):
+        raise ValueError(f"input.invalid_argument: degree ska vara 1 eller 2, fick {degree}")
+    _check("pixels", pixels)
+    _check("wavelengths", wavelengths)
+    if pixels.shape != wavelengths.shape:
+        raise ValueError(
+            f"input.invalid_argument: pixels och wavelengths har olika form, {pixels.shape} och {wavelengths.shape}"
+        )
+    unique = np.unique(pixels)
+    if unique.size < pixels.size:
+        raise ValueError("input.invalid_argument: samma pixel står två gånger")
+    if pixels.size < degree + 1:
+        raise ValueError(f"input.invalid_argument: grad {degree} behöver minst {degree + 1} punkter, fick {pixels.size}")
+    # Minsta kvadrat-anpassning, koefficienterna i stigande ordning. Se rev7, RX10.
+    return poly.polyfit(pixels, wavelengths, degree)
