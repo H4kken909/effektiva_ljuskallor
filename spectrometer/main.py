@@ -149,6 +149,12 @@ def _measure_direct(state, n):
     return measure(direct_state)
 
 def _to_int(name, text, smallest):
+    """Gör om ett ord till ett heltal som är minst smallest.
+
+    Parametrar: name: namnet i felmeddelandet (str); text: ordet från prompten (str); smallest: minsta tillåtna tal (int).
+    Returnerar: talet (int).
+    Fel: ValueError med input.invalid_argument om ordet inte är ett heltal eller är mindre än smallest.
+    """
     try:
         number = int(text)
     except ValueError as error:
@@ -158,6 +164,12 @@ def _to_int(name, text, smallest):
     return number
 
 def _need(args, names, command):
+    """Kontrollerar att kommandot fick lika många ord som names.
+
+    Parametrar: args: orden efter kommandot (list); names: namnen på orden som behövs (tuple); command: kommandots namn (str).
+    Returnerar: None
+    Fel: ValueError med input.invalid_argument när ett ord saknas (felet säger vilket) eller när orden är för många.
+    """
     if len(args) < len(names):
         missing = names[len(args)]
         raise ValueError(f"input.invalid_argument: {command}: {missing} saknas")

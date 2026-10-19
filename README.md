@@ -1,3 +1,43 @@
+Windows (PowerShell):
+1. winget install --id Git.Git -e
+2. winget install --id astral-sh.uv -e
+3. git clone https://github.com/eliasholmberg05/effektiva_ljuskallor.git
+4. cd effektiva_ljuskallor
+5. git switch adrianfemboygaming
+6. uv python install 3.12
+7. uv venv --seed
+8. .venv\Scripts\Activate.ps1 (första gången: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned)
+9. uv pip install -r requirements.txt -r requirements-dev.txt
+10. python check_install.py
+
+Arch Linux (bash):
+1. sudo pacman -S --needed git uv github-cli base-devel psmisc v4l-utils guvcview
+2. git clone https://github.com/eliasholmberg05/effektiva_ljuskallor.git
+3. cd effektiva_ljuskallor
+4. git switch adrianfemboygaming
+5. uv python install 3.12
+6. uv venv --seed
+7. source .venv/bin/activate
+8. uv pip install -r requirements.txt -r requirements-dev.txt
+9. python check_install.py
+
+source camera 0
+roi <x> <y> <bredd> <höjd>
+channel <kanal>
+dark
+calibrate <punktfil>
+response build <känd fördelning>
+response on
+frames 16
+step
+save
+reference
+mode transmission
+step
+save
+quit
+
+
 # Effektiva ljuskällor – spectrometer
 
 A small Python program that turns a webcam image (or an image file) of a spectrum into a calibrated spectral curve. Built for the course TFYY51 at Linköping University (project group GRYb1), software part of Delrapport 2.

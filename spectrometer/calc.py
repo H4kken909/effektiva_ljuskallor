@@ -87,6 +87,7 @@ def extract_spectrum(table):
     if table.size == 0:
         raise ValueError("input.invalid_argument: table is empty")
 
+    # Spektrumet är medlet av raderna, ett värde per kolumn. Se rev7, RX05.
     return np.mean(table, axis=0)
 
 
