@@ -222,3 +222,32 @@ def apply_response(signal, response, mask, min_response):
     # Korrigerad signal = signal delad med responsen, bara där den nya masken är True.
     np.divide(signal, response, out=values, where=new_mask)
     return values, new_mask
+
+def transmission_ratio(sample, reference, mask, min_reference):
+    """Delar provet med referensen där masken är True och referensen är strikt större än min_reference.
+
+    Parametrar: sample: provet, (P,) float64 i counts, får vara negativt; reference: referensen, (P,) float64 i counts;
+    mask: (P,) bool, True där värdet duger; min_reference: minsta giltiga referens i counts.
+    Returnerar: (values, mask): transmissionen (P,) float64 som kvot, NaN där den inte går att räkna,
+    och den nya masken (P,) bool.
+    Fel: ValueError med input.invalid_argument vid olika form, en mask som inte är bool, en tröskel som inte är
+    ändlig och större än 0, eller NaN och inf på en giltig plats.
+    """
+    if sample.shape != reference.shape:
+        raise ValueError(f"input.invalid_argument: reference har annan form än sample {sample.shape} {reference.shape}")
+    if sample.shape != mask.shape:
+        raise ValueError(f"input.invalid_argument: mask har annan form än sample {sample.shape} {mask.shape}")
+    if mask.dtype != np.bool_:
+        raise ValueError(f"input.invalid_argument: mask måste vara en bool-array, fick {mask.dtype}")
+    if not np.isfinite(min_reference) or min_reference <= 0:
+        raise ValueError(
+            f"input.invalid_argument: min_reference måste vara ändligt och större än 0, fick {min_reference}"
+        )
+    _check("sample", sample[mask])
+    _check("reference", reference[mask])
+    # Strikt >: exakt min_reference är ogiltig. Se rev7, T06.
+    valid = mask & (reference > min_reference)
+    values = np.full(sample.shape[0], np.nan)
+    # Transmission T = I_prov / I_ref, bara där den nya masken är True. Se rev7, RX17.
+    np.divide(sample, reference, out=values, where=valid)
+    return values, valid
