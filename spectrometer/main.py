@@ -18,6 +18,8 @@ DEFAULTS = {
     "frames": 1, # "bilder per mätning"
     "min_response": 0.01, # minsta respons, utan enhet
     "min_reference": 1.0, # minsta referens i counts
+    "response": (cmd_response, "build KNOWNFILE | on | off"),
+
 }
 
 AXES = ("horizontal", "vertical")
@@ -51,7 +53,7 @@ def measure(state, src=None):
     stänga källan här.
     Returnerar: spektrumet, en ordbok med x (P,) float64 i pixlar eller nm (stigande), values (P,) float64 i counts, mask (P,) bool,
     x_label och y_label.
-    Fel: ValueError med input.invalid_argument, RuntimeError med camera.open_failed eller camera.read_failed.
+    Fel: ValueError med input.invalid_argument eller input.missing_data, RuntimeError med camera.open_failed eller camera.read_failed.
     """
     cfg = state["settings"]
     kind, value = cfg["source"]
@@ -87,6 +89,7 @@ def measure(state, src=None):
     x = np.arange(first, first + count).astype("float64")
     mask = np.isfinite(values)
     x_label = "pixel"
+    y_label = "signal (counts)"
     if state["coefficients"] is not None:
         low, high = state["pixel_range"]
         inside = (x >= low) & (x <= high)
@@ -97,12 +100,31 @@ def measure(state, src=None):
         x = x[::-1]
         values = values[::-1]
         mask = mask[::-1]
-    spectrum = {"x": x, "values": values, "mask": mask, "x_label": x_label, "y_label": "signal (counts)"}
+    if state["use_response"] and state["mode"] == "direct":
+        if state["coefficients"] is None:
+            raise ValueError("input.missing_data: ingen kalibrering, kör calibrate först")
+        response_at_x = np.interp(x, state["response"]["x"], state["response"]["values"], left=np.nan, right=np.nan)
+        mask = mask & np.isfinite(response_at_x)
+        values, mask = calc.apply_response(values, response_at_x, mask, cfg["min_response"])
+        y_label = "korrigerad signal (relativ)"
+    spectrum = {"x": x, "values": values, "mask": mask, "x_label": x_label, "y_label": y_label}
     state["image"] = image
     state["spectrum"] = spectrum
     return spectrum
 
+def _measure_direct(state, n):
+    """Mäter med en kopia av state i mode direct, utan respons och med n bilder (lampa och referens).
 
+    Parametrar: state: programmets state (ändras inte); n: antalet bilder, minst 1.
+    Returnerar: spektrumet från measure, i counts.
+    Fel: samma som measure.
+    """
+    direct_state = state.copy()
+    direct_state["settings"] = state["settings"].copy()
+    direct_state["mode"] = "direct"
+    direct_state["use_response"] = False
+    direct_state["settings"]["frames"] = n
+    return measure(direct_state)
 
 def _to_int(name, text, smallest):
     try:
@@ -122,7 +144,7 @@ def _need(args, names, command):
 
 
 def _set(state, key, value) -> None:
-    """Lägger en inställning i state och glömmer den gamla mätningen.
+    """Lägger en inställning i state och glömmer den gamla mätningen (roi och channel glömmer också responsen).
 
     Parametrar: state: programmets state; key: nyckeln i settings (str); value: det nya värdet.
     Returnerar: None
@@ -130,6 +152,11 @@ def _set(state, key, value) -> None:
     """
     state["settings"][key] = value
     state["spectrum"] = None
+    if key in ("roi", "channel") and state["response"] is not None:
+        state["response"] = None
+        state["use_response"] = False
+        print("Responsen glömd. Kör response build igen.")
+
 
 
 def cmd_help(state, args):
@@ -419,6 +446,40 @@ def cmd_dark(state, args):
     if state["image"] is not None and np.mean(state["dark"]) >= 0.5 * np.mean(state["image"]):
         print("Varning: mörkret liknar bilden. Var ljusvägen blockerad?")
 
+def cmd_response(state, args):
+    """Kommandot response build KNOWNFILE, response on eller response off.
+
+    Parametrar: state: programmets state; args: ["build", KNOWNFILE], ["on"] eller ["off"].
+    Returnerar: None
+    Fel: ValueError med input.invalid_argument vid fel ord och input.missing_data utan mörker, kalibrering eller respons;
+    OSError om filen saknas.
+    """
+    if not args or args[0] not in ("build", "on", "off"):
+        raise ValueError("input.invalid_argument: första ordet ska vara build, on eller off")
+    if args[0] == "build":
+        rest = args[1:]
+        _need(rest, ("KNOWNFILE",), "response")
+        if state["dark"] is None:
+            raise ValueError("input.missing_data: inget mörker, kör dark först")
+        if state["coefficients"] is None:
+            raise ValueError("input.missing_data: ingen kalibrering, kör calibrate först")
+        known_wavelengths, known_values = files.load_known(rest[0])
+        lamp = _measure_direct(state, CAPTURE_FRAMES)
+        lamp_values = np.where(lamp["mask"], lamp["values"], np.nan)
+        response_values = calc.build_response(lamp["x"], lamp_values, known_wavelengths, known_values)
+        state["response"] = {"x": lamp["x"].copy(), "values": response_values}
+        state["spectrum"] = None
+        print(f"respons: {np.count_nonzero(np.isfinite(state["response"]["values"]))} av {len(state["response"]["values"])} positioner giltiga")
+    elif args[0] == "on":
+        if state["response"] is None:
+            raise ValueError("input.missing_data: ingen respons, kör response build först")
+        state["use_response"] = True
+        state["spectrum"] = None
+        print("respons: on")
+    elif args[0] == "off":
+        state["use_response"] = False
+        state["spectrum"] = None
+        print("respons: off")
 
 COMMANDS = {
     "help": (cmd_help, "Visa kommandona"),

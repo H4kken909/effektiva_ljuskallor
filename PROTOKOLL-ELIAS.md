@@ -21,3 +21,8 @@ Här skriver `klar` och `anteckna` (verktyg-elias.ps1 och verktyg-elias.sh) en r
 | 2026-10-19 | 05:13 | 0.8.1 alla delar | main.py: dark och avdraget i measure | FEL (ruff, pytest) | 1d79a15 | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 05:14 | 0.8.2 del 1 | build_response | FEL (ruff, pytest) | 1d79a15 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 05:14 | 0.8.2 del 2 | apply_response | FEL (ruff, pytest) | 1d79a15 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:14 | 0.8.2 alla delar | calc.py: responsen räknas | FEL (ruff, pytest) | abfa994 | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:15 | 0.8.3 del 1 | load_known | FEL (ruff, pytest) | abfa994 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:18 | 0.8.3 del 5 | response build, on och off, respons i measure | FEL (ruff, pytest) | abfa994 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:19 | 0.8.3 del 6 | CHANGELOG 0.8 | OK | abfa994 (+ändringar) | Windows DESKTOP-NFJKKB3 | ## [0.8] med en rad per bit |
+| 2026-10-19 | 05:19 | 0.8.3 alla delar | main.py: response och korrigerad signal | FEL (ruff, pytest) | abfa994 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
