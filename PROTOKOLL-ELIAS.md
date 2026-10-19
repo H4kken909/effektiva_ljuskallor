@@ -10,3 +10,7 @@ Här skriver `klar` och `anteckna` (verktyg-elias.ps1 och verktyg-elias.sh) en r
 | 2026-10-19 | 04:43 | 0.7.1 del 1 | evaluate_wavelength och fit_wavelength | OK | 72e74f0 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 04:44 | 0.7.2 del 1 | kalibrering/hg_linjer.csv, fem Hg-linjer | OK | cb5ca04 (+ändringar) | Windows DESKTOP-NFJKKB3 | NIST mercurytable2, luftvåglängder |
 | 2026-10-19 | 05:03 | 0.7.2 del 2 | load_points | OK | eaa9a11 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:03 | 0.7.2 alla delar | files.py: load_points läser punktfilen | OK | e26fa6b | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:06 | 0.7.3 del 1 | calibrate och x-axeln i nm | OK | e26fa6b (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:07 | 0.7.3 del 2 | README B8 och CHANGELOG 0.7 | OK | e26fa6b (+ändringar) | Windows DESKTOP-NFJKKB3 | B8: högst ett pixelsteg |
+| 2026-10-19 | 05:08 | 0.7.3 alla delar | main.py: calibrate och x-axeln i nm | OK | e26fa6b (+ändringar) | Windows DESKTOP-NFJKKB3 | |
