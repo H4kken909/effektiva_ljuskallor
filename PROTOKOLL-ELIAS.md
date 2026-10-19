@@ -38,3 +38,6 @@ Här skriver `klar` och `anteckna` (verktyg-elias.ps1 och verktyg-elias.sh) en r
 | 2026-10-19 | 05:45 | 0.10.1 del 3 | README och exempel/del1.txt | FEL (ruff, pytest) | e4851ea (+ändringar) | Windows DESKTOP-NFJKKB3 | |
 | 2026-10-19 | 05:46 | 0.10.1 del 4 | ren klon (A01) | OK | 6e00857 | Windows DESKTOP-NFJKKB3 | <vad du rättade i README, eller inget> |
 | 2026-10-19 | 06:11 | rättning 0.8-0.10.1 | main.py importerbar igen (CAPTURE_FRAMES, COMMANDS dark och response), calc, files, README 0.10.1, exempel/ | OK | 6e00857 (+ändringar) | Windows DESKTOP-NFJKKB3 | v0.8.3beta2 och v0.9.3beta2 |
+| 2026-10-19 | 06:26 | rättelse taggar | v1.0.0, v0.9.3, v0.8.3, v0.9.3beta, v0.8.3beta borttagna: satta utan Adrians Godkänt eller på kod som inte gick att importera | OK | 37b03fb | Windows DESKTOP-NFJKKB3 | kvar: v0.7.3beta, v0.8.3beta2, v0.9.3beta2 |
+| 2026-10-19 | 06:26 | rättelse 0.10.1 del 4 | raden 05:46 gjordes på 6e00857 (trasig kod), A01 görs om nedan | FEL | 37b03fb (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 06:27 | 0.10.1 del 4 | ren klon (A01), README Windows-listan steg 3-10 i C:\Users\jaman\ren-klon | OK | 37b03fb (+ändringar) | Windows DESKTOP-NFJKKB3 | klon av 37b03fb 2026-10-19 06:17; klon-pytest.txt: 19 passed in 0.56s; README rättad: inget |
