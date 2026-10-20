@@ -137,7 +137,8 @@ def test_elias_camera_too_big():
     state = new_state()
     assert error_text(state, "source camera 2147483648") is None
     text = error_text(state, "step")
-    assert text.startswith("camera.open_failed: kunde inte öppna /dev/video2147483648.")
+    assert text.startswith("camera.open_failed: kunde inte öppna ")  # resten av raden beror på systemet (1.0.16)
+    assert "2147483648" in text
 
 
 def test_elias_live_loses_camera(monkeypatch):
