@@ -11,19 +11,13 @@ def cmd_dark(state, args):
     if len(args) > 1:
         raise ValueError("input.invalid_argument: dark tar högst ett ord (N)")
     n = registry.to_int("N", args[0], 1) if args else measure.CAPTURE_FRAMES
-    kind, value = state["settings"]["source"]
-    src = source.open_source(kind, value)
-    flat = []
-    try:
-        for _ in range(n):
-            frame = source.read_frame(src).astype(np.float64)
-            shape = frame.shape
-            flat.append(frame.reshape(-1))
-    finally:
-        source.close_source(src)
+    images, camera = measure._with_source(state, None, lambda s: (source.read_frames(s, n), source.describe(s)))
+    shape = images[0].shape
+    flat = [image.astype(np.float64).reshape(-1) for image in images]
     # Mörkret är medlet av N bilder, pixel för pixel och kanal för kanal. Se rev7, RX03.
     mean_image, _spread = calc.average_spectra(np.stack(flat))
     state["dark"] = mean_image.reshape(shape)
+    state["dark_camera"] = camera
     state["spectrum"] = None
     word = "bild" if n == 1 else "bilder"
     out.say(f"mörker: {n} {word}, medel {np.mean(state['dark']):g}")

@@ -43,3 +43,20 @@ def warn_saturated(count):
     """Varnar när count pixlar är mättade; samma text i step, reference och response build."""
     if count:
         out.warn("mättad (255 i råbilden). Sänk exponeringen.")
+
+
+def changed_controls(now, then):
+    """Reglagen som skiljer mellan två describe-ordböcker, som [(namn, nu, då)]. None (okänt) jämförs inte."""
+    if now is None or then is None:
+        return []
+    changed = []
+    for key, name in (("exposure", "exponeringen"), ("gain", "gain")):
+        if now[key] is not None and then[key] is not None and now[key] != then[key]:
+            changed.append((name, now[key], then[key]))
+    return changed
+
+
+def warn_changed(now, then, what, command):
+    """Varnar för varje reglage som ändrats sedan what (mörkret, referensen) togs, och säger vilket kommando som hjälper."""
+    for name, value, old in changed_controls(now, then):
+        out.warn(f"{name} är {value:g} men {what} togs vid {old:g}. Kör {command} igen.")

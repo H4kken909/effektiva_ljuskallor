@@ -2,12 +2,17 @@
 
 Används av main.py. Bilden lämnas som den är, (H, W, 3) uint8 i BGR.
 """
-
 import sys
+import time
 from pathlib import Path
 
 import cv2
 import numpy as np
+
+READ_TRIES = 3  # försök per bild innan camera.read_failed; ett enstaka tappat read() ska inte stoppa live
+READ_PAUSE = 0.05  # sekunder mellan försöken
+WARMUP_FRAMES = 0  # bilder som läses och kastas direkt efter att kameran öppnats; 0 tills uppvärmningen är mätt
+MAX_MPIXEL = 40  # största bildfil i miljoner pixlar; float64 × 3 kanaler är 24 byte per pixel
 
 
 def open_source(kind, value):
@@ -21,27 +26,36 @@ def open_source(kind, value):
     """
     if kind == "camera":
         if sys.platform.startswith("linux"):
-            backend = cv2.CAP_V4L2  # Video for Linux 2
+            backends = [cv2.CAP_V4L2]  # Video for Linux 2
+            message = f"camera.open_failed: kunde inte öppna /dev/video{value}. Kontrollera med v4l2-ctl --list-devices."
         elif sys.platform == "win32":
-            backend = cv2.CAP_DSHOW  # DirectShow på Windows
+            backends = [cv2.CAP_DSHOW, cv2.CAP_MSMF, cv2.CAP_ANY]  # DirectShow, Media Foundation, sist OpenCV:s val
+            message = (f"camera.open_failed: kunde inte öppna kamera {value}. Stäng program som kan använda den "
+                       "(Kamera-appen, Teams, webbläsaren), se efter att appar får använda kameran "
+                       f"(Inställningar > Sekretess > Kamera) eller prova source camera {value + 1}.")
         else:
-            backend = cv2.CAP_ANY  # OpenCV väljer själv
-        message = f"camera.open_failed: kunde inte öppna /dev/video{value}. Kontrollera med v4l2-ctl --list-devices."
-        cap = None
-        try:
-            # Ett nummer som inte ryms i OpenCV:s heltal (till exempel 2147483648) ger cv2.error i stället för False.
-            cap = cv2.VideoCapture(value, backend)
-            opened = cap.isOpened()
-        except cv2.error as error:
+            backends = [cv2.CAP_ANY]  # OpenCV väljer själv
+            message = f"camera.open_failed: kunde inte öppna kamera {value}. Prova ett annat nummer."
+        error = None
+        for backend in backends:
+            cap = None
+            try:
+                # Ett nummer som inte ryms i OpenCV:s heltal (till exempel 2147483648) ger cv2.error i stället för False.
+                cap = cv2.VideoCapture(value, backend)
+                if cap.isOpened():
+                    return warm_up({"kind": "camera", "cap": cap})
+            except cv2.error as err:
+                error = err
+            except RuntimeError as err:  # öppnades men gav ingen bild (warm_up har släppt den): prova nästa backend
+                message = str(err)
+                error = err
             if cap is not None:
                 cap.release()
-            raise RuntimeError(message) from error
-        if not opened:
-            cap.release()
-            raise RuntimeError(message)
-        return {"kind": "camera", "cap": cap}
+        raise RuntimeError(message) from error
     if kind != "file":
         raise ValueError(f"input.invalid_argument: Type is unknown {kind}")
+    if Path(value).is_dir():
+        return open_folder(value)
     if not Path(value).is_file():
         raise RuntimeError(f"camera.open_failed: Image source does not exist {value}")
     data = np.fromfile(value, np.uint8)  # imdecode i stället för imread: klarar åäö i Windows-sökvägar
@@ -55,9 +69,9 @@ def open_source(kind, value):
     elif img.ndim == 3 and img.shape[-1] == 4:
         img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
     if img.ndim != 3 or img.shape[-1] != 3:
-        raise RuntimeError(
-            f"camera.open_failed: Image is not (H, W, 3), shape is {img.shape}"
-        )
+        raise RuntimeError(f"camera.open_failed: Image is not (H, W, 3), shape is {img.shape}")
+    if img.shape[0] * img.shape[1] > MAX_MPIXEL * 1e6:
+        raise ValueError(f"input.invalid_argument: bilden är {img.shape[0] * img.shape[1] / 1e6:.3g} Mpixel, högst {MAX_MPIXEL:g}")
     return {"kind": kind, "image": img}
 
 
@@ -69,14 +83,21 @@ def read_frame(src):
     Fel: RuntimeError med camera.read_failed om kameran inte ger någon bild.
     """
     if src["kind"] == "camera":
-        ok, image = src["cap"].read()
-        if not ok or image is None:
-            raise RuntimeError(
-                "camera.read_failed: kunde inte läsa en bild från kameran"
-            )
-        return image
+        error = None
+        for attempt in range(READ_TRIES):
+            if attempt:
+                time.sleep(READ_PAUSE)
+            try:
+                ok, image = src["cap"].read()
+            except cv2.error as err:  # en trasig bild från drivrutinen
+                ok, image, error = False, None, err
+            if ok and image is not None:
+                return image
+        raise RuntimeError("camera.read_failed: kunde inte läsa en bild från kameran") from error
     if src["kind"] == "file":
         return src["image"].copy()
+    if src["kind"] == "folder":
+        return next_in_folder(src)
 
 
 def close_source(src):
@@ -88,3 +109,85 @@ def close_source(src):
     """
     if src["kind"] == "camera":
         src["cap"].release()
+
+
+def warm_up(src):
+    """Läser och kastar WARMUP_FRAMES bilder direkt efter att kameran öppnats (de första kan vara mörkare).
+
+    Returnerar: src. Fel: RuntimeError med camera.open_failed, och kameran släppt, om den inte ger någon bild
+    (open_source fångar felet och provar nästa backend).
+    """
+    for _ in range(WARMUP_FRAMES):
+        try:
+            read_frame(src)
+        except RuntimeError as error:
+            close_source(src)
+            raise RuntimeError("camera.open_failed: kameran öppnades men ger ingen bild; prova nästa nummer") from error
+    return src
+
+
+def read_frames(src, n):
+    """n bilder i rad ur en öppen källa, som en lista. Fel: som read_frame."""
+    return [read_frame(src) for _ in range(n)]
+
+
+def describe(src):
+    """Vad källan och drivrutinen säger om sig själva, som en ordbok; ingen utskrift.
+
+    Nycklar: kind, backend, fourcc, width, height, exposure, gain, auto_exposure, fps. För en bildfil är allt utom
+    kind None. Kamerans tal är drivrutinens egna, utan enhet (antaget: V4L2 och DirectShow räknar exponeringen
+    olika), och 0 eller -1 kan betyda att reglaget saknas. De duger för att se om något ändrats, inte mer.
+    """
+    info = {"kind": src["kind"], "backend": None, "fourcc": None, "width": None, "height": None,
+            "exposure": None, "gain": None, "auto_exposure": None, "fps": None}
+    if src["kind"] != "camera":
+        return info
+    cap = src["cap"]
+    if not hasattr(cap, "get"):  # en drivrutin (eller ett låtsasobjekt i ett test) utan reglage: bara kind
+        return info
+    info["backend"] = cap.getBackendName() if hasattr(cap, "getBackendName") else None
+    code = int(cap.get(cv2.CAP_PROP_FOURCC))  # fyra tecken i ett heltal, första tecknet i lägsta byten
+    info["fourcc"] = "".join(chr((code >> 8 * i) & 0xFF) for i in range(4)) if code > 0 else None
+    props = {"width": cv2.CAP_PROP_FRAME_WIDTH, "height": cv2.CAP_PROP_FRAME_HEIGHT, "exposure": cv2.CAP_PROP_EXPOSURE,
+             "gain": cv2.CAP_PROP_GAIN, "auto_exposure": cv2.CAP_PROP_AUTO_EXPOSURE, "fps": cv2.CAP_PROP_FPS}
+    for key, prop in props.items():
+        info[key] = cap.get(prop)
+    return info
+
+
+def probe(max_index=4):
+    """Provar kamera 0 till max_index: öppnar, läser en bild och stänger. Ger [(index, bredd, höjd)] för dem som ger bild."""
+    found = []
+    for index in range(max_index + 1):
+        try:
+            src = open_source("camera", index)
+        except RuntimeError:
+            continue  # ingen kamera med det numret
+        try:
+            image = read_frame(src)
+        except RuntimeError:
+            continue  # öppnades men gav ingen bild
+        finally:
+            close_source(src)
+        found.append((index, image.shape[1], image.shape[0]))
+    return found
+
+
+def open_folder(folder):
+    """En mapp med bilder som källa: sorterade *.png och *.jpg, en bild per read_frame (döp dem 001.png, 002.png ...).
+
+    Fel: RuntimeError med camera.open_failed om mappen inte har några png- eller jpg-bilder.
+    """
+    paths = sorted(p for p in Path(folder).iterdir() if p.suffix.lower() in (".png", ".jpg", ".jpeg"))
+    if not paths:
+        raise RuntimeError(f"camera.open_failed: inga png- eller jpg-bilder i mappen {folder}")
+    return {"kind": "folder", "paths": paths, "next": 0}
+
+
+def next_in_folder(src):
+    """Nästa bild i mappen, kontrollerad som en bildfil. Fel: RuntimeError med camera.read_failed när bilderna är slut."""
+    if src["next"] >= len(src["paths"]):
+        raise RuntimeError(f"camera.read_failed: slut på bilderna i mappen ({len(src['paths'])} st)")
+    path = src["paths"][src["next"]]
+    src["next"] += 1
+    return open_source("file", path)["image"]

@@ -145,6 +145,7 @@ def test_extract_spectrum_bad_table(table, message):
     with pytest.raises(ValueError, match=message):
         calc.extract_spectrum(table)
 
+
 # ---- calc.average_spectra, evaluate_wavelength, fit_wavelength och subtract_dark ----
 
 
@@ -288,6 +289,7 @@ def test_subtract_dark_bad_input():
     with pytest.raises(ValueError, match="ändliga tal"):
         calc.subtract_dark(image, dark)
 
+
 # ---- calc.build_response, apply_response och transmission_ratio ----
 
 LAMP_X = np.array([500.0, 510.0, 520.0, 530.0])
@@ -427,6 +429,7 @@ def test_ratio_bad_mask_and_shapes(ratio):
         ratio(np.ones(2), np.ones(2), np.ones(3, dtype=bool), 0.5)
     with pytest.raises(ValueError, match="annan form"):
         ratio(np.ones(2), np.ones(3), np.ones(2, dtype=bool), 0.5)
+
 
 # ---- files: save_measurement, load_points och load_known ----
 
@@ -596,6 +599,7 @@ def test_load_known_errors_name_the_line(tmp_path, text, message):
     with pytest.raises(ValueError, match=f"input.invalid_argument: {message}"):
         files.load_known(write(tmp_path, text))
 
+
 # ---- source: bildfiler och kameran (en låtsaskamera, aldrig en riktig) ----
 
 
@@ -641,9 +645,11 @@ def test_open_bad_files(tmp_path):
     text = write(tmp_path, "det här är ingen bild", name="text.png")
     with pytest.raises(RuntimeError, match=r"camera\.open_failed: Could not open"):
         source.open_source("file", text)
-    for missing in (tmp_path / "saknas.png", tmp_path):
-        with pytest.raises(RuntimeError, match=r"camera\.open_failed: Image source does not exist"):
-            source.open_source("file", missing)
+    with pytest.raises(RuntimeError, match=r"camera\.open_failed: Image source does not exist"):
+        source.open_source("file", tmp_path / "saknas.png")
+    (tmp_path / "tom").mkdir()
+    with pytest.raises(RuntimeError, match=r"camera\.open_failed: inga png- eller jpg-bilder"):
+        source.open_source("file", tmp_path / "tom")  # en mapp utan bilder (1.0.20)
     with pytest.raises(ValueError, match=r"input\.invalid_argument: Type is unknown video"):
         source.open_source("video", "x.png")
 
@@ -665,7 +671,7 @@ def use_fake_capture(monkeypatch, opened=True, results=()):
     results = list(results)
     cap = types.SimpleNamespace(calls=[], released=False)
     cap.isOpened = lambda: opened
-    cap.read = lambda: results.pop(0)
+    cap.read = lambda: results.pop(0) if results else (False, None)  # tre försök sedan 1.0.16
 
     def release():
         cap.released = True
