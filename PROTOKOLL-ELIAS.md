@@ -1,0 +1,57 @@
+# Protokoll: Elias
+
+Här skriver `klar` och `anteckna` (verktyg-elias.ps1 och verktyg-elias.sh) en rad direkt efter varje delkontroll, före commit, så att raden följer med i `git add`.
+
+| Datum | Tid | Del | Vad | Resultat | Commit | Dator | Not |
+|---|---|---|---|---|---|---|---|
+| 2026-10-19 | 04:35 | kodfix 0.0-0.6 | calc, main, source, test_elias (16), check_install, verktyg-elias, PROTOKOLL-ELIAS, README/CHANGELOG | OK, 19 passed, ruff grön | c3ba437 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 04:43 | 0.7.1 del 1 | evaluate_wavelength och fit_wavelength | FEL (ruff, pytest) | 72e74f0 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 04:43 | 0.7.1 del 1 | evaluate_wavelength och fit_wavelength | OK | 72e74f0 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 04:44 | 0.7.2 del 1 | kalibrering/hg_linjer.csv, fem Hg-linjer | OK | cb5ca04 (+ändringar) | Windows DESKTOP-NFJKKB3 | NIST mercurytable2, luftvåglängder |
+| 2026-10-19 | 05:03 | 0.7.2 del 2 | load_points | OK | eaa9a11 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:03 | 0.7.2 alla delar | files.py: load_points läser punktfilen | OK | e26fa6b | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:06 | 0.7.3 del 1 | calibrate och x-axeln i nm | OK | e26fa6b (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:07 | 0.7.3 del 2 | README B8 och CHANGELOG 0.7 | OK | e26fa6b (+ändringar) | Windows DESKTOP-NFJKKB3 | B8: högst ett pixelsteg |
+| 2026-10-19 | 05:08 | 0.7.3 alla delar | main.py: calibrate och x-axeln i nm | OK | e26fa6b (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:08 | v0.7.3beta | betatagg pushad, Testa 0.7 kan börja | OK | 373f905 | Windows DESKTOP-NFJKKB3 | ls-remote visar taggen |
+| 2026-10-19 | 05:11 | 0.8.1 del 4 | CAPTURE_FRAMES, measure, cmd_dark och dark i COMMANDS | FEL (ruff, pytest) | 373f905 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:12 | 0.8.1 del 5 | subtract_dark | FEL (ruff, pytest) | 373f905 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:12 | 0.8.1 del 6 | prepare godtar float64, mörkret dras av | FEL (ruff, pytest) | 373f905 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:13 | 0.8.1 alla delar | main.py: dark och avdraget i measure | FEL (ruff, pytest) | 1d79a15 | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:14 | 0.8.2 del 1 | build_response | FEL (ruff, pytest) | 1d79a15 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:14 | 0.8.2 del 2 | apply_response | FEL (ruff, pytest) | 1d79a15 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:14 | 0.8.2 alla delar | calc.py: responsen räknas | FEL (ruff, pytest) | abfa994 | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:15 | 0.8.3 del 1 | load_known | FEL (ruff, pytest) | abfa994 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:18 | 0.8.3 del 5 | response build, on och off, respons i measure | FEL (ruff, pytest) | abfa994 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:19 | 0.8.3 del 6 | CHANGELOG 0.8 | OK | abfa994 (+ändringar) | Windows DESKTOP-NFJKKB3 | ## [0.8] med en rad per bit |
+| 2026-10-19 | 05:19 | 0.8.3 alla delar | main.py: response och korrigerad signal | FEL (ruff, pytest) | abfa994 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:19 | v0.8.3beta | betatagg pushad, Testa 0.8 kan börja | OK | f39b5fc | Windows DESKTOP-NFJKKB3 | ls-remote visar taggen |
+| 2026-10-19 | 05:19 | v0.8.3 | riktig tagg efter Adrians Godkänt | OK | f39b5fc (+ändringar) | Windows DESKTOP-NFJKKB3 | Godkänt i till-elias.md |
+| 2026-10-19 | 05:20 | 0.9.1 del 1 | transmission_ratio | FEL (ruff, pytest) | f39b5fc (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:22 | 0.9.2 del 3 | reference, mode och dark | FEL (ruff, pytest) | a16a620 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:22 | 0.9.2 alla delar | main.py: reference och mode | FEL (ruff, pytest) | ac8d7aa | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:24 | 0.9.3 del 6 | snabbkollen för hela 0.9 | FEL (ruff, pytest) | ac8d7aa (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:24 | 0.9.3 alla delar | main.py: transmission i measure, show, step och save | FEL (ruff, pytest) | ac8d7aa (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:25 | 0.9.3 | betataggen v0.9.3beta | OK | e4851ea | Windows DESKTOP-NFJKKB3 | Testa 0.9 till Adrian |
+| 2026-10-19 | 05:42 | 0.10.1 del 1 | D1 i ruff | FEL (ruff, pytest) | e4851ea (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:43 | 0.10.1 del 2 | docstrings och kommentarer | FEL (ruff, pytest) | e4851ea (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:45 | 0.10.1 del 3 | README och exempel/del1.txt | FEL (ruff, pytest) | e4851ea (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 05:46 | 0.10.1 del 4 | ren klon (A01) | OK | 6e00857 | Windows DESKTOP-NFJKKB3 | <vad du rättade i README, eller inget> |
+| 2026-10-19 | 06:11 | rättning 0.8-0.10.1 | main.py importerbar igen (CAPTURE_FRAMES, COMMANDS dark och response), calc, files, README 0.10.1, exempel/ | OK | 6e00857 (+ändringar) | Windows DESKTOP-NFJKKB3 | v0.8.3beta2 och v0.9.3beta2 |
+| 2026-10-19 | 06:26 | rättelse taggar | v1.0.0, v0.9.3, v0.8.3, v0.9.3beta, v0.8.3beta borttagna: satta utan Adrians Godkänt eller på kod som inte gick att importera | OK | 37b03fb | Windows DESKTOP-NFJKKB3 | kvar: v0.7.3beta, v0.8.3beta2, v0.9.3beta2 |
+| 2026-10-19 | 06:26 | rättelse 0.10.1 del 4 | raden 05:46 gjordes på 6e00857 (trasig kod), A01 görs om nedan | FEL | 37b03fb (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 06:27 | 0.10.1 del 4 | ren klon (A01), README Windows-listan steg 3-10 i C:\Users\jaman\ren-klon | OK | 37b03fb (+ändringar) | Windows DESKTOP-NFJKKB3 | klon av 37b03fb 2026-10-19 06:17; klon-pytest.txt: 19 passed in 0.56s; README rättad: inget |
+| 2026-10-19 | 06:42 | 0.10.2 del 1 | kodkolumnen till kravmatrisen | OK | 8aad51d (+ändringar) | Windows DESKTOP-NFJKKB3 | skickad till Adrian i till-adrian.md |
+| 2026-10-19 | 06:42 | 0.10.2 del 2 | A01 till Adrian | OK | 8aad51d (+ändringar) | Windows DESKTOP-NFJKKB3 | skickad till Adrian i till-adrian.md |
+| 2026-10-19 | 06:42 | 0.10.2 | betataggen v0.10.2beta, hela sviten efter merge av tester | OK | 8aad51d (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 18:21 | 1.0-koll | dump till Claude-sessionen: git, Issues, ruff, pytest, alla filer | OK | 49f96d3 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 18:37 | 1.0-koll 2 | pytest-tempmappen, Issue 7, Adrians svit pa origin/tester i ren kopia | OK | 49f96d3 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 18:46 | 1.0.0 | frysen: origin/tester mergad, Issue #7 väg B (facit_07), CHANGELOG, tagg v1.0.0 | OK, 32 passed, ruff grön | b304314 (+ändringar) | Windows DESKTOP-NFJKKB3 | Adrian frånvarande: A11, A13, A06, A15, A07, Uppgift 16 och frysmappen inte gjorda |
+| 2026-10-19 | 19:20 | 1.0.0 kontroll | ny klon av v1.0.0 från GitHub: check_install, ruff, pytest, kommandofiler mot facit; GitHub städat | OK | 1770adb (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 20:08 | testrundan v1.0.0 | A11, Testa 0.7 och 0.8b, A13 A06 A15 A07 Blockerat, Uppgift 16, A16, Slutkoll, frysmappen på tester (Adrian frånvarande) | OK | 698b824 (+ändringar) | Windows DESKTOP-NFJKKB3 | |
+| 2026-10-19 | 20:35 | 1.0.0 dokument | kod.pdf (Krav 11, 18 sidor) ur v1.0.0, A16 rättad, frysmappen, README, CHANGELOG, release v1.0.0 | OK | fabea7a (+ändringar) | Windows DESKTOP-NFJKKB3 | kvar: kamerabeviset (Krav 13) och A13 A06 A15 A07 på uppställningen |
+| 2026-10-20 | 00:09 | startskarm | py -m spektro: gula rader (rich), prismat, spektro> vantar, quit avslutar | OK | 263f13e (+ändringar) | Windows DESKTOP-NFJKKB3 | spektro.py sha256 5920de3a02b5, slutkod 0; ej committad, v1.1.0 aterstar |
+| 2026-10-20 | 00:43 | 1.1.0 startskarm | spektro.py utan rich (ANSI-koder), prisma.py i startskarm/, requirements.txt som i v1.0.0, README-stycke, CHANGELOG [Unreleased] | OK, 32 passed, ruff grön | 263f13e (+ändringar) | Windows DESKTOP-NFJKKB3 | ingen tagg; inte provat på Arch eller Adrians ARM |
+| 2026-10-20 | 09:53 | 1.0.1 pytest-tempmappen | WinError 5 på %TEMP%\pytest-of-jaman (12 tmp_path-tester i setup), mappen borttagen, pytest igen | 32 passed in 0.59s | 9fe1245 (+ändringar) | Windows DESKTOP-NFJKKB3 | tempmappen kvar: True |
+| 2026-10-20 | 09:58 | 1.0.3 pytest-tempmappen | PYTEST_ADDOPTS=--basetemp=C:\Users\jaman\AppData\Local\Temp\ljuskallor-bt satt för användaren, pytest-of-jaman gav WinError 5 (fjärde gången) | 36 errors in 0.60s | 5152413 (+ändringar) | Windows DESKTOP-NFJKKB3 | ta bort variabeln i 1.0.13 (INS-17) |
+| 2026-10-20 | 13:12 | 1.0.7 reparation | PYTEST_ADDOPTS med /, tempmappen ur projektet, pyproject [tool.ruff.lint], filerna 1.0.5-1.0.7 mot sidan | All checks passed!, 171 passed in 4.10s | 5152413 (+ändringar) | Windows DESKTOP-NFJKKB3 | |

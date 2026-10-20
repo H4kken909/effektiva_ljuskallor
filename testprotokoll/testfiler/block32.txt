@@ -1,0 +1,9 @@
+0 testfiler\test_calc.py finns OK: den flyttas in i tests\ i steg 11
+1 testkort\test_calc.py -> testkort\test_calc-kopia.txt (lika med testfiler\test_calc.py: True)
+2 borttagna i roten (3 av 3, resten fanns inte): protokoll.md.bak, pytest.txt, ruff.txt
+3 tomma mappar borttagna (9): 01-testfiler, 02-skärmbilder, 03-kalibrering, 04-spektra, 05-kamera, 06-beräkningar, 07-felrapporter, 08-versioner, 09-övrigt
+4 omdöpt: Skärmbild 2026-10-19 030157.png -> testfiler\skarmbild-annan-ai-0301.png
+5 bara en .py OK: testfiler\test_calc.py
+6 inget .png.png OK: 
+7 kvar i roten: A02\ (5), A06\ (0), A07\ (0), A11\ (0), A13\ (0), A15\ (0), A17\ (10), kommandon\ (0), Testa01\ (4), Testa02\ (3), testfiler\ (8), testkort\ (5), protokoll.md, rott.txt
+SLUT block 32: OK

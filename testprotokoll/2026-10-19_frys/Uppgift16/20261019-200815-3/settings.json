@@ -1,0 +1,25 @@
+{
+  "source": [
+    "file",
+    "testprotokoll/testfiler/rx19_prov.png"
+  ],
+  "roi": [
+    10,
+    0,
+    3,
+    2
+  ],
+  "axis": "horizontal",
+  "channel": "red",
+  "output_dir": "data",
+  "frames": 1,
+  "min_response": 0.01,
+  "min_reference": 1.0,
+  "coefficients": [
+    490.0,
+    1.000000000000003
+  ],
+  "dark": true,
+  "use_response": false,
+  "mode": "transmission"
+}

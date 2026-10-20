@@ -1,0 +1,39 @@
+kor tests\kommandon\testa_07.txt -W, v0.10.2beta, 2026-10-19 (omgjord efter rättningen av kor och jamfor, 2c268e9):
+     1  Skriv help för kommandona. quit eller Ctrl+D avslutar.
+     2  spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+     3  spektro> ROI:n kontrolleras vid nästa mätning.
+     4  roi: (10, 0, 5, 10)
+     5  spektro> channel: red
+     6  spektro> Topp 200 vid pixel 12 (1 bild)
+     7  spektro> a0: 400
+     8  a1: 1
+     9  anpassat: pixel 100 till 200
+    10  giltigt: pixel 0 till 300
+    11  residual: 2.27374e-13
+    12  residual: 3.41061e-13
+    13  inte kontrollerad: inga kontrollpunkter i filen
+    14  spektro> Topp 200 vid våglängd (nm) 412 (1 bild)
+    15  spektro> a0: 400
+    16  a1: 1
+    17  anpassat: pixel 100 till 200
+    18  giltigt: pixel 0 till 300
+    19  residual: 2.27374e-13
+    20  residual: 3.41061e-13
+    21  kontrollfel vid pixel 180: 1.5
+    22  Varning: kontrollfelet 1.5 nm är större än steget 1 nm.
+    23  kontrollfel vid pixel 150: 0.4
+    24  spektro> Fel: input.invalid_argument: semikolon.csv rad 1: fel rubrik, väntade pixel,wavelength_nm,check
+    25  spektro> Avslutar.
+
+jamfor mot facit_07 (tomt = lika):
+diff --git "a/C:\\Users\\wowji\\AppData\\Local\\Temp\\facit.txt" "b/C:\\Users\\wowji\\AppData\\Local\\Temp\\ut.txt"
+index bfce471..1ffad6a 100644
+--- "a/C:\\Users\\wowji\\AppData\\Local\\Temp\\facit.txt"
++++ "b/C:\\Users\\wowji\\AppData\\Local\\Temp\\ut.txt"
+@@ -21,5 +21,5 @@ residual: 0
+ kontrollfel vid pixel 180: 1.5
+ Varning: kontrollfelet 1.5 nm är större än steget 1 nm.
+ kontrollfel vid pixel 150: 0.4
+-spektro> Fel: input.invalid_argument: semikolon.csv rad 1: fel rubrik ['pixel;wavelength_nm;check']
++spektro> Fel: input.invalid_argument: semikolon.csv rad 1: fel rubrik, väntade pixel,wavelength_nm,check
+ spektro> Avslutar.

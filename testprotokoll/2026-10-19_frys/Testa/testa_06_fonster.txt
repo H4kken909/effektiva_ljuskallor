@@ -1,0 +1,20 @@
+start på bildfil efter calibrate t04.csv, sedan source camera 99 och start; v0.10.2beta, 2026-10-19; x-axeln 410 till 414 enligt Adrian: ja
+     1  Skriv help för kommandona. quit eller Ctrl+D avslutar.
+     2  spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+     3  spektro> ROI:n kontrolleras vid nästa mätning.
+     4  roi: (10, 0, 5, 10)
+     5  spektro> channel: red
+     6  spektro> a0: 400
+     7  a1: 1
+     8  anpassat: pixel 100 till 200
+     9  giltigt: pixel 0 till 300
+    10  residual: 2.27374e-13
+    11  residual: 3.41061e-13
+    12  inte kontrollerad: inga kontrollpunkter i filen
+    13  spektro> Live. Tryck Ctrl+C eller stäng fönstret för att stoppa.
+    14  live stoppad
+    15  spektro> source: ('camera', 99)
+    16  [ WARN:0@4.217] global cap.cpp:477 cv::VideoCapture::open VIDEOIO(DSHOW): backend is generally available but can't be used to capture by index
+    17  spektro> Live. Tryck Ctrl+C eller stäng fönstret för att stoppa.
+    18  Fel: camera.open_failed: kunde inte öppna /dev/video99. Kontrollera med v4l2-ctl --list-devices.
+    19  spektro> Avslutar.
