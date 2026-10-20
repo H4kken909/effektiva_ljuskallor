@@ -701,7 +701,7 @@ def test_camera_backend_per_platform(monkeypatch, platform, backend):
 def test_camera_that_does_not_open_is_released(monkeypatch):
     """Fel: en kamera som inte öppnas ger camera.open_failed och släpps."""
     cap = use_fake_capture(monkeypatch, opened=False)
-    with pytest.raises(RuntimeError, match=r"camera\.open_failed: kunde inte öppna /dev/video0"):
+    with pytest.raises(RuntimeError, match=r"camera\.open_failed: kunde inte öppna "):  # resten beror på systemet
         source.open_source("camera", 0)
     assert cap.released
 
