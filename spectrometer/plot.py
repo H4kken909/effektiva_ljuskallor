@@ -14,9 +14,10 @@ def open_plot():
 
     return {"fig": fig, "ax": ax, "line": line}
 
+
 def draw(win, x, values, x_label, y_label):
     """Changes the values of the curve and redraws"""
-    
+
     win["line"].set_data(x, values)
     win["ax"].relim()
     win["ax"].autoscale_view()

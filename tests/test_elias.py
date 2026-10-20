@@ -78,7 +78,16 @@ def error_text(state, line):
 
 
 def test_elias_one_line_per_error(monkeypatch, capsys):
-    lines = ["foo", "roi 1 2 3", "frames tre", 'source file "x', "channel purple", "help x", "save", "quit"]
+    lines = [
+        "foo",
+        "roi 1 2 3",
+        "frames tre",
+        'source file "x',
+        "channel purple",
+        "help x",
+        "save",
+        "quit",
+    ]
     code, out = run_prompt(monkeypatch, capsys, lines)
     errors = [row for row in out.splitlines() if "Fel:" in row]
     assert code is None
@@ -99,7 +108,9 @@ def test_elias_ctrl_c_at_prompt(monkeypatch, capsys):
 
 def test_elias_ctrl_c_during_step_releases_camera(monkeypatch, capsys):
     cam = use_camera(monkeypatch, [KeyboardInterrupt()])
-    code, out = run_prompt(monkeypatch, capsys, ["source camera 0", "step", "show", "quit"])
+    code, out = run_prompt(
+        monkeypatch, capsys, ["source camera 0", "step", "show", "quit"]
+    )
     assert code is None
     assert "spektro> Avbrutet." in out
     assert cam.released
@@ -109,13 +120,19 @@ def test_elias_ctrl_c_during_step_releases_camera(monkeypatch, capsys):
 
 def test_elias_camera_minus_one():
     state = main.new_state(main.DEFAULTS)
-    assert error_text(state, "source camera -1") == "input.invalid_argument: index ska vara minst 0"
+    assert (
+        error_text(state, "source camera -1")
+        == "input.invalid_argument: index ska vara minst 0"
+    )
     assert state["settings"]["source"] == ("camera", 0)
 
 
 def test_elias_camera_word():
     state = main.new_state(main.DEFAULTS)
-    assert error_text(state, "source camera x") == "input.invalid_argument: index ska vara ett heltal, fick x"
+    assert (
+        error_text(state, "source camera x")
+        == "input.invalid_argument: index ska vara ett heltal, fick x"
+    )
 
 
 def test_elias_camera_too_big():
@@ -131,7 +148,9 @@ def test_elias_live_loses_camera(monkeypatch):
     drawn = []
     fig = type("Fig", (), {"number": 1})()
     monkeypatch.setattr(main.plot, "open_plot", lambda: {"fig": fig})
-    monkeypatch.setattr(main.plot, "draw", lambda win, x, values, x_label, y_label: drawn.append(values))
+    monkeypatch.setattr(
+        main.plot, "draw", lambda win, x, values, x_label, y_label: drawn.append(values)
+    )
     monkeypatch.setattr(main.plt, "fignum_exists", lambda number: True)
     monkeypatch.setattr(main.plt, "pause", lambda seconds: None)
     monkeypatch.setattr(main.plt, "close", closed.append)
@@ -205,7 +224,11 @@ def test_elias_vertical_and_folder(tmp_path, capsys):
     assert "Topp 100 vid pixel 4 (1 bild)" in out
     folders = list((tmp_path / "data").iterdir())
     assert len(folders) == 1
-    assert sorted(p.name for p in folders[0].iterdir()) == ["raw.png", "settings.json", "spectrum.csv"]
+    assert sorted(p.name for p in folders[0].iterdir()) == [
+        "raw.png",
+        "settings.json",
+        "spectrum.csv",
+    ]
     settings = json.loads((folders[0] / "settings.json").read_text(encoding="utf-8"))
     assert settings["axis"] == "vertical"
     rows = (folders[0] / "spectrum.csv").read_text(encoding="utf-8").splitlines()
@@ -244,6 +267,9 @@ def test_elias_roi_kept_after_error(tmp_path):
     main.run_command(state, "step")
     text = error_text(state, "roi 0 0 21 10")
     assert text.startswith("input.invalid_argument:")
-    assert error_text(state, "roi 1 2 x 4") == "input.invalid_argument: width ska vara ett heltal, fick x"
+    assert (
+        error_text(state, "roi 1 2 x 4")
+        == "input.invalid_argument: width ska vara ett heltal, fick x"
+    )
     assert state["settings"]["roi"] == (10, 0, 5, 10)
     assert state["spectrum"] is not None

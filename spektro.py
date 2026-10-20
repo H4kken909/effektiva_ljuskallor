@@ -94,7 +94,9 @@ def las_flaggor():
     )
     tolk.add_argument("--windowed", action="store_true", help="maximera inte fönstret")
     tolk.add_argument(
-        "--no-splash", action="store_true", help="ingen startskärm, direkt till prompten"
+        "--no-splash",
+        action="store_true",
+        help="ingen startskärm, direkt till prompten",
     )
     tolk.add_argument(
         "--delay",

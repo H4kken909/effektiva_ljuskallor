@@ -1,4 +1,5 @@
 """Håller ihop programmet: startas med python -m spectrometer.main och styrs med kommandon vid prompten spektro>."""
+
 import argparse
 import shlex
 import sys
@@ -19,7 +20,9 @@ DEFAULTS = {
     "min_reference": 1.0,  # minsta referens i counts
 }
 
-CAPTURE_FRAMES = 16  # bilder i dark och reference: medlet av flera bilder har mindre brus än en enda
+CAPTURE_FRAMES = (
+    16  # bilder i dark och reference: medlet av flera bilder har mindre brus än en enda
+)
 
 AXES = ("horizontal", "vertical")
 
@@ -104,12 +107,28 @@ def measure(state, src=None):
         mask = mask[::-1]
     if state["use_response"] and state["mode"] == "direct":
         if state["coefficients"] is None:
-            raise ValueError("input.missing_data: ingen kalibrering, kör calibrate först")
-        response_at_x = np.interp(x, state["response"]["x"], state["response"]["values"], left=np.nan, right=np.nan)
+            raise ValueError(
+                "input.missing_data: ingen kalibrering, kör calibrate först"
+            )
+        response_at_x = np.interp(
+            x,
+            state["response"]["x"],
+            state["response"]["values"],
+            left=np.nan,
+            right=np.nan,
+        )
         mask = mask & np.isfinite(response_at_x)
-        values, mask = calc.apply_response(values, response_at_x, mask, cfg["min_response"])
+        values, mask = calc.apply_response(
+            values, response_at_x, mask, cfg["min_response"]
+        )
         y_label = "korrigerad signal (relativ)"
-    spectrum = {"x": x, "values": values, "mask": mask, "x_label": x_label, "y_label": y_label}
+    spectrum = {
+        "x": x,
+        "values": values,
+        "mask": mask,
+        "x_label": x_label,
+        "y_label": y_label,
+    }
     if state["mode"] == "transmission":
         if state["reference"] is None:
             raise ValueError("input.missing_data: ingen referens, kör reference först")
@@ -124,7 +143,9 @@ def measure(state, src=None):
                 f"{state['reference']['channel']}, kör reference igen"
             )
         spectrum["values"], spectrum["mask"] = calc.transmission_ratio(
-            spectrum["values"], state["reference"]["values"], spectrum["mask"] & state["reference"]["mask"],
+            spectrum["values"],
+            state["reference"]["values"],
+            spectrum["mask"] & state["reference"]["mask"],
             state["settings"]["min_reference"],
         )
         spectrum["y_label"] = "transmission (kvot)"
@@ -158,7 +179,9 @@ def _to_int(name, text, smallest):
     try:
         number = int(text)
     except ValueError as error:
-        raise ValueError(f"input.invalid_argument: {name} ska vara ett heltal, fick {text}") from error
+        raise ValueError(
+            f"input.invalid_argument: {name} ska vara ett heltal, fick {text}"
+        ) from error
     if number < smallest:
         raise ValueError(f"input.invalid_argument: {name} ska vara minst {smallest}")
     return number
@@ -175,7 +198,9 @@ def _need(args, names, command):
         missing = names[len(args)]
         raise ValueError(f"input.invalid_argument: {command}: {missing} saknas")
     elif len(args) > len(names):
-        raise ValueError(f"input.invalid_argument: {command}: för många ord, väntade {len(names)}")
+        raise ValueError(
+            f"input.invalid_argument: {command}: för många ord, väntade {len(names)}"
+        )
 
 
 def _set(state, key, value) -> None:
@@ -261,7 +286,9 @@ def cmd_source(state, args):
         index = _to_int("index", args[1], 0)
         _set(state, "source", ("camera", index))
     else:
-        raise ValueError(f"input.invalid_argument: okänd källa {args[0]}, välj file eller camera")
+        raise ValueError(
+            f"input.invalid_argument: okänd källa {args[0]}, välj file eller camera"
+        )
     state["image"] = None
     print(f"source: {state['settings']['source']}")
 
@@ -285,7 +312,12 @@ def cmd_roi(state, args):
     height = _to_int("height", args[3], 1)
     new_roi = (x, y, width, height)
     if state["image"] is not None:
-        calc.prepare(state["image"], new_roi, state["settings"]["axis"], state["settings"]["channel"])
+        calc.prepare(
+            state["image"],
+            new_roi,
+            state["settings"]["axis"],
+            state["settings"]["channel"],
+        )
     else:
         print("ROI:n kontrolleras vid nästa mätning.")
     _set(state, "roi", new_roi)
@@ -302,7 +334,9 @@ def cmd_channel(state, args):
     _need(args, ("name",), "channel")
     if args[0] not in calc.CHANNELS:
         allowed = ", ".join(calc.CHANNELS)
-        raise ValueError(f"input.invalid_argument: okänd kanal {args[0]}, välj {allowed}")
+        raise ValueError(
+            f"input.invalid_argument: okänd kanal {args[0]}, välj {allowed}"
+        )
     _set(state, "channel", args[0])
     print(f"channel: {args[0]}")
 
@@ -317,7 +351,9 @@ def cmd_axis(state, args):
     _need(args, ("name",), "axis")
     if args[0] not in AXES:
         allowed = ", ".join(AXES)
-        raise ValueError(f"input.invalid_argument: okänd riktning {args[0]}, välj {allowed}")
+        raise ValueError(
+            f"input.invalid_argument: okänd riktning {args[0]}, välj {allowed}"
+        )
     _set(state, "axis", args[0])
     print(f"axis: {args[0]}")
 
@@ -346,10 +382,17 @@ def cmd_step(state, args):
     spectrum = measure(state)
     i = np.nanargmax(spectrum["values"])
     word = "bild" if state["settings"]["frames"] == 1 else "bilder"
-    print(f"Topp {spectrum["values"][i]:g} vid {spectrum["x_label"]} {spectrum["x"][i]:g} ({state["settings"]["frames"]} {word})")
+    print(
+        f"Topp {spectrum['values'][i]:g} vid {spectrum['x_label']} {spectrum['x'][i]:g} ({state['settings']['frames']} {word})"
+    )
     crop = state["image"]
     if state["settings"]["roi"] is not None:
-        crop = state["image"][state["settings"]["roi"][1]:state["settings"]["roi"][1] + state["settings"]["roi"][3], state["settings"]["roi"][0]:state["settings"]["roi"][0] + state["settings"]["roi"][2]]
+        crop = state["image"][
+            state["settings"]["roi"][1] : state["settings"]["roi"][1]
+            + state["settings"]["roi"][3],
+            state["settings"]["roi"][0] : state["settings"]["roi"][0]
+            + state["settings"]["roi"][2],
+        ]
     if crop.max() >= 255:
         print("Varning: mättad (255 i råbilden). Sänk exponeringen.")
     if state["mode"] == "transmission":
@@ -373,7 +416,9 @@ def cmd_save(state, args):
         raise ValueError("input.missing_data: Ingen mätning än. Kör step först.")
     parent = args[0] if args else state["settings"]["output_dir"]
     saved = state["settings"].copy()
-    saved["coefficients"] = state["coefficients"].tolist() if state["coefficients"] is not None else None
+    saved["coefficients"] = (
+        state["coefficients"].tolist() if state["coefficients"] is not None else None
+    )
     saved["dark"] = state["dark"] is not None
     saved["use_response"] = state["use_response"]
     saved["mode"] = state["mode"]
@@ -401,7 +446,13 @@ def cmd_start(state, args):
                 print("live stoppad")
                 break
             spectrum = measure(state, src)
-            plot.draw(win, spectrum["x"], np.where(spectrum["mask"], spectrum["values"], np.nan), spectrum["x_label"], spectrum["y_label"])
+            plot.draw(
+                win,
+                spectrum["x"],
+                np.where(spectrum["mask"], spectrum["values"], np.nan),
+                spectrum["x_label"],
+                spectrum["y_label"],
+            )
             plt.pause(0.05)
     except KeyboardInterrupt:
         print("live stoppad")
@@ -423,7 +474,9 @@ def cmd_calibrate(state, args):
     if not args:
         _need(args, ("PATH",), "calibrate")  # kommatecknet är obligatoriskt
     if len(args) > 2:
-        raise ValueError("input.invalid_argument: calibrate tar högst två ord (PATH DEGREE)")
+        raise ValueError(
+            "input.invalid_argument: calibrate tar högst två ord (PATH DEGREE)"
+        )
     if len(args) == 2:
         degree = _to_int("DEGREE", args[1], 1)
     else:
@@ -433,7 +486,9 @@ def cmd_calibrate(state, args):
     check_pixels = pixels[is_check]
     fit_wavelengths = wavelengths[~is_check]
     check_wavelengths = wavelengths[is_check]
-    coefficients = calc.fit_wavelength(fit_pixels, fit_wavelengths, degree)  # bara anpassningspunkter
+    coefficients = calc.fit_wavelength(
+        fit_pixels, fit_wavelengths, degree
+    )  # bara anpassningspunkter
     print(f"a0: {coefficients[0]:g}")
     print(f"a1: {coefficients[1]:g}")
     if degree == 2:
@@ -452,9 +507,14 @@ def cmd_calibrate(state, args):
     residuals = fit_wavelengths - calc.evaluate_wavelength(fit_pixels, coefficients)
     for residual in residuals:
         print(f"residual: {residual:g}")
-    check_errors = check_wavelengths - calc.evaluate_wavelength(check_pixels, coefficients)
+    check_errors = check_wavelengths - calc.evaluate_wavelength(
+        check_pixels, coefficients
+    )
     # Lokalt steg: hur många nm en pixel är vid kontrollpunkten.
-    step = np.abs(calc.evaluate_wavelength(check_pixels + 1, coefficients) - calc.evaluate_wavelength(check_pixels, coefficients))
+    step = np.abs(
+        calc.evaluate_wavelength(check_pixels + 1, coefficients)
+        - calc.evaluate_wavelength(check_pixels, coefficients)
+    )
     # varna när abs(fel) är större än steget
     for pixel, error, s in zip(check_pixels, check_errors, step):
         print(f"kontrollfel vid pixel {pixel:g}: {error:g}")
@@ -497,8 +557,10 @@ def cmd_dark(state, args):
     state["dark"] = mean_image.reshape(shape)
     state["spectrum"] = None
     word = "bild" if N == 1 else "bilder"
-    print(f"mörker: {N} {word}, medel {np.mean(state["dark"]):g}")
-    if state["image"] is not None and np.mean(state["dark"]) >= 0.5 * np.mean(state["image"]):
+    print(f"mörker: {N} {word}, medel {np.mean(state['dark']):g}")
+    if state["image"] is not None and np.mean(state["dark"]) >= 0.5 * np.mean(
+        state["image"]
+    ):
         print("Varning: mörkret liknar bilden. Var ljusvägen blockerad?")
     if state["reference"] is not None:
         # Referensen mättes med det gamla mörkret, så den gäller inte längre.
@@ -515,24 +577,34 @@ def cmd_response(state, args):
     OSError om filen saknas.
     """
     if not args or args[0] not in ("build", "on", "off"):
-        raise ValueError("input.invalid_argument: första ordet ska vara build, on eller off")
+        raise ValueError(
+            "input.invalid_argument: första ordet ska vara build, on eller off"
+        )
     if args[0] == "build":
         rest = args[1:]
         _need(rest, ("KNOWNFILE",), "response")
         if state["dark"] is None:
             raise ValueError("input.missing_data: inget mörker, kör dark först")
         if state["coefficients"] is None:
-            raise ValueError("input.missing_data: ingen kalibrering, kör calibrate först")
+            raise ValueError(
+                "input.missing_data: ingen kalibrering, kör calibrate först"
+            )
         known_wavelengths, known_values = files.load_known(rest[0])
         lamp = _measure_direct(state, CAPTURE_FRAMES)
         lamp_values = np.where(lamp["mask"], lamp["values"], np.nan)
-        response_values = calc.build_response(lamp["x"], lamp_values, known_wavelengths, known_values)
+        response_values = calc.build_response(
+            lamp["x"], lamp_values, known_wavelengths, known_values
+        )
         state["response"] = {"x": lamp["x"].copy(), "values": response_values}
         state["spectrum"] = None
-        print(f"respons: {np.count_nonzero(np.isfinite(state["response"]["values"]))} av {len(state["response"]["values"])} positioner giltiga")
+        print(
+            f"respons: {np.count_nonzero(np.isfinite(state['response']['values']))} av {len(state['response']['values'])} positioner giltiga"
+        )
     elif args[0] == "on":
         if state["response"] is None:
-            raise ValueError("input.missing_data: ingen respons, kör response build först")
+            raise ValueError(
+                "input.missing_data: ingen respons, kör response build först"
+            )
         state["use_response"] = True
         state["spectrum"] = None
         print("respons: on")
@@ -562,7 +634,9 @@ def cmd_reference(state, args):
     state["reference"] = spectrum
     state["spectrum"] = None
     word = "bild" if N == 1 else "bilder"
-    print(f"Referens: {N} {word}, x från {spectrum["x"][0]:g} till {spectrum["x"][-1]:g}")
+    print(
+        f"Referens: {N} {word}, x från {spectrum['x'][0]:g} till {spectrum['x'][-1]:g}"
+    )
 
 
 def cmd_mode(state, args):
@@ -573,7 +647,9 @@ def cmd_mode(state, args):
     Fel: ValueError med input.invalid_argument vid fel ord och input.missing_data för transmission utan referens.
     """
     if len(args) != 1 or args[0] not in ("direct", "transmission"):
-        raise ValueError("input.invalid_argument: mode tar ett ord, direct eller transmission")
+        raise ValueError(
+            "input.invalid_argument: mode tar ett ord, direct eller transmission"
+        )
     if args[0] == "transmission" and state["reference"] is None:
         raise ValueError("input.missing_data: ingen referens, kör reference först")
     state["mode"] = args[0]
@@ -615,7 +691,9 @@ def run_command(state, line):
     if not words:
         return None  # tom rad: bara en ny prompt
     if words[0] not in COMMANDS:
-        raise ValueError(f"input.invalid_argument: okänt kommando {words[0]}. Skriv help för en lista.")
+        raise ValueError(
+            f"input.invalid_argument: okänt kommando {words[0]}. Skriv help för en lista."
+        )
     function, _help_text = COMMANDS[words[0]]
     return function(state, words[1:])
 
@@ -631,13 +709,21 @@ def run_file(state, path):
     try:
         spectrum = measure(state)
         i = np.argmax(spectrum["values"])
-        print(f"Topp {spectrum["values"][i]:g} vid pixel {spectrum["x"][i]:g}")
+        print(f"Topp {spectrum['values'][i]:g} vid pixel {spectrum['x'][i]:g}")
 
-        folder = files.save_measurement(state["settings"]["output_dir"], spectrum, state["image"], state["settings"])
+        folder = files.save_measurement(
+            state["settings"]["output_dir"], spectrum, state["image"], state["settings"]
+        )
         print(f"Sparad i {folder.as_posix()}")
 
         win = plot.open_plot()
-        plot.draw(win, spectrum["x"], np.where(spectrum["mask"], spectrum["values"], np.nan), spectrum["x_label"], spectrum["y_label"])
+        plot.draw(
+            win,
+            spectrum["x"],
+            np.where(spectrum["mask"], spectrum["values"], np.nan),
+            spectrum["x_label"],
+            spectrum["y_label"],
+        )
         plt.show(block=True)
 
     except (ValueError, RuntimeError, OSError) as err:
@@ -654,8 +740,13 @@ def main():
     Returnerar: None för prompten (sys.exit ger då koden 0), annars slutkoden från run_file.
     Fel: fångar ValueError, RuntimeError och OSError per rad, och KeyboardInterrupt under ett kommando (Avbrutet.).
     """
-    parser = argparse.ArgumentParser(prog="python -m spectrometer.main", description="Utan sökväg: prompten spektro>. Med sökväg: läser bildfilen, skriver toppen, sparar mätningen och ritar spektrumet.")
-    parser.add_argument("path", nargs="?", help="sökvägen till en bildfil (utan den startar prompten)")
+    parser = argparse.ArgumentParser(
+        prog="python -m spectrometer.main",
+        description="Utan sökväg: prompten spektro>. Med sökväg: läser bildfilen, skriver toppen, sparar mätningen och ritar spektrumet.",
+    )
+    parser.add_argument(
+        "path", nargs="?", help="sökvägen till en bildfil (utan den startar prompten)"
+    )
     args = parser.parse_args()
 
     state = new_state(DEFAULTS)

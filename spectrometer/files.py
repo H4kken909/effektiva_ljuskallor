@@ -2,6 +2,7 @@
 
 Används av main.py (save, calibrate och response build).
 """
+
 import csv
 import json
 import math
@@ -28,7 +29,9 @@ def save_measurement(parent, spectrum, image, settings):
         folder = Path(parent) / f"{stamp}-{counter}"
         counter += 1
     folder.mkdir(parents=True)
-    transmission = settings.get("mode") == "transmission"  # valfritt (0.9.3): kolumnen absorbance
+    transmission = (
+        settings.get("mode") == "transmission"
+    )  # valfritt (0.9.3): kolumnen absorbance
     with open(folder / "spectrum.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         x_col = "x_px" if spectrum["x_label"] == "pixel" else "x_nm"
@@ -70,22 +73,34 @@ def load_points(path):
                 continue  # tom rad, en sist i filen är vanlig
             if line_no == 1:
                 if row != ["pixel", "wavelength_nm", "check"]:
-                    raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel rubrik, väntade pixel,wavelength_nm,check")
+                    raise ValueError(
+                        f"input.invalid_argument: {name} rad {line_no}: fel rubrik, väntade pixel,wavelength_nm,check"
+                    )
                 continue
             if len(row) != 3:
-                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel antal fält, väntade 3")
+                raise ValueError(
+                    f"input.invalid_argument: {name} rad {line_no}: fel antal fält, väntade 3"
+                )
             try:
                 pixel = float(row[0])
             except ValueError as err:
-                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: pixel är inte ett tal") from err
+                raise ValueError(
+                    f"input.invalid_argument: {name} rad {line_no}: pixel är inte ett tal"
+                ) from err
             try:
                 wavelength = float(row[1])
             except ValueError as err:
-                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: wavelength_nm är inte ett tal") from err
+                raise ValueError(
+                    f"input.invalid_argument: {name} rad {line_no}: wavelength_nm är inte ett tal"
+                ) from err
             if not math.isfinite(pixel) or pixel < 0:
-                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: pixel har ett ogiltigt värde")
+                raise ValueError(
+                    f"input.invalid_argument: {name} rad {line_no}: pixel har ett ogiltigt värde"
+                )
             if row[2] not in ("0", "1"):
-                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: check ska vara 0 eller 1")
+                raise ValueError(
+                    f"input.invalid_argument: {name} rad {line_no}: check ska vara 0 eller 1"
+                )
             pixels.append(pixel)
             wavelengths.append(wavelength)
             is_check.append(row[2] == "1")
@@ -112,19 +127,29 @@ def load_known(path):
                 continue  # tom rad, en sist i filen är vanlig
             if line_no == 1:
                 if row != ["wavelength_nm", "relative_power_per_nm"]:
-                    raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel rubrik {row}")
+                    raise ValueError(
+                        f"input.invalid_argument: {name} rad {line_no}: fel rubrik {row}"
+                    )
                 continue
             if len(row) != 2:
-                raise ValueError(f"input.invalid_argument: {name}: fel antal fält, rad {line_no}")
+                raise ValueError(
+                    f"input.invalid_argument: {name}: fel antal fält, rad {line_no}"
+                )
             try:
                 wavelength = float(row[0])
                 power = float(row[1])
             except ValueError as err:
-                raise ValueError(f"input.invalid_argument: {name}: fältet är inte ett tal, rad {line_no}") from err
+                raise ValueError(
+                    f"input.invalid_argument: {name}: fältet är inte ett tal, rad {line_no}"
+                ) from err
             if not (math.isfinite(wavelength) and math.isfinite(power)) or power < 0:
-                raise ValueError(f"input.invalid_argument: {name}: ogiltigt värde, rad {line_no}")
+                raise ValueError(
+                    f"input.invalid_argument: {name}: ogiltigt värde, rad {line_no}"
+                )
             if wavelengths and wavelength <= wavelengths[-1]:
-                raise ValueError(f"input.invalid_argument: {name}: våglängden stiger inte, rad {line_no}")
+                raise ValueError(
+                    f"input.invalid_argument: {name}: våglängden stiger inte, rad {line_no}"
+                )
             wavelengths.append(wavelength)
             values.append(power)
     if len(wavelengths) < 2:
