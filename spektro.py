@@ -25,6 +25,10 @@ import sys
 import time
 from pathlib import Path
 
+from spectrometer import __version__
+
+VERSION = f"v{__version__}"
+
 ROT = Path(__file__).resolve().parent
 VENV = ROT / ".venv"
 VENV_PY = VENV / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
@@ -245,9 +249,7 @@ def startskarm(paus_rad):
         time.sleep(PAUS_SLUT)
         skriv_info()
         skriv("\x1b[?25h")
-        main_py = ROT / "spectrometer" / "main.py"
-        if "input(" in main_py.read_text(encoding="utf-8"):
-            gom_hjalpen()
+        gom_hjalpen() # main skriver alltid sin rad före första prompten = prismat och tipset står där
         kor_main()
     finally:
         if isinstance(sys.stdout, io.StringIO):
