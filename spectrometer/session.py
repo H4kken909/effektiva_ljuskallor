@@ -29,6 +29,7 @@ def new_state(settings):
         "coefficients": None,  # kalibreringens koefficienter, float64, a0 först (calibrate)
         "pixel_range": None,  # kalibreringens giltiga intervall (låg, hög) i pixlar (calibrate)
         "dark": None,  # mörkret, (H, W, 3) float64 i counts (dark)
+        "dark_camera": None,  # kamerans reglage när mörkret togs (source.describe), None innan dark
         "response": None,  # responsen: {"x": nm, "values": relativ} (response build)
         "use_response": False,  # True när responsen ska användas (response on och off)
         "reference": None,  # referensspektrumet med kanal, values i counts (reference)

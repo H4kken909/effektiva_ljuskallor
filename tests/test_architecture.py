@@ -76,6 +76,6 @@ def test_help_ordningen():
 
     registry.load(commands.modules())
     assert list(registry.COMMANDS) == [
-        "help", "quit", "show", "source", "roi", "channel", "axis", "frames",
-        "step", "save", "start", "stability", "calibrate", "dark", "response", "reference", "mode",
+        "help", "quit", "show", "source", "roi", "channel", "axis", "frames", "info", "cameras", "snap", "image",
+        "step", "save", "start", "stability", "perf", "calibrate", "dark", "response", "reference", "mode",
     ]

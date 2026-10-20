@@ -3,9 +3,11 @@
 measure() gör samma sak som main.measure i v1.0.0, delad i steg som går att testa ett och ett.
 """
 
+import time
+
 import numpy as np
 
-from spectrometer import calc, quality, source
+from spectrometer import calc, out, quality, source
 
 CAPTURE_FRAMES = 16  # bilder i dark och reference: medlet av flera bilder har mindre brus än en enda
 
@@ -83,33 +85,28 @@ def apply_transmission(state, spectrum):
     spectrum["y_label"] = "transmission (kvot)"
 
 
-def measure(state, src=None):
+def measure(state, src=None, timing=None):
     """Mäter ett spektrum med inställningarna och lägger det och råbilden i state.
 
     Ordning: frames bilder (mörker, ROI, kanal, medel per bild), medel över bilderna, nm, respons, transmission.
     Parametrar: state: programmets state; src: en redan öppen källa som lånas (start), eller None för att öppna och
-    stänga källan här.
-    Returnerar: spektrumet, en ordbok med x, values, mask, x_label och y_label.
+    stänga källan här; timing: en ordbok som får sekunderna för read (bilderna ur källan) och compute (resten), eller None.
+    Returnerar: spektrumet, en ordbok med x, values, mask, x_label, y_label, saturated_px, saturated, stddev och camera.
     Fel: ValueError med input.invalid_argument eller input.missing_data, RuntimeError med camera.open_failed eller
     camera.read_failed.
     """
-    kind, value = state["settings"]["source"]
-    opened_here = src is None
-    if opened_here:
-        src = source.open_source(kind, value)
+    n = state["settings"]["frames"]
+    started = time.perf_counter()
+    images, camera = _with_source(state, src, lambda s: (source.read_frames(s, n), source.describe(s)))
+    read_done = time.perf_counter()
     spectra = []
     saturated_px, saturated = 0, False  # flest mättade ROI-pixlar i en bild, och var längs spektrumet (alla bilder)
-    try:
-        for _ in range(state["settings"]["frames"]):
-            image = source.read_frame(src)
-            values, roi = frame_spectrum(state, image)
-            spectra.append(values)
-            part = quality.crop(image, roi)
-            saturated_px = max(saturated_px, quality.saturated_count(part, state["settings"]["channel"]))
-            saturated = saturated | quality.saturated_positions(part, state["settings"]["axis"], state["settings"]["channel"])
-    finally:
-        if opened_here:
-            source.close_source(src)
+    for image in images:
+        values, roi = frame_spectrum(state, image)
+        spectra.append(values)
+        part = quality.crop(image, roi)
+        saturated_px = max(saturated_px, quality.saturated_count(part, state["settings"]["channel"]))
+        saturated = saturated | quality.saturated_positions(part, state["settings"]["axis"], state["settings"]["channel"])
     mean, stddev = calc.average_spectra(np.stack(spectra))
     x = pixel_axis(roi, state["settings"]["axis"])
     saturated = calibrate_axis(state, x, saturated, np.isfinite(mean))[1]  # samma ordning som values: vänds med x
@@ -118,10 +115,14 @@ def measure(state, src=None):
     spectrum = {"x": x, "values": values, "mask": mask, "x_label": x_label, "y_label": "signal (counts)"}
     spectrum["saturated_px"], spectrum["saturated"] = saturated_px, saturated
     spectrum["stddev"] = stddev  # slumpbrus mellan bilderna i counts (stickprov, ddof=1); ingen osäkerhet för instrumentet
+    spectrum["camera"] = camera  # kamerans reglage under mätningen (source.describe)
     apply_response(state, spectrum)
     apply_transmission(state, spectrum)
     state["image"] = image
     state["spectrum"] = spectrum
+    if timing is not None:
+        timing["read"] = read_done - started
+        timing["compute"] = time.perf_counter() - read_done
     return spectrum
 
 
@@ -133,3 +134,23 @@ def measure_direct(state, n):
     direct["use_response"] = False
     direct["settings"]["frames"] = n
     return measure(direct)
+
+
+def _with_source(state, src, funktion):
+    """Kör funktion(src) med en öppen källa och ger det funktion ger.
+
+    Parametrar: state: programmets state (källan står i settings); src: en öppen källa som lånas (start), eller None
+    för att öppna källan här och alltid stänga den efteråt, också vid fel och Ctrl+C; funktion: tar den öppna källan.
+    Exempel: images = _with_source(state, None, lambda s: source.read_frames(s, 16))
+    """
+    opened_here = src is None
+    if opened_here:
+        kind, value = state["settings"]["source"]
+        if kind == "camera":
+            out.say("Öppnar kameran ...")  # kan ta en sekund, och uppvärmningen läses bort
+        src = source.open_source(kind, value)
+    try:
+        return funktion(src)
+    finally:
+        if opened_here:
+            source.close_source(src)

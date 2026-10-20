@@ -1,6 +1,6 @@
-"""source, roi, channel, axis och frames: var bilden kommer ifrån och vilken del som mäts."""
+"""source, roi, channel, axis och frames: var bilden kommer ifrån och vilken del som mäts. Sist kommandon som tittar på källan."""
 
-from spectrometer import calc, out, registry, session
+from spectrometer import calc, files, measure, out, registry, session, source
 
 
 @registry.command("source", "file PATH eller camera N")
@@ -69,3 +69,60 @@ def cmd_frames(state, args):
     n = registry.to_int("N", args[0], 1)
     session.set_setting(state, "frames", n)
     out.say(f"frames: {n}")
+
+
+@registry.command("info", "källan: storlek, format och kamerans reglage")
+def cmd_info(state, args):
+    """Kommandot info: öppnar källan, läser en bild, skriver vad källan och drivrutinen säger och stänger igen.
+
+    Exponering och gain är drivrutinens egna tal utan enhet; de jämförs bara med sig själva (step varnar vid ändring).
+    """
+    registry.need(args, (), "info")
+    image, camera = measure._with_source(state, None, lambda s: (source.read_frame(s), source.describe(s)))
+    height, width = image.shape[:2]
+    kind, value = state["settings"]["source"]
+    if kind != "camera":
+        out.say(f"Källa: fil {value}, {width}x{height}")
+        return
+    backend = camera["backend"] or "okänd"  # None när drivrutinen inte säger något
+    fourcc = camera["fourcc"] or "okänd"
+    out.say(f"Källa: kamera {value} ({backend}), {width}x{height}, {fourcc}")
+    out.say(f"exponering: {camera['exposure']:g}, gain: {camera['gain']:g}, auto-exponering: "
+            f"{camera['auto_exposure']:g}, bildtakt: {camera['fps']:g} (enligt drivrutinen)")
+    if camera["fourcc"] == "MJPG":
+        out.warn("MJPG: JPEG-komprimeringen ändrar pixelvärdena. Välj YUYV om kameran klarar det.")
+
+
+@registry.command("cameras", "prova kamera 0 till 4 och skriv vilka som ger bild")
+def cmd_cameras(state, args):
+    """Kommandot cameras: provar kameranummer 0 till 4 med source.probe och skriver en rad per nummer. Källan ändras inte."""
+    registry.need(args, (), "cameras")
+    max_index = 4
+    found = {index: (width, height) for index, width, height in source.probe(max_index)}
+    for index in range(max_index + 1):
+        size = found.get(index)
+        out.say(f"kamera {index}: {size[0]}x{size[1]}" if size else f"kamera {index}: ingen bild")
+
+
+@registry.command("snap", "[N]: spara N råbilder (1) ur källan som PNG i output_dir, utan att mäta")
+def cmd_snap(state, args):
+    """Kommandot snap [N]: läser N bilder ur källan och sparar dem som PNG; state ändras inte."""
+    if len(args) > 1:
+        raise ValueError("input.invalid_argument: snap tar högst ett ord (N)")
+    n = registry.to_int("N", args[0], 1) if args else 1
+    images = measure._with_source(state, None, lambda s: source.read_frames(s, n))
+    for path in files.save_snaps(state["settings"]["output_dir"], images):
+        out.say(f"Sparad: {path.as_posix()}")
+
+
+@registry.command("image", "[FIL]: spara en bild ur källan med ROI:n inritad (bild.png)")
+def cmd_image(state, args):
+    """Kommandot image [FIL]: läser en bild och sparar en kopia med ROI:n som grön ram, för att se var ROI:n ligger."""
+    if len(args) > 1:
+        raise ValueError("input.invalid_argument: image tar högst ett ord (FIL)")
+    path = args[0] if args else "bild.png"
+    if not path.lower().endswith(".png"):
+        raise ValueError(f"input.invalid_argument: {path}: filnamnet ska sluta på .png")
+    image = measure._with_source(state, None, source.read_frame)
+    files.save_png(path, image, state["settings"]["roi"])
+    out.say(f"Sparad: {path}")

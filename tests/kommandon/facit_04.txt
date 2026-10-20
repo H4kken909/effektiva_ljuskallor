@@ -7,10 +7,15 @@ roi X Y W H i pixlar, eller full för hela bilden
 channel gray, sum, red, green eller blue
 axis horizontal eller vertical
 frames N: bilder per mätning
+info källan: storlek, format och kamerans reglage
+cameras prova kamera 0 till 4 och skriv vilka som ger bild
+snap [N]: spara N råbilder (1) ur källan som PNG i output_dir, utan att mäta
+image [FIL]: spara en bild ur källan med ROI:n inritad (bild.png)
 step mät och skriv toppen
 save [DIR]: spara senaste mätningen
 start live med kameran, Ctrl+C stoppar
 stability [N]: mät toppvärdet N gånger (30) och skriv variation och drift
+perf [N]: tidta N mätningar (20) utan fönster: median, 95:e percentil, bilder/s
 calibrate PATH [DEGREE]: anpassa våglängd till en punktfil
 dark [N]: mät mörker med blockerad ljusväg
 response build KNOWNFILE | on | off
