@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import cv2
+import numpy as np
 
 
 def open_source(kind, value):
@@ -43,7 +44,8 @@ def open_source(kind, value):
         raise ValueError(f"input.invalid_argument: Type is unknown {kind}")
     if not Path(value).is_file():
         raise RuntimeError(f"camera.open_failed: Image source does not exist {value}")
-    img = cv2.imread(str(value), cv2.IMREAD_UNCHANGED)
+    data = np.fromfile(value, np.uint8)  # imdecode i stället för imread: klarar åäö i Windows-sökvägar
+    img = cv2.imdecode(data, cv2.IMREAD_UNCHANGED) if data.size else None
     if img is None:
         raise RuntimeError(f"camera.open_failed: Could not open {value} as image")
     if img.dtype != "uint8":

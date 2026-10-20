@@ -10,6 +10,7 @@ frames N: bilder per mätning
 step mät och skriv toppen
 save [DIR]: spara senaste mätningen
 start live med kameran, Ctrl+C stoppar
+stability [N]: mät toppvärdet N gånger (30) och skriv variation och drift
 calibrate PATH [DEGREE]: anpassa våglängd till en punktfil
 dark [N]: mät mörker med blockerad ljusväg
 response build KNOWNFILE | on | off

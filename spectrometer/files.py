@@ -47,7 +47,12 @@ def save_measurement(parent, spectrum, image, settings):
                 row.append(f"{-math.log10(value):.10g}" if ok and value > 0 else "")
             writer.writerow(row)
     raw_path = folder / "raw.png"
-    written = cv2.imwrite(str(raw_path), image)
+    try:
+        written, encoded = cv2.imencode(".png", image)  # imencode och tofile, inte imwrite: klarar åäö i Windows
+        if written:
+            encoded.tofile(raw_path)
+    except OSError:
+        written = False
     if not written:
         raise OSError(f"files.write_failed: raw.png kunde inte sparas: {raw_path}")
     with open(folder / "settings.json", "w", encoding="utf-8") as f:
