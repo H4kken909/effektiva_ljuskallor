@@ -11,9 +11,9 @@ PAKET = Path(__file__).resolve().parents[1] / "spectrometer"
 LAGER = {
     "out": 0, "theme": 0, "calc": 0,
     "session": 1, "quality": 1, "peaks": 1, "source": 1, "files": 1, "plot": 1,
-    "registry": 2, "measure": 2, "analysis": 2,
+    "registry": 2, "measure": 2, "analysis": 2, "meta": 2,
     "commands": 3,
-    "main": 4,
+    "main": 4, "__main__": 5,
 }
 BARA = {"matplotlib": {"plot", "analysis"}, "cv2": {"source", "files"}}
 MODULER = [
@@ -76,6 +76,7 @@ def test_help_ordningen():
 
     registry.load(commands.modules())
     assert list(registry.COMMANDS) == [
-        "help", "quit", "show", "source", "roi", "channel", "axis", "frames", "info", "cameras", "snap", "image",
-        "step", "save", "start", "stability", "perf", "calibrate", "dark", "response", "reference", "mode",
+        "help", "quit", "show", "status", "version", "source", "roi", "channel", "axis", "frames", "info", "cameras", "snap", "image",
+        "step", "save", "start", "stability", "perf", "calibrate", "toppar", "dark", "response", "reference", "mode",
+        "run", "wait", "reset", "undo", "history", "history save", "clear", "set", "rows", "background", "response save", "response load", "rigg",
     ]

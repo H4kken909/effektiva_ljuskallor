@@ -3,8 +3,12 @@
 Används av main.py (save, calibrate och response build).
 """
 import csv
+import hashlib
 import json
 import math
+import os
+import shutil
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -13,21 +17,40 @@ import numpy as np
 
 
 def save_measurement(parent, spectrum, image, settings):
-    """Sparar en mätning som en mapp med spectrum.csv, raw.png och settings.json.
+    """Sparar en mätning som en mapp med spectrum.csv, raw.png, settings.json och README.txt.
 
+    Säkert: mappen skrivs först som <stämpel>.partial, filerna kontrolleras och sist byter mappen namn (os.replace),
+    så en mapp utan .partial är alltid hel. Vid varje fel tas .partial bort; under 50 MB ledigt sparas inget.
     Parametrar: parent: föräldramappen (str eller Path); spectrum: ordboken från measure med x, values, mask,
     x_label och y_label; image: råbilden, (H, W, 3) uint8; settings: inställningarna (bara tal, text, tuple,
     listor, bool och None).
     Returnerar: mätmappen som Path, till exempel data/20261016-153012 eller data/20261016-153012-2.
     Fel: OSError om något inte går att skriva, med files.write_failed om raw.png inte sparas.
     """
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    # Mappnamnet är samma ögonblick som measured_at i settings.json, när den finns. DAT-07.
+    moment = datetime.fromisoformat(settings["measured_at"]) if "measured_at" in settings else datetime.now()
+    stamp = moment.strftime("%Y%m%d-%H%M%S")
     folder = Path(parent) / stamp
     counter = 2
     while folder.exists():
         folder = Path(parent) / f"{stamp}-{counter}"
         counter += 1
-    folder.mkdir(parents=True)
+    _check_free_space(parent)
+    partial = folder.with_name(folder.name + ".partial")
+    partial.mkdir(parents=True)
+    try:
+        _write_files(partial, spectrum, image, settings)
+        _check_files(partial)
+        _rename(partial, folder)
+    except BaseException:
+        # Vid varje fel, även Ctrl+C (KeyboardInterrupt) och full disk: hellre ingen mapp än en halv. ROB-12.
+        shutil.rmtree(partial, ignore_errors=True)
+        raise
+    return folder
+
+
+def _write_files(folder, spectrum, image, settings):
+    """Skriver spectrum.csv, raw.png, README.txt och settings.json i mappen folder, som redan finns."""
     transmission = settings.get("mode") == "transmission"  # valfritt (0.9.3): kolumnen absorbance
     with open(folder / "spectrum.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -52,9 +75,9 @@ def save_measurement(parent, spectrum, image, settings):
         written = False
     if not written:
         raise OSError(f"files.write_failed: raw.png kunde inte sparas: {raw_path}")
+    _write_readme(folder, settings)
     with open(folder / "settings.json", "w", encoding="utf-8") as f:
         json.dump(settings, f, indent=2, ensure_ascii=False)
-    return folder
 
 
 def load_points(path):
@@ -168,3 +191,201 @@ def save_snaps(parent, images):
         save_png(path, image)
         paths.append(path)
     return paths
+
+
+def load_lines(path):
+    """Läser en linjefil: rubriken wavelength_nm och en våglängd i nm per rad; rader som börjar med # hoppas över.
+
+    Parametrar: path: sökvägen till CSV-filen (str eller Path), t.ex. kalibrering/hg_linjer.csv.
+    Returnerar: våglängderna i stigande nm, (L,) float64.
+    Fel: ValueError med input.invalid_argument, filnamnet och radnumret vid fel rubrik, fel antal fält, ett fält som
+    inte är ett tal eller färre än två linjer; OSError om filen saknas.
+    """
+    name = Path(path).name
+    wavelengths = []
+    header = False
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        for line_no, row in enumerate(csv.reader(f), start=1):
+            if not row or row[0].startswith("#"):
+                continue  # tom rad eller kommentar (källan för linjerna)
+            if not header:
+                if row != ["wavelength_nm"]:
+                    raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel rubrik, väntade wavelength_nm")
+                header = True
+                continue
+            if len(row) != 1:
+                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel antal fält, väntade 1")
+            try:
+                wavelength = float(row[0])
+            except ValueError as err:
+                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: wavelength_nm är inte ett tal") from err
+            if not math.isfinite(wavelength):
+                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: wavelength_nm har ett ogiltigt värde")
+            wavelengths.append(wavelength)
+    if len(wavelengths) < 2:
+        raise ValueError(f"input.invalid_argument: färre än två linjer i {name}")
+    return np.sort(np.array(wavelengths, dtype=np.float64))
+
+
+def save_points(path, rows):
+    """Skriver en ny punktfil: rubriken pixel,wavelength_nm,check och raderna som de är. Skriver aldrig över.
+
+    Parametrar: path: den nya filen (str eller Path); rows: raderna som text, t.ex. "412.3,404.656,0".
+    Returnerar: None.
+    Fel: ValueError med input.invalid_argument om filen redan finns; OSError om den inte går att skriva.
+    """
+    try:
+        f = open(path, "x", encoding="utf-8")  # "x": bara en ny fil, annars FileExistsError
+    except FileExistsError as err:
+        raise ValueError(f"input.invalid_argument: {Path(path).name} finns redan, toppar skriver inte över") from err
+    with f:
+        f.write("pixel,wavelength_nm,check\n")
+        for row in rows:
+            f.write(f"{row}\n")
+
+
+def points_file_info(path):
+    """Vilken punktfil kalibreringen kom ifrån: sökvägen, de 12 första tecknen av sha256 och tiden då den lästes.
+
+    Samma sha256 betyder samma innehåll i filen. Parametrar: path: punktfilen (str eller Path).
+    Returnerar: {"path": "kalibrering/punkter.csv", "sha256": "3f2a...", "time": "2026-10-20T14:03:12"}.
+    Fel: OSError om filen inte går att läsa.
+    """
+    digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()[:12]
+    return {"path": Path(path).as_posix(), "sha256": digest, "time": datetime.now().isoformat(timespec="seconds")}
+
+
+def load_saved_calibration(path):
+    """Läser kalibreringen ur en mätmapps settings.json (sparad av save, pixel_range finns från 1.0.26).
+
+    Parametrar: path: sökvägen till settings.json (str eller Path).
+    Returnerar: ordbok med coefficients (2 eller 3 värden, float64, a0 först), pixel_range (låg, hög),
+    axis och image_size ([bredd, höjd]) som de sparades (None om de saknas) och calibration_points_file.
+    Fel: ValueError med input.invalid_argument om filen inte är JSON eller värdena har fel form, med
+    input.missing_data om kalibreringen eller pixel_range saknas; OSError om filen saknas.
+    """
+    name = Path(path).name
+    try:
+        with open(path, encoding="utf-8") as f:
+            saved = json.load(f)
+    except json.JSONDecodeError as err:
+        raise ValueError(f"input.invalid_argument: {name} är inte giltig JSON (rad {err.lineno})") from err
+    if not isinstance(saved, dict) or saved.get("coefficients") is None:
+        raise ValueError(f"input.missing_data: {name} har ingen kalibrering (coefficients saknas)")
+    if saved.get("pixel_range") is None:
+        raise ValueError(f"input.missing_data: {name} saknar pixel_range (sparad före 1.0.26), kalibrera med punktfilen")
+    try:
+        coefficients = np.array(saved["coefficients"], dtype=np.float64)
+        low, high = (float(v) for v in saved["pixel_range"])
+    except (TypeError, ValueError) as err:
+        raise ValueError(f"input.invalid_argument: {name}: coefficients eller pixel_range har fel form") from err
+    if coefficients.shape not in ((2,), (3,)) or not np.all(np.isfinite(coefficients)) or not low < high:
+        raise ValueError(f"input.invalid_argument: {name}: coefficients eller pixel_range har fel form")
+    return {
+        "coefficients": coefficients,
+        "pixel_range": (low, high),
+        "axis": saved.get("axis"),
+        "image_size": saved.get("image_size"),
+        "calibration_points_file": saved.get("calibration_points_file"),
+    }
+
+
+def save_response(path, wavelengths, values):
+    """Skriver responsen som CSV: wavelength_nm, response och valid, med tom cell där responsen saknas (NaN).
+
+    Parametrar: path: filen (str eller Path); wavelengths: (P,) i nm; values: (P,) relativ respons, NaN där ogiltig.
+    Fel: OSError om filen inte går att skriva.
+    """
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["wavelength_nm", "response", "valid"])
+        for x, value in zip(wavelengths, values):
+            ok = bool(np.isfinite(value))
+            writer.writerow([f"{x:.10g}", f"{value:.10g}" if ok else "", "true" if ok else "false"])
+
+
+SAVED_FILES = ("spectrum.csv", "raw.png", "settings.json", "README.txt")  # filerna som varje hel mätmapp har
+MIN_FREE_MB = 50  # en 1080p-PNG är några MB (antaget); under 50 MB ledigt sparas inget
+
+
+def _check_free_space(parent):
+    """Kräver MIN_FREE_MB ledigt på närmaste befintliga mapp ovanför parent. Fel: OSError med files.write_failed."""
+    folder = Path(parent).resolve()
+    while not folder.exists() and folder != folder.parent:
+        folder = folder.parent
+    free_mb = shutil.disk_usage(folder).free // (1024 * 1024)
+    if free_mb < MIN_FREE_MB:
+        raise OSError(f"files.write_failed: bara {free_mb} MB ledigt på {folder.as_posix()}")
+
+
+def _check_files(folder):
+    """Kontrollerar att varje fil i SAVED_FILES finns och inte är tom. Fel: OSError med files.write_failed."""
+    for name in SAVED_FILES:
+        path = folder / name
+        if not path.is_file() or path.stat().st_size == 0:
+            raise OSError(f"files.write_failed: {name} saknas eller är tom i {folder.as_posix()}")
+
+
+def _rename(partial, folder):
+    """Byter namn från .partial till det slutliga namnet med os.replace; tre försök vid PermissionError.
+
+    Windows Defender eller OneDrive kan låsa en ny fil en kort stund (antaget), därför en halv sekund mellan försöken.
+    """
+    for attempt in range(3):
+        try:
+            os.replace(partial, folder)
+            return
+        except PermissionError:
+            if attempt == 2:
+                raise
+            time.sleep(0.5)
+
+
+def opencv_version():
+    """OpenCV-versionen, till settings.json och kommandot version (cv2 används bara här och i source.py)."""
+    return cv2.__version__
+
+
+YES = {True: "ja", False: "nej"}
+README_TEXT = """\
+Mätmapp från spektrometerprogrammet (Effektiva ljuskällor, TFYY51, grupp GRYb1).
+
+Filerna
+  spectrum.csv   spektrumet, en rad per position längs spektrumet
+  raw.png        den sista råbilden, 8 bitar per kanal
+  settings.json  inställningar, programversion, bibliotek, profiler och kalibrering när mätningen gjordes
+  README.txt     den här filen
+
+Kolumnerna i spectrum.csv
+  x_px eller x_nm  position: pixel i hela bilden (x_px) eller våglängd i nm (x_nm, efter calibrate)
+  value            signalen: counts (mode direct), relativ (med respons) eller kvoten T (mode transmission);
+                   tom där värdet inte går att använda
+  valid            true där värdet går att använda, annars false
+  absorbance       bara i mode transmission: A = -log10(T), utan enhet
+
+Alla tal är relativa tal från kameran, inte watt.
+
+Excel: Data, Från text/CSV, välj spectrum.csv, avgränsare komma. Talen har decimalpunkt; visar svensk Excel dem
+som text, ändra kolumnernas typ med nationella inställningar Engelska (USA) under Transformera data.
+"""
+
+
+def _write_readme(folder, settings):
+    """Skriver README.txt: den fasta texten och raderna om just den här mätningen ur settings. DAT-24."""
+    transmission = settings.get("mode") == "transmission"
+    lines = [
+        "",
+        "Den här mätningen",
+        f"  källa: {settings.get('source')}",
+        f"  kanal: {settings.get('channel')}",
+        f"  roi: {settings.get('roi')}",
+        f"  frames: {settings.get('frames')}",
+        f"  läge: {settings.get('mode')}",
+        f"  kalibrerad: {YES[settings.get('coefficients') is not None]}",
+        f"  mörker: {YES[bool(settings.get('dark'))]}",
+        f"  respons: {YES[bool(settings.get('use_response')) and not transmission]}",
+        f"  referens: {YES[transmission]}",
+        f"  programversion: {settings.get('program_version')}",
+        f"  mätt: {settings.get('measured_at')}",
+    ]
+    (folder / "README.txt").write_text(README_TEXT + "\n".join(lines) + "\n", encoding="utf-8")

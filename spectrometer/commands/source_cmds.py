@@ -3,9 +3,10 @@
 from spectrometer import calc, files, measure, out, registry, session, source
 
 
-@registry.command("source", "file PATH eller camera N")
+@registry.command("source", "file PATH eller camera N", "source file PATH eller source camera N")
 def cmd_source(state, args):
     """Kommandot source file PATH eller source camera N: byter källa och glömmer den gamla bilden."""
+    before = state["settings"]["source"]
     if not args:
         raise ValueError("input.invalid_argument: source: kind saknas")
     if args[0] == "file":
@@ -18,15 +19,23 @@ def cmd_source(state, args):
     else:
         raise ValueError(f"input.invalid_argument: okänd källa {args[0]}, välj file eller camera")
     state["image"] = None
-    out.say(f"source: {state['settings']['source']}")
+    kind, where = state["settings"]["source"]
+    if " " in str(where):
+        where = f'"{where}"'  # som man skulle skriva kommandot
+    out.say(f"source {kind} {where}")
+    after = state["settings"]["source"]
+    profiles = state["dark"] is not None or state["response"] is not None or state["reference"] is not None
+    if profiles and (after[0] != before[0] or (after[0] == "camera" and after[1] != before[1])):
+        # Annan kamera eller fil mot kamera: mörker och referens mättes med den gamla källan. PRO-16.
+        out.warn("källan ändrad, mörker och referens kan vara fel")
 
 
-@registry.command("roi", "X Y W H i pixlar, eller full för hela bilden")
+@registry.command("roi", "X Y W H i pixlar, eller full för hela bilden", "roi X Y W H eller roi full")
 def cmd_roi(state, args):
     """Kommandot roi X Y W H eller roi full; en ROI som inte ryms i senaste bilden ger fel och den gamla står kvar."""
     if args == ["full"]:
         session.set_setting(state, "roi", None)
-        out.say("roi: None (hela bilden)")
+        out.say("roi full")
         return
     registry.need(args, ("x", "y", "width", "height"), "roi")
     x = registry.to_int("x", args[0], 0)
@@ -39,10 +48,10 @@ def cmd_roi(state, args):
     else:
         out.say("ROI:n kontrolleras vid nästa mätning.")
     session.set_setting(state, "roi", new_roi)
-    out.say(f"roi: {new_roi}")
+    out.say("roi " + " ".join(str(n) for n in new_roi))
 
 
-@registry.command("channel", "gray, sum, red, green eller blue")
+@registry.command("channel", "gray, sum, red, green eller blue", "channel gray, sum, red, green eller blue")
 def cmd_channel(state, args):
     """Kommandot channel NAMN: färgkanal ur calc.CHANNELS."""
     registry.need(args, ("name",), "channel")
@@ -52,7 +61,7 @@ def cmd_channel(state, args):
     out.say(f"channel: {args[0]}")
 
 
-@registry.command("axis", "horizontal eller vertical")
+@registry.command("axis", "horizontal eller vertical", "axis horizontal eller axis vertical")
 def cmd_axis(state, args):
     """Kommandot axis RIKTNING: riktning ur session.AXES."""
     registry.need(args, ("name",), "axis")
@@ -62,11 +71,11 @@ def cmd_axis(state, args):
     out.say(f"axis: {args[0]}")
 
 
-@registry.command("frames", "N: bilder per mätning")
+@registry.command("frames", "N: bilder per mätning", "frames N")
 def cmd_frames(state, args):
-    """Kommandot frames N: antalet bilder per mätning, minst 1."""
+    """Kommandot frames N: antalet bilder per mätning, från 1 till registry.MAX_FRAMES (1000)."""
     registry.need(args, ("N",), "frames")
-    n = registry.to_int("N", args[0], 1)
+    n = registry.to_frames(args[0])
     session.set_setting(state, "frames", n)
     out.say(f"frames: {n}")
 

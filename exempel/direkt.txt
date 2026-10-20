@@ -1,0 +1,7 @@
+# Direkt mätning på testbilden: en ljus kolumn vid pixel 12. Kör från projektmappen: run exempel/direkt.txt
+source file tests/data/bilder/rand_x12.png
+roi 10 0 5 10  # remsan runt linjen
+channel red
+frames 3
+step
+save

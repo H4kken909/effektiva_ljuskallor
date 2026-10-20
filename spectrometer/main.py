@@ -53,10 +53,34 @@ def run_file(state, path):
     return 0
 
 
-def main():
+START_FILE = "spektro-start.txt"  # körs före första prompten när den finns i arbetsmappen och stdin är en terminal
+
+
+def start_files(kor):
+    """Kommandofilerna före första prompten: spektro-start.txt (i en terminal, om den finns), sedan --kor FIL."""
+    paths = [START_FILE] if sys.stdin.isatty() and Path(START_FILE).is_file() else []
+    return paths + ([kor] if kor is not None else [])
+
+
+def run_at_start(state, path):
+    """Kör kommandofilen path med run före första prompten. Ger (quit, fel): om filen körde quit, om en rad gav Fel:."""
+    out.say(f"Kör {path}")
+    try:
+        return bool(registry.lookup("run").run(state, [path])), False
+    except (ValueError, RuntimeError, OSError) as error:
+        out.error(error)
+        return False, True
+    except KeyboardInterrupt:
+        out.say("Avbrutet.")
+        return False, True
+
+
+def main(argv=None):
     """Kör prompten spektro> tills quit, Ctrl+D eller Ctrl+C vid prompten; ett fel blir en rad Fel:.
 
-    Med en sökväg efter kommandot mäts bara den bildfilen en gång (run_file).
+    Med en sökväg efter kommandot mäts bara den bildfilen en gång (run_file). Flaggorna (-h visar dem): --version,
+    --kor FIL [--avsluta], --camera N, --input PATH, --output DIR. Med --avsluta: 1 om en rad i filen gav Fel:, annars 0;
+    argparse ger 2 vid en felaktig flagga. argv: orden efter programnamnet, None läser sys.argv.
     Returnerar: slutkoden. Med en sökväg den från run_file. Annars 1 om något kommando gav Fel: och stdin inte är en
     terminal (en kommandofil eller ett rör), annars 0.
     """
@@ -69,13 +93,37 @@ def main():
         "och ritar spektrumet.",
     )
     parser.add_argument("path", nargs="?", help="sökvägen till en bildfil (utan den startar prompten)")
-    args = parser.parse_args()
+    parser.add_argument("--version", action="version", version=f"spektro {__version__}", help="skriv versionen och avsluta")
+    parser.add_argument("--kor", metavar="FIL", help="kör kommandofilen FIL (som run FIL) före första prompten")
+    parser.add_argument("--avsluta", action="store_true", help="med --kor: avsluta efter filen, slutkod 0 eller 1")
+    where = parser.add_mutually_exclusive_group()
+    where.add_argument("--camera", type=int, metavar="N", help="källan är kamera N (som source camera N)")
+    where.add_argument("--input", metavar="PATH", help="källan är bildfilen PATH (som source file PATH)")
+    parser.add_argument("--output", metavar="DIR", help="mappen för mätmapparna (output_dir, annars data)")
+    args = parser.parse_args(argv)
+    if args.avsluta and args.kor is None:
+        parser.error("--avsluta kräver --kor FIL")
     registry.load(commands.modules())
     state = session.new_state(session.DEFAULTS)
+    if args.camera is not None:
+        state["settings"]["source"] = ("camera", args.camera)
+    if args.input is not None:
+        state["settings"]["source"] = ("file", args.input)
+    if args.output is not None:
+        state["settings"]["output_dir"] = args.output
     if args.path is not None:
         return run_file(state, args.path)
-    out.say("Skriv help för kommandona. quit eller Ctrl+D avslutar.")
+    if not args.avsluta:
+        out.say("Skriv help för kommandona. quit eller Ctrl+D avslutar.")
     failed = False
+    quit_now = False
+    for path in start_files(args.kor):
+        quit_now, error = run_at_start(state, path)
+        failed = failed or error
+        if quit_now:
+            break
+    if args.avsluta or quit_now:
+        return 1 if failed else 0
     while True:
         try:
             line = out.ask("spektro> ")
@@ -83,7 +131,7 @@ def main():
             out.say()
             break
         try:
-            if registry.run_command(state, line):
+            if registry.run_line(state, line):  # som run_command, och raden hamnar i history och undo
                 break
         except (ValueError, RuntimeError, OSError) as error:
             out.error(error)

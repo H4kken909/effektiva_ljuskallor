@@ -2,6 +2,8 @@ Skriv help för kommandona. quit eller Ctrl+D avslutar.
 spektro> help Visa kommandona
 quit Avsluta
 show Visa inställningarna
+status Visa kedjan och nästa steg
+version Visa versionerna av programmet och biblioteken
 source file PATH eller camera N
 roi X Y W H i pixlar, eller full för hela bilden
 channel gray, sum, red, green eller blue
@@ -13,26 +15,40 @@ snap [N]: spara N råbilder (1) ur källan som PNG i output_dir, utan att mäta
 image [FIL]: spara en bild ur källan med ROI:n inritad (bild.png)
 step mät och skriv toppen
 save [DIR]: spara senaste mätningen
-start live med kameran, Ctrl+C stoppar
+start [SEKUNDER]: live med kameran, Ctrl+C stoppar (med SEKUNDER: efter så lång tid)
 stability [N]: mät toppvärdet N gånger (30) och skriv variation och drift
 perf [N]: tidta N mätningar (20) utan fönster: median, 95:e percentil, bilder/s
-calibrate PATH [DEGREE]: anpassa våglängd till en punktfil
+calibrate PATH [DEGREE [MARGIN]]: anpassa våglängd till en punktfil
+toppar [N] eller LINJEFIL [UT.csv]: toppar ur senaste step, med LINJEFIL ett förslag till punktfil
 dark [N]: mät mörker med blockerad ljusväg
-response build KNOWNFILE | on | off
-reference [N]: mät referens utan prov
+response build KNOWNFILE [N] | on | off | export PATH
+reference [N] | check [N]: mät referens utan prov, eller jämför med den sparade
 mode direct|transmission
-spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
-spektro> roi: None (hela bilden)
+run FIL: kör kommandona i en kommandofil, en rad i taget; stannar vid första felet
+wait SEKUNDER: vänta, till exempel medan lampan blir varm (högst 600 s, Ctrl+C avbryter)
+reset [ja]: nollställ allt som vid start (i en terminal med mörker eller kalibrering: reset ja)
+undo ångra senaste raden vid prompten som ändrade något (högst 5 steg)
+history [N]: de N senaste raderna vid prompten (20), fel och ångrade märkta
+history save FIL: spara raderna som lyckades som en kommandofil (för run FIL)
+clear dark|calibration|response|reference|all: ta bort en del av kedjan, inställningarna står kvar
+set min_response TAL, min_reference TAL eller output_dir MAPP: ändra en gräns eller mappen
+rows mean|median: medel eller median över ROI:ns rader (rows ensam visar valet)
+background N|off: dra av bakgrunden ur N rader ovanför och under ROI:n (background ensam visar läget)
+response save FIL.npz: spara responsen med roi, kanal, axis och kalibrering (skriver aldrig över)
+response load FIL.npz: läs en sparad respons (samma roi, kanal och axis som nu)
+rigg PATH|off: läs uppställningens data ur en JSON-fil, save skriver den (rigg ensam visar den)
+spektro> source file tests/data/bilder/rand_x12.png
+spektro> roi full
 spektro> ROI:n kontrolleras vid nästa mätning.
-roi: (0, 0, 20, 10)
+roi 0 0 20 10
 spektro> Fel: input.invalid_argument: roi: height saknas
 spektro> Fel: input.invalid_argument: okänd kanal purple, välj gray, sum, red, green, blue
 spektro> channel: red
 spektro> axis: vertical
 spektro> Fel: input.invalid_argument: okänt kommando foo. Skriv help för en lista.
-spektro> source: ('file', 'data/mätning 1.png')
-spektro> source: ('file', 'data/mätning 1.png')
-roi: (0, 0, 20, 10)
+spektro> source file "data/mätning 1.png"
+spektro> källa: fil data/mätning 1.png
+roi: 0 0 20 10
 axis: vertical
 channel: red
 output_dir: data
@@ -44,5 +60,5 @@ mörker: nej
 respons: nej, off
 referens: nej
 mode: direct
-Mätning: nej
+mätning: nej
 spektro> Avslutar.

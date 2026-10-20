@@ -21,3 +21,13 @@ def warn(text):
 def ask(prompt):
     """Läs en rad efter prompten (input skriver prompten)."""
     return input(prompt)
+
+
+def fmt(x):
+    """Ett tal i utskriften, som f"{x:g}" (högst sex värdesiffror). Ett ställe att ändra talformatet på."""
+    return f"{x:g}"
+
+
+def progress(items, text):
+    """Går igenom items. Förloppsraden i terminalen (med texten text) kommer med rich i 1.1.1; här bara items."""
+    return items

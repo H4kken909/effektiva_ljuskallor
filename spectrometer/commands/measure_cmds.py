@@ -1,35 +1,59 @@
 """step, save och start: mäta en gång, spara, och visa live. Sist kommandon som prövar själva mätningen."""
 
+import sys
 import time
 
 import numpy as np
 
-from spectrometer import files, measure, out, plot, quality, registry, source
+from spectrometer import (
+    files,
+    measure,
+    meta,
+    out,
+    plot,
+    quality,
+    registry,
+    session,
+    source,
+)
 
 LIVE_INTERVAL = 0.05  # sekunder per varv i live (mål 20 bilder/s); pausen är det som blir över
 
 
 @registry.command("step", "mät och skriv toppen")
 def cmd_step(state, args):
-    """Kommandot step: mäter, skriver toppen och antalet bilder, varnar vid mättnad och transmission över 1."""
+    """Kommandot step: mäter, skriver toppen och antalet bilder, varnar vid mättnad och transmission över 1,05."""
     registry.need(args, (), "step")
     spectrum = measure.measure(state)
     i = int(np.nanargmax(np.where(spectrum["mask"], spectrum["values"], np.nan)))
     frames = state["settings"]["frames"]
     word = "bild" if frames == 1 else "bilder"
-    out.say(f"Topp {spectrum['values'][i]:g} vid {spectrum['x_label']} {spectrum['x'][i]:g} ({frames} {word})")
+    out.say(f"Topp {out.fmt(spectrum['values'][i])} vid {spectrum['x_label']} {out.fmt(spectrum['x'][i])} ({frames} {word})")
     quality.warn_saturated(spectrum["saturated_px"])
     quality.warn_changed(spectrum["camera"], state["dark_camera"], "mörkret", "dark")
+    session.warn_old_dark(state)  # PRO-12
     if state["reference"] is not None:
         quality.warn_changed(spectrum["camera"], state["reference"].get("camera"), "referensen", "reference")
+    if state["dark"] is not None and state["mode"] == "direct" and not state["use_response"]:
+        # Negativt efter mörkret är rätt (brus), men starkt negativt betyder att mörkret inte passar. LOG-17.
+        low = np.count_nonzero(spectrum["values"][spectrum["mask"]] < -5)
+        if low:
+            unit = "position" if low == 1 else "positioner"
+            out.warn(
+                f"{low} {unit} under -5 counts efter mörkeravdrag. Mörkret passar inte (exponering, gain, temperatur)?"
+            )
     if state["mode"] == "transmission":
-        over = np.count_nonzero(spectrum["values"][spectrum["mask"]] > 1)
+        # Brus runt T = 1 ger T > 1 på ungefär halva positionerna; varna först över 1,05 (planens gräns). LOG-16.
+        over = np.count_nonzero(spectrum["values"][spectrum["mask"]] > 1.05)
         if over:
             unit = "position" if over == 1 else "positioner"
-            out.warn(f"transmission över 100 % på {over} {unit}")
+            out.warn(
+                f"transmission över 105 % på {over} {unit} "
+                f"(högst {spectrum['values'][i]:g} vid {spectrum['x_label']} {spectrum['x'][i]:g})"
+            )
 
 
-@registry.command("save", "[DIR]: spara senaste mätningen")
+@registry.command("save", "[DIR]: spara senaste mätningen", "save [DIR]")
 def cmd_save(state, args):
     """Kommandot save [DIR]: sparar senaste mätningen i en ny mätmapp under DIR eller output_dir."""
     if len(args) > 1:
@@ -40,18 +64,34 @@ def cmd_save(state, args):
     saved = state["settings"].copy()
     saved["saturated_px"] = state["spectrum"].get("saturated_px")  # ROI-pixlar som var 255, i den värsta bilden
     saved["camera"] = state["spectrum"].get("camera")  # drivrutinens reglage under mätningen; för en fil bara kind: file, resten None
+    saved["pixel_range"] = [float(v) for v in state["pixel_range"]] if state["pixel_range"] is not None else None
+    saved["image_size"] = [state["image"].shape[1], state["image"].shape[0]]  # bredd, höjd i pixlar
+    saved["calibration_points_file"] = state["calibration_points_file"]
     saved["coefficients"] = state["coefficients"].tolist() if state["coefficients"] is not None else None
     saved["dark"] = state["dark"] is not None
     saved["use_response"] = state["use_response"]
     saved["mode"] = state["mode"]
+    # Programversion, tid, git, bibliotek, profiler och settings_id, före coefficients. 1.0.32.
+    saved = meta.with_metadata(state, saved)
+    saved = meta.put_before(saved, "taken", session.taken_text(state))  # när profilerna togs. PRO-10
+    if state["rigg"] is None and sys.stdout.isatty():
+        out.warn("ingen rigg angiven (rigg rigg.json), uppställningens data saknas i settings.json")  # DOK-32
+    saved = meta.put_before(saved, "rigg", state["rigg"])  # Krav 9, DOK-31
     folder = files.save_measurement(parent, state["spectrum"], state["image"], saved)
+    state["spectrum"]["saved_in"] = folder.as_posix()  # quit frågar inte om en sparad mätning
     out.say(f"Sparad i {folder.as_posix()}")
 
 
-@registry.command("start", "live med kameran, Ctrl+C stoppar")
+@registry.command("start", "[SEKUNDER]: live med kameran, Ctrl+C stoppar (med SEKUNDER: efter så lång tid)",
+                  "start [SEKUNDER]")
 def cmd_start(state, args):
-    """Kommandot start: spektrumet live tills Ctrl+C eller tills fönstret stängs; källan och fönstret stängs alltid."""
-    registry.need(args, (), "start")
+    """Kommandot start [SEKUNDER]: spektrumet live tills Ctrl+C, tills fönstret stängs eller efter SEKUNDER.
+
+    Källan och fönstret stängs alltid. Fel: ValueError med input.invalid_argument om SEKUNDER inte är ett tal över 0.
+    """
+    if len(args) > 1:
+        raise ValueError("input.invalid_argument: start tar högst ett ord (SEKUNDER)")
+    seconds = registry.to_float("SEKUNDER", args[0], 0) if args else None  # None: tills Ctrl+C. KOM-42
     out.say("Live. Tryck Ctrl+C eller stäng fönstret för att stoppa.")
     kind, value = state["settings"]["source"]
     src = None
@@ -60,8 +100,12 @@ def cmd_start(state, args):
     try:
         src = source.open_source(kind, value)
         win = plot.open_plot()
+        begun = time.perf_counter()
         while True:
             if not plot.is_open(win):
+                out.say("live stoppad")
+                break
+            if seconds is not None and time.perf_counter() - begun >= seconds:
                 out.say("live stoppad")
                 break
             started = time.perf_counter()

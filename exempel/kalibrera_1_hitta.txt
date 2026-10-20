@@ -1,0 +1,7 @@
+source camera 0
+roi 0 200 640 40
+frames 16
+step
+toppar
+toppar kalibrering/hg_linjer.csv
+quit
