@@ -2,6 +2,7 @@
 
 Används av main.py. Bilden lämnas som den är, (H, W, 3) uint8 i BGR.
 """
+
 import sys
 from pathlib import Path
 
@@ -52,7 +53,9 @@ def open_source(kind, value):
     elif img.ndim == 3 and img.shape[-1] == 4:
         img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
     if img.ndim != 3 or img.shape[-1] != 3:
-        raise RuntimeError(f"camera.open_failed: Image is not (H, W, 3), shape is {img.shape}")
+        raise RuntimeError(
+            f"camera.open_failed: Image is not (H, W, 3), shape is {img.shape}"
+        )
     return {"kind": kind, "image": img}
 
 
@@ -66,7 +69,9 @@ def read_frame(src):
     if src["kind"] == "camera":
         ok, image = src["cap"].read()
         if not ok or image is None:
-            raise RuntimeError("camera.read_failed: kunde inte läsa en bild från kameran")
+            raise RuntimeError(
+                "camera.read_failed: kunde inte läsa en bild från kameran"
+            )
         return image
     if src["kind"] == "file":
         return src["image"].copy()

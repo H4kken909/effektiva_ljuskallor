@@ -2,6 +2,7 @@
 
 Används av main.py. Filen vet ingenting om state, filer eller kameran.
 """
+
 import numpy as np
 from numpy.polynomial import polynomial as poly
 
@@ -30,7 +31,9 @@ def _check(name, a):
         raise ValueError(f"input.invalid_argument: {name} måste vara en float64-array")
 
     if not np.all(np.isfinite(a)):
-        raise ValueError(f"input.invalid_argument: {name} får bara innehålla ändliga tal")
+        raise ValueError(
+            f"input.invalid_argument: {name} får bara innehålla ändliga tal"
+        )
 
 
 def prepare(image, roi, axis, channel):
@@ -42,20 +45,32 @@ def prepare(image, roi, axis, channel):
     Fel: ValueError med input.invalid_argument om bilden, ROI:n, axis eller channel är fel.
     """
     if not isinstance(image, np.ndarray) or image.dtype not in (np.uint8, np.float64):
-        raise ValueError("input.invalid_argument: image måste vara en uint8- eller float64-array")
+        raise ValueError(
+            "input.invalid_argument: image måste vara en uint8- eller float64-array"
+        )
     if image.ndim != 3 or image.shape[2] != 3:
-        raise ValueError(f"input.invalid_argument: image måste ha formen (H, W, 3), fick {image.shape}")
+        raise ValueError(
+            f"input.invalid_argument: image måste ha formen (H, W, 3), fick {image.shape}"
+        )
     x, y, width, height = roi
     if width <= 0 or height <= 0:
-        raise ValueError(f"input.invalid_argument: roi måste ha bredd och höjd större än 0, fick {roi}")
+        raise ValueError(
+            f"input.invalid_argument: roi måste ha bredd och höjd större än 0, fick {roi}"
+        )
     h, w = image.shape[:2]
     if x < 0 or y < 0 or x + width > w or y + height > h:
-        raise ValueError(f"input.invalid_argument: roi {roi} ligger utanför bilden ({w} bred, {h} hög)")
+        raise ValueError(
+            f"input.invalid_argument: roi {roi} ligger utanför bilden ({w} bred, {h} hög)"
+        )
     if channel not in CHANNELS:
-        raise ValueError(f"input.invalid_argument: okänd kanal {channel}, tillåtna är {CHANNELS}")
+        raise ValueError(
+            f"input.invalid_argument: okänd kanal {channel}, tillåtna är {CHANNELS}"
+        )
     if axis not in ("horizontal", "vertical"):
-        raise ValueError(f"input.invalid_argument: okänd riktning {axis}, tillåtna är ('horizontal', 'vertical')")
-    view = image[y:y + height, x:x + width]
+        raise ValueError(
+            f"input.invalid_argument: okänd riktning {axis}, tillåtna är ('horizontal', 'vertical')"
+        )
+    view = image[y : y + height, x : x + width]
     cut = view.astype(np.float64)
     blue = cut[:, :, CHANNEL_INDEX["blue"]]
     green = cut[:, :, CHANNEL_INDEX["green"]]
@@ -84,7 +99,9 @@ def extract_spectrum(table):
 
     # Kontrollera form
     if table.ndim != 2:
-        raise ValueError(f"input.invalid_argument: table must have 2 dimensions, got shape {table.shape}")
+        raise ValueError(
+            f"input.invalid_argument: table must have 2 dimensions, got shape {table.shape}"
+        )
 
     if table.size == 0:
         raise ValueError("input.invalid_argument: table is empty")
@@ -101,7 +118,9 @@ def average_spectra(stack):
     Fel: ValueError med input.invalid_argument om stack inte är 2D, inte float64 eller är tom.
     """
     if stack.ndim != 2:
-        raise ValueError(f"input.invalid_argument: stack måste vara 2D (en rad per bild), fick ndim {stack.ndim}")
+        raise ValueError(
+            f"input.invalid_argument: stack måste vara 2D (en rad per bild), fick ndim {stack.ndim}"
+        )
     if stack.dtype != np.float64:
         raise ValueError("input.invalid_argument: stack måste vara en float64-array")
     if stack.size == 0:
@@ -129,7 +148,9 @@ def evaluate_wavelength(pixels, coefficients):
     _check("pixels", pixels)
     _check("coefficients", coefficients)
     if coefficients.size not in (2, 3):
-        raise ValueError(f"input.invalid_argument: coefficients ska ha 2 eller 3 värden, fick {coefficients.size}")
+        raise ValueError(
+            f"input.invalid_argument: coefficients ska ha 2 eller 3 värden, fick {coefficients.size}"
+        )
     # Våglängd = a0 + a1·p (+ a2·p²), a0 först. Se rev7, RX09.
     return poly.polyval(pixels, coefficients)
 
@@ -144,7 +165,9 @@ def fit_wavelength(pixels, wavelengths, degree):
     samma pixel står två gånger eller punkterna är för få.
     """
     if degree not in (1, 2):
-        raise ValueError(f"input.invalid_argument: degree ska vara 1 eller 2, fick {degree}")
+        raise ValueError(
+            f"input.invalid_argument: degree ska vara 1 eller 2, fick {degree}"
+        )
     _check("pixels", pixels)
     _check("wavelengths", wavelengths)
     if pixels.shape != wavelengths.shape:
@@ -155,7 +178,9 @@ def fit_wavelength(pixels, wavelengths, degree):
     if unique.size < pixels.size:
         raise ValueError("input.invalid_argument: samma pixel står två gånger")
     if pixels.size < degree + 1:
-        raise ValueError(f"input.invalid_argument: grad {degree} behöver minst {degree + 1} punkter, fick {pixels.size}")
+        raise ValueError(
+            f"input.invalid_argument: grad {degree} behöver minst {degree + 1} punkter, fick {pixels.size}"
+        )
     # Minsta kvadrat-anpassning, koefficienterna i stigande ordning. Se rev7, RX10.
     return poly.polyfit(pixels, wavelengths, degree)
 
@@ -170,7 +195,9 @@ def subtract_dark(image, dark):
     _check("image", image)
     _check("dark", dark)
     if image.shape != dark.shape:
-        raise ValueError(f"input.invalid_argument: mörkret har formen {dark.shape} men bilden har {image.shape}")
+        raise ValueError(
+            f"input.invalid_argument: mörkret har formen {dark.shape} men bilden har {image.shape}"
+        )
     # Signal utan mörker = bild minus mörker, i float64 så att inget slår runt. Se rev7, RX03.
     return image - dark
 
@@ -191,9 +218,13 @@ def build_response(wavelengths, measured, known_wavelengths, known_values):
         or known_wavelengths.shape != known_values.shape
         or known_wavelengths.size < 2
     ):
-        raise ValueError("input.invalid_argument: olika form eller färre än två kända punkter")
+        raise ValueError(
+            "input.invalid_argument: olika form eller färre än två kända punkter"
+        )
     # Interpolation utan extrapolation: NaN utanför de kända punkterna. Se rev7, RX15.
-    known_at_lamp = np.interp(wavelengths, known_wavelengths, known_values, left=np.nan, right=np.nan)
+    known_at_lamp = np.interp(
+        wavelengths, known_wavelengths, known_values, left=np.nan, right=np.nan
+    )
     valid = np.isfinite(measured) & np.isfinite(known_at_lamp) & (known_at_lamp > 0)
     # Respons = uppmätt delat med känt, där det är giltigt. Se rev7, RX14.
     ratio = np.full(measured.shape[0], np.nan)
@@ -217,13 +248,21 @@ def apply_response(signal, response, mask, min_response):
     ändlig och större än 0, eller NaN och inf på en giltig plats.
     """
     if signal.shape != response.shape:
-        raise ValueError(f"input.invalid_argument: response har annan form än signal {signal.shape} {response.shape}")
+        raise ValueError(
+            f"input.invalid_argument: response har annan form än signal {signal.shape} {response.shape}"
+        )
     if signal.shape != mask.shape:
-        raise ValueError(f"input.invalid_argument: mask har annan form än signal {signal.shape} {mask.shape}")
+        raise ValueError(
+            f"input.invalid_argument: mask har annan form än signal {signal.shape} {mask.shape}"
+        )
     if mask.dtype != np.bool_:
-        raise ValueError(f"input.invalid_argument: mask måste vara en bool-array, fick {mask.dtype}")
+        raise ValueError(
+            f"input.invalid_argument: mask måste vara en bool-array, fick {mask.dtype}"
+        )
     if not np.isfinite(min_response) or min_response <= 0:
-        raise ValueError(f"input.invalid_argument: min_response måste vara ändligt och större än 0, fick {min_response}")
+        raise ValueError(
+            f"input.invalid_argument: min_response måste vara ändligt och större än 0, fick {min_response}"
+        )
     _check("signal", signal[mask])
     _check("response", response[mask])
     # Strikt >: exakt min_response är ogiltig. Se rev7, RX16.
@@ -245,11 +284,17 @@ def transmission_ratio(sample, reference, mask, min_reference):
     ändlig och större än 0, eller NaN och inf på en giltig plats.
     """
     if sample.shape != reference.shape:
-        raise ValueError(f"input.invalid_argument: reference har annan form än sample {sample.shape} {reference.shape}")
+        raise ValueError(
+            f"input.invalid_argument: reference har annan form än sample {sample.shape} {reference.shape}"
+        )
     if sample.shape != mask.shape:
-        raise ValueError(f"input.invalid_argument: mask har annan form än sample {sample.shape} {mask.shape}")
+        raise ValueError(
+            f"input.invalid_argument: mask har annan form än sample {sample.shape} {mask.shape}"
+        )
     if mask.dtype != np.bool_:
-        raise ValueError(f"input.invalid_argument: mask måste vara en bool-array, fick {mask.dtype}")
+        raise ValueError(
+            f"input.invalid_argument: mask måste vara en bool-array, fick {mask.dtype}"
+        )
     if not np.isfinite(min_reference) or min_reference <= 0:
         raise ValueError(
             f"input.invalid_argument: min_reference måste vara ändligt och större än 0, fick {min_reference}"

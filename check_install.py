@@ -76,7 +76,9 @@ def _heltal(text):
     try:
         return int(text)
     except ValueError:
-        raise argparse.ArgumentTypeError(f"ska vara ett heltal, fick {text!r}") from None
+        raise argparse.ArgumentTypeError(
+            f"ska vara ett heltal, fick {text!r}"
+        ) from None
 
 
 def _bygg_parser():
@@ -92,7 +94,9 @@ def _bygg_parser():
         add_help=False,
     )
     flaggor = parser.add_argument_group("flaggor")
-    flaggor.add_argument("-h", "--help", action="help", help="visa den här hjälpen och avsluta")
+    flaggor.add_argument(
+        "-h", "--help", action="help", help="visa den här hjälpen och avsluta"
+    )
     flaggor.add_argument(
         "--kamera",
         type=_heltal,
@@ -116,18 +120,30 @@ def _kolla_python():
     if (v.major, v.minor) == KRAV_PYTHON:
         return [_ok(text)]
     kravtext = f"{KRAV_PYTHON[0]}.{KRAV_PYTHON[1]}"
-    return [_fel(f"{text}: projektet kräver Python {kravtext} (Windows: py -{kravtext} -m venv .venv)")]
+    return [
+        _fel(
+            f"{text}: projektet kräver Python {kravtext} (Windows: py -{kravtext} -m venv .venv)"
+        )
+    ]
 
 
 def _kolla_venv():
     """Kontrollerar att en virtuell miljö är aktiv (sys.prefix skiljer sig från sys.base_prefix)."""
     if sys.prefix == sys.base_prefix:
-        return [_fel(".venv är inte aktiv: sys.prefix är Pythons egen mapp. "
-                     "Linux: source .venv/bin/activate. Windows: .\\.venv\\Scripts\\Activate.ps1")]
+        return [
+            _fel(
+                ".venv är inte aktiv: sys.prefix är Pythons egen mapp. "
+                "Linux: source .venv/bin/activate. Windows: .\\.venv\\Scripts\\Activate.ps1"
+            )
+        ]
     namn = Path(sys.prefix).name
     if namn == ".venv":
         return [_ok(f".venv aktiv ({sys.prefix})")]
-    return [_ok(f"virtuell miljö aktiv ({sys.prefix}). OBS: mappen heter {namn}, projektet använder .venv")]
+    return [
+        _ok(
+            f"virtuell miljö aktiv ({sys.prefix}). OBS: mappen heter {namn}, projektet använder .venv"
+        )
+    ]
 
 
 def _les_krav(fil):
@@ -144,8 +160,10 @@ def _les_krav(fil):
     try:
         text = rader.decode("utf-8-sig")
     except UnicodeDecodeError:
-        return [], _fel(f"{fil.name} går inte att läsa som UTF-8. Spara om den som UTF-8 i VS Code.",
-                        kolon=True)
+        return [], _fel(
+            f"{fil.name} går inte att läsa som UTF-8. Spara om den som UTF-8 i VS Code.",
+            kolon=True,
+        )
     namn = []
     for rad in text.splitlines():
         rad = rad.split("#", 1)[0].strip()
@@ -172,9 +190,13 @@ def _kolla_paket(namn):
         try:
             version = importlib.metadata.version(namn)
         except importlib.metadata.PackageNotFoundError:
-            return _fel(f"{namn}: saknas ({fel}). Kör: python -m pip install -r requirements.txt "
-                        "-r requirements-dev.txt")
-        return _ok(f"{namn} {version} (installerat, men ingen modul {modul} att importera)")
+            return _fel(
+                f"{namn}: saknas ({fel}). Kör: python -m pip install -r requirements.txt "
+                "-r requirements-dev.txt"
+            )
+        return _ok(
+            f"{namn} {version} (installerat, men ingen modul {modul} att importera)"
+        )
     except (ImportError, OSError, RuntimeError, AttributeError) as fel:
         return _fel(f"{namn}: går inte att importera ({type(fel).__name__}: {fel})")
     try:
@@ -222,18 +244,29 @@ def _kolla_kamerastod():
     try:
         import cv2
     except (ImportError, OSError, RuntimeError, AttributeError) as fel:
-        return [_fel(f"OpenCV-kamerastöd: cv2 går inte att importera ({type(fel).__name__}: {fel})")]
+        return [
+            _fel(
+                f"OpenCV-kamerastöd: cv2 går inte att importera ({type(fel).__name__}: {fel})"
+            )
+        ]
     try:
         from cv2 import videoio_registry
 
-        namn = [videoio_registry.getBackendName(b) for b in videoio_registry.getCameraBackends()]
+        namn = [
+            videoio_registry.getBackendName(b)
+            for b in videoio_registry.getCameraBackends()
+        ]
         kalla = "videoio_registry"
     except (ImportError, AttributeError, cv2.error):
         namn = _backendnamn_ur_bygginfo(cv2.getBuildInformation())
         kalla = "getBuildInformation"
     if not namn:
-        return [_fel(f"OpenCV-kamerastöd: inget kamerabackend ({kalla}). "
-                     "Installera opencv-python enligt requirements.txt.")]
+        return [
+            _fel(
+                f"OpenCV-kamerastöd: inget kamerabackend ({kalla}). "
+                "Installera opencv-python enligt requirements.txt."
+            )
+        ]
     if sys.platform.startswith("linux"):
         behovs = "V4L2"
     elif sys.platform == "win32":
@@ -241,7 +274,11 @@ def _kolla_kamerastod():
     else:
         behovs = None
     if behovs is not None and behovs not in namn:
-        return [_fel(f"OpenCV-kamerastöd: {', '.join(namn)}, men source.py väljer {behovs} här")]
+        return [
+            _fel(
+                f"OpenCV-kamerastöd: {', '.join(namn)}, men source.py väljer {behovs} här"
+            )
+        ]
     return [_ok(f"OpenCV-kamerastöd: {', '.join(namn)} (cv2 {cv2.__version__})")]
 
 
@@ -250,8 +287,12 @@ def _kolla_tkinter():
     try:
         import tkinter
     except (ImportError, OSError, RuntimeError) as fel:
-        return [_fel(f"tkinter: går inte att importera ({type(fel).__name__}: {fel}). "
-                     "Arch: sudo pacman -S tk. Windows: installera om Python med tcl/tk.")]
+        return [
+            _fel(
+                f"tkinter: går inte att importera ({type(fel).__name__}: {fel}). "
+                "Arch: sudo pacman -S tk. Windows: installera om Python med tcl/tk."
+            )
+        ]
     return [_ok(f"tkinter (Tk {tkinter.TkVersion})")]
 
 
@@ -272,8 +313,12 @@ def _kolla_kamera(nummer, antal):
     try:
         from spectrometer.source import close_source, open_source, read_frame
     except (ImportError, OSError, RuntimeError, AttributeError) as fel:
-        return [_fel(f"kamera {nummer}: spectrometer.source går inte att importera "
-                     f"({type(fel).__name__}: {fel}). Kör i repots rot.")]
+        return [
+            _fel(
+                f"kamera {nummer}: spectrometer.source går inte att importera "
+                f"({type(fel).__name__}: {fel}). Kör i repots rot."
+            )
+        ]
     src = None
     try:
         try:
@@ -286,23 +331,33 @@ def _kolla_kamera(nummer, antal):
             try:
                 bild = read_frame(src)
             except (RuntimeError, ValueError, OSError) as fel:
-                rader.append(_fel(f"kamera {nummer}: bild {i} gick inte att läsa ({fel})"))
+                rader.append(
+                    _fel(f"kamera {nummer}: bild {i} gick inte att läsa ({fel})")
+                )
                 break
             medel.append(float(bild.mean()))
-            rader.append(_ok(
-                f"bild {i}: form {bild.shape}, dtype {bild.dtype}, max {bild.max()}, "
-                f"medel {medel[-1]:.2f}"
-            ))
+            rader.append(
+                _ok(
+                    f"bild {i}: form {bild.shape}, dtype {bild.dtype}, max {bild.max()}, "
+                    f"medel {medel[-1]:.2f}"
+                )
+            )
         if len(medel) == antal and antal >= 3:
             if _forsta_bilden_morkare(medel):
                 senare = ", ".join(f"{m:.2f}" for m in medel[1:])
-                rader.append(_info(
-                    f"OBS: mörk första bild (medel {medel[0]:.2f} mot {senare} i de senare). "
-                    "Kameran behöver värmas upp: läs bort första bilden eller mät en gång till."
-                ))
+                rader.append(
+                    _info(
+                        f"OBS: mörk första bild (medel {medel[0]:.2f} mot {senare} i de senare). "
+                        "Kameran behöver värmas upp: läs bort första bilden eller mät en gång till."
+                    )
+                )
         elif len(medel) == antal:
-            rader.append(_info("OBS: för få bilder för att avgöra om första bilden är mörk "
-                               "(använd --bilder 3 eller fler)."))
+            rader.append(
+                _info(
+                    "OBS: för få bilder för att avgöra om första bilden är mörk "
+                    "(använd --bilder 3 eller fler)."
+                )
+            )
     finally:
         if src is not None:
             close_source(src)
