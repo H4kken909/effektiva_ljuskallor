@@ -20,7 +20,14 @@ def frame_spectrum(state, image):
         corrected = calc.subtract_dark(image.astype(np.float64), state["dark"])
     roi = cfg["roi"] if cfg["roi"] is not None else (0, 0, image.shape[1], image.shape[0])
     table = calc.prepare(corrected, roi, cfg["axis"], cfg["channel"])
-    return calc.extract_spectrum(table), roi
+    if state["rows"] == "median":
+        values = calc.extract_median(table)  # ROI-14
+    else:
+        values = calc.extract_spectrum(table)
+    if state["background"] is not None:
+        # Bakgrunden bredvid bandet (ströljus i kameran) dras av efter mörkret. ROI-21.
+        values = values - calc.side_background(corrected, roi, state["background"], cfg["channel"], cfg["axis"])
+    return values, roi
 
 
 def pixel_axis(roi, axis):
@@ -39,6 +46,11 @@ def calibrate_axis(state, x, values, mask):
         low, high = state["pixel_range"]
         mask = mask & (x >= low) & (x <= high)
         x = calc.evaluate_wavelength(x, state["coefficients"])
+        if not (np.all(np.diff(x) > 0) or np.all(np.diff(x) < 0)):
+            raise ValueError(
+                "input.invalid_argument: x-axeln är inte monoton i ROI:n. "
+                "Minska ROI:n till det giltiga intervallet eller prova grad 1"
+            )
         x_label = "våglängd (nm)"
     if x[0] > x[-1]:
         x, values, mask = x[::-1], values[::-1], mask[::-1]
@@ -97,7 +109,7 @@ def measure(state, src=None, timing=None):
     """
     n = state["settings"]["frames"]
     started = time.perf_counter()
-    images, camera = _with_source(state, src, lambda s: (source.read_frames(s, n), source.describe(s)))
+    images, camera = _with_source(state, src, lambda s: (_read_frames(s, n, src is None), source.describe(s)))
     read_done = time.perf_counter()
     spectra = []
     saturated_px, saturated = 0, False  # flest mättade ROI-pixlar i en bild, och var längs spektrumet (alla bilder)
@@ -154,3 +166,24 @@ def _with_source(state, src, funktion):
     finally:
         if opened_here:
             source.close_source(src)
+
+
+SLOW_SECONDS = 30  # beräknad insamling längre än så: measure skriver hur lång tid den tar. LOG-19
+
+
+def _read_frames(src, n, show):
+    """n bilder ur en öppen källa, som en lista. UT-17 och LOG-19.
+
+    show (measure öppnade källan själv, alltså inte live): vid n över 4 en förloppsrad (bara i terminal, out.progress),
+    och efter första bilden en rad med tiden för alla, om den blir längre än SLOW_SECONDS (då även i en kommandofil).
+    """
+    started = time.perf_counter()
+    images = [source.read_frame(src)]
+    estimate = n * (time.perf_counter() - started)
+    if show and estimate > SLOW_SECONDS:
+        out.say(f"Mäter {n} bilder, ca {max(1, round(estimate / 60))} min. Ctrl+C avbryter.")
+    rest = range(n - 1)
+    steps = out.progress(rest, "mäter") if show and n > 4 else rest
+    for _ in steps:
+        images.append(source.read_frame(src))
+    return images

@@ -1,7 +1,7 @@
 Skriv help för kommandona. quit eller Ctrl+D avslutar.
-spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
+spektro> source file tests/data/bilder/rand_x12.png
 spektro> ROI:n kontrolleras vid nästa mätning.
-roi: (10, 0, 3, 2)
+roi 10 0 3 2
 spektro> channel: red
 spektro> Topp 200 vid pixel 12 (1 bild)
 spektro> Fel: input.invalid_argument: N ska vara minst 1

@@ -118,7 +118,7 @@ def test_elias_ctrl_c_during_step_releases_camera(monkeypatch, capsys):
     assert code == 0
     assert "spektro> Öppnar kameran ...\nAvbrutet." in out
     assert cam.released
-    assert "Mätning: nej" in out
+    assert "mätning: nej" in out
     assert out.rstrip().endswith("Avslutar.")
 
 
@@ -221,7 +221,7 @@ def test_elias_vertical_and_folder(tmp_path, capsys):
     assert "Topp 100 vid pixel 4 (1 bild)" in out
     folders = list((tmp_path / "data").iterdir())
     assert len(folders) == 1
-    assert sorted(p.name for p in folders[0].iterdir()) == ["raw.png", "settings.json", "spectrum.csv"]
+    assert sorted(p.name for p in folders[0].iterdir()) == ["README.txt", "raw.png", "settings.json", "spectrum.csv"]
     settings = json.loads((folders[0] / "settings.json").read_text(encoding="utf-8"))
     assert settings["axis"] == "vertical"
     rows = (folders[0] / "spectrum.csv").read_text(encoding="utf-8").splitlines()

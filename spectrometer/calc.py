@@ -307,3 +307,64 @@ def transmission_ratio(sample, reference, mask, min_reference):
     # Transmission T = I_prov / I_ref, bara där den nya masken är True. Se rev7, RX17.
     np.divide(sample, reference, out=values, where=valid)
     return values, valid
+
+
+def extract_median(table):
+    """Medianen av raderna i tabellen, ett värde per kolumn: som extract_spectrum, men median i stället för medel.
+
+    Medianen bryr sig inte om en enstaka het pixel eller en rad med ströljus; medlet har mindre brus när raderna är lika.
+    Parametrar: table: tabellen från prepare(), (rader, kolumner) float64.
+    Returnerar: medianen per kolumn, (kolumner,) float64.
+    Fel: ValueError med input.invalid_argument om table inte är float64, har inf eller NaN, inte är 2D eller är tom.
+    """
+    _check("table", table)
+    if table.ndim != 2 or table.size == 0:
+        raise ValueError(f"input.invalid_argument: table ska vara 2D och inte tom, fick formen {table.shape}")
+    # Spektrumet är medianen av raderna, ett värde per kolumn (ROI-14; RX05 är medlet).
+    return np.median(table, axis=0)
+
+
+def bin_spectrum(x, values, mask, n):
+    """Slår ihop n intilliggande positioner till en: medel av x och av values. Positionerna sist (färre än n) tas bort.
+
+    Parametrar: x: (P,) float64, pixel eller nm; values: (P,) float64, får vara NaN där mask är False; mask: (P,) bool;
+    n: positioner per grupp, från 1 till P.
+    Returnerar: (x, values, mask), (P // n,) vardera. En grupp är giltig bara om alla n positioner är det, annars NaN.
+    Fel: ValueError med input.invalid_argument om formerna skiljer sig, mask inte är bool eller n är utanför 1 till P.
+    """
+    if x.ndim != 1 or x.shape != values.shape or x.shape != mask.shape:
+        raise ValueError(f"input.invalid_argument: x, values och mask ska ha samma form (P,), fick {x.shape}")
+    if mask.dtype != np.bool_:
+        raise ValueError(f"input.invalid_argument: mask måste vara en bool-array, fick {mask.dtype}")
+    if not 1 <= n <= x.size:
+        raise ValueError(f"input.invalid_argument: n ska vara från 1 till {x.size}, fick {n}")
+    groups = x.size // n
+    used = slice(0, groups * n)
+    new_mask = mask[used].reshape(groups, n).all(axis=1)
+    new_x = x[used].reshape(groups, n).mean(axis=1)
+    sums = np.where(mask, values, 0.0)[used].reshape(groups, n).mean(axis=1)  # 0 i stället för NaN; maskas nedan
+    return new_x, np.where(new_mask, sums, np.nan), new_mask
+
+
+def side_background(image, roi, margin, channel, axis="horizontal"):
+    """Bakgrunden bredvid bandet: medianen av margin rader ovanför och margin rader under ROI:n, per kolumn.
+
+    Vid axis vertical är det margin kolumner till vänster och till höger. Dras av efter mörkret (ROI-21).
+    Parametrar: image: (H, W, 3) uint8 eller float64; roi: (x, y, width, height); margin: rader på varje sida, minst 1;
+    channel: ett namn i CHANNELS; axis: "horizontal" eller "vertical".
+    Returnerar: bakgrunden, (P,) float64 i counts, med samma P som prepare ger för roi.
+    Fel: ValueError med input.invalid_argument om margin är mindre än 1 eller inte ryms på båda sidor om ROI:n.
+    """
+    if margin < 1:
+        raise ValueError(f"input.invalid_argument: margin ska vara minst 1, fick {margin}")
+    x, y, width, height = roi
+    if axis == "vertical":
+        sides = [(x - margin, y, margin, height), (x + width, y, margin, height)]
+    else:
+        sides = [(x, y - margin, width, margin), (x, y + height, width, margin)]
+    h, w = image.shape[:2]
+    for sx, sy, sw, sh in sides:
+        if sx < 0 or sy < 0 or sx + sw > w or sy + sh > h:
+            raise ValueError(f"input.invalid_argument: bakgrunden behöver {margin} fria rader på båda sidor om roi {roi}")
+    rows = np.vstack([prepare(image, side, axis, channel) for side in sides])
+    return np.median(rows, axis=0)

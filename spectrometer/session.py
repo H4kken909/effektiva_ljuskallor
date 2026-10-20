@@ -1,5 +1,7 @@
 """Sessionen: inställningarna och allt programmet minns mellan två kommandon (ordboken state)."""
 
+from datetime import datetime
+
 from spectrometer import out
 
 DEFAULTS = {
@@ -28,20 +30,103 @@ def new_state(settings):
         "spectrum": None,  # senaste mätningen (ordbok från measure), None tills step
         "coefficients": None,  # kalibreringens koefficienter, float64, a0 först (calibrate)
         "pixel_range": None,  # kalibreringens giltiga intervall (låg, hög) i pixlar (calibrate)
+        "fit_range": None,  # anpassningspunkternas intervall (låg, hög) i pixlar (calibrate)
+        "calibration_points_file": None,  # punktfilens sökväg, sha256 (12 tecken) och tid (calibrate)
         "dark": None,  # mörkret, (H, W, 3) float64 i counts (dark)
+        "dark_frames": None,  # antal bilder i mörkret (dark), till profiles i settings.json
         "dark_camera": None,  # kamerans reglage när mörkret togs (source.describe), None innan dark
         "response": None,  # responsen: {"x": nm, "values": relativ} (response build)
         "use_response": False,  # True när responsen ska användas (response on och off)
         "reference": None,  # referensspektrumet med kanal, values i counts (reference)
         "mode": "direct",  # "direct" eller "transmission" (mode)
+        "rows": "mean",  # medel eller median över ROI:ns rader (rows); inte i settings, så show är som förut
+        "background": None,  # rader på var sida om ROI:n för bakgrunden (background N), None är av
+        "taken": {},  # när dark, response, reference och calibrate gjordes (mark_taken), datetime med tidszon
+        "rigg": None,  # uppställningens data ur rigg.json: {"file": ..., "fields": {...}} (rigg PATH)
     }
 
 
 def set_setting(state, key, value):
-    """Lägger en inställning i state och glömmer den gamla mätningen (roi och channel glömmer också responsen)."""
+    """Lägger en inställning i state och glömmer den gamla mätningen.
+
+    roi, channel och axis glömmer också responsen och referensen: de mättes med en annan del av bilden.
+    axis glömmer dessutom kalibreringen: den räknar pixlar längs den gamla riktningen.
+    """
     state["settings"][key] = value
     state["spectrum"] = None
-    if key in ("roi", "channel") and state["response"] is not None:
+    if key in ("roi", "channel", "axis") and state["response"] is not None:
         state["response"] = None
         state["use_response"] = False
         out.say("Responsen glömd. Kör response build igen.")
+    if key in ("roi", "channel", "axis") and state["reference"] is not None:
+        state["reference"] = None
+        out.say("Referensen glömd. Kör reference igen.")
+    if key == "axis" and state["coefficients"] is not None:
+        state["coefficients"] = None
+        state["pixel_range"] = None
+        out.say("Kalibreringen glömd. Kör calibrate igen.")
+
+
+NOT_UNDONE = ("history", "undo", "image", "spectrum")  # undo lägger aldrig tillbaka dessa
+
+
+def snapshot(state):
+    """En grund kopia av state och en kopia av inställningarna, för undo; utan nycklarna i NOT_UNDONE."""
+    copy = {key: value for key, value in state.items() if key not in NOT_UNDONE}
+    copy["settings"] = state["settings"].copy()
+    return copy
+
+
+def changed(state, before):
+    """True om inställningarna skiljer sig från before, eller om någon annan nyckel pekar på ett annat objekt.
+
+    Kommandona byter objekt (state["dark"] = nytt mörker) i stället för att ändra i dem, så is räcker. image och
+    spectrum räknas inte (en ny mätning ångras inte), och visningen (view, theme) ändras på plats och ångras inte.
+    """
+    if state["settings"] != before["settings"]:
+        return True
+    keys = (set(state) | set(before)) - set(NOT_UNDONE) - {"settings"}
+    return any(state.get(key) is not before.get(key) for key in keys)
+
+
+def restore(state, before):
+    """Lägger tillbaka state från snapshot; historiken, undo-stacken och senaste bilden står kvar, mätningen glöms."""
+    kept = {key: state[key] for key in NOT_UNDONE if key in state}
+    state.clear()
+    state.update(before)
+    state.update(kept)
+    state["spectrum"] = None
+
+
+TAKEN_KEYS = {"dark": "dark", "response": "response", "reference": "reference", "calibrate": "coefficients"}
+AGE_SHOWN_MIN = 10  # show skriver åldern först från 10 min, så att snabba körningar (facit) ger samma show. PRO-11
+DARK_MAX_MIN = 30  # mörker äldre än så ger en varning i step; gränsen bestäms efter driftprovet FYS-17. PRO-12
+
+
+def mark_taken(state, what, moment=None):
+    """Kommer ihåg när what (en nyckel i TAKEN_KEYS) gjordes: nu, eller moment (en datetime med tidszon). PRO-10.
+
+    En ny ordbok i stället för att ändra i den gamla, så att kopian för undo har kvar den gamla tiden.
+    """
+    state["taken"] = state["taken"] | {what: moment or datetime.now().astimezone()}
+
+
+def age_minutes(state, what):
+    """Hela minuter sedan what gjordes, eller None när det inte finns (aldrig gjort, eller borttaget sedan)."""
+    taken = state["taken"].get(what)
+    if taken is None or state[TAKEN_KEYS[what]] is None:
+        return None
+    return int((datetime.now().astimezone() - taken).total_seconds() // 60)
+
+
+def taken_text(state):
+    """Tiden för det som finns, som text (ISO 8601 med tidszon), till "taken" i settings.json. PRO-10."""
+    return {what: moment.isoformat(timespec="seconds") for what, moment in state["taken"].items()
+            if state[TAKEN_KEYS[what]] is not None}
+
+
+def warn_old_dark(state):
+    """Varning när mörkret är äldre än DARK_MAX_MIN minuter: kamerans temperatur och mörker driver. PRO-12."""
+    minutes = age_minutes(state, "dark")
+    if minutes is not None and minutes > DARK_MAX_MIN:
+        out.warn(f"mörkret är {minutes} min gammalt (gräns {DARK_MAX_MIN}). Kör dark igen.")
