@@ -5,7 +5,7 @@ Ordningen här är ordningen i help. Namnen är strängar, inte importer, så at
 
 import importlib
 
-FEATURES = ["basic", "source_cmds", "measure_cmds", "calib_cmds", "correction_cmds", "files_cmds", "session_cmds", "extract_cmds", "profile_cmds", "rig_cmds"]
+FEATURES = ["basic", "source_cmds", "measure_cmds", "calib_cmds", "correction_cmds", "files_cmds", "session_cmds", "extract_cmds", "profile_cmds", "rig_cmds", "view_cmds", "roi_cmds", "camera_cmds", "series_cmds", "spectra_cmds", "color_cmds", "bandgap_cmds", "accuracy_cmds", "demo_cmds"]
 
 
 def modules(names=None):

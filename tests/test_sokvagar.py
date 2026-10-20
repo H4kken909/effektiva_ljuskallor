@@ -74,7 +74,7 @@ def test_space_and_aao_all_the_way(tmp_path, monkeypatch, capsys):
     registry.run_command(state, f'save "{(tmp_path / "ut mapp").as_posix()}"')
     capsys.readouterr()
     saved = next((tmp_path / "ut mapp").iterdir())
-    assert sorted(p.name for p in saved.iterdir()) == ["README.txt", "raw.png", "settings.json", "spectrum.csv"]
+    assert sorted(p.name for p in saved.iterdir()) == ["README.txt", "raw.png", "settings.json", "spectrum.csv", "spectrum.png"]
     np.testing.assert_array_equal(read_png(saved / "raw.png"), line_image())
     assert json.loads((saved / "settings.json").read_text(encoding="utf-8"))["source"][1].endswith("rå bild.png")
 

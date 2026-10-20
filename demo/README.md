@@ -60,3 +60,9 @@ En uppsättning, tagen i samma kameraläge (exponering, gain, upplösning):
 | `prov.png` | provet med filter i ljusvägen |
 
 Lägg `demo/bilder/kamera.txt` bredvid med exponering, gain och avståndet mellan kamera och spalt. Spara kopior på USB-minne och i mätdata-repot. Bilderna är 8 bitar och sparade som PNG.
+
+## En fil för hela mätningen: mät.txt
+
+`run demo/mät.txt` kör mätningen i ordning: `dark`, `calibrate demo/punkter.csv`, `response build demo/kand.csv`, `response on`, `step`, `save`, `color` och `guide`. Källan och ROI:n ställs först (`1_forbered.txt`). I en terminal ber `dark` om kartongen, och `pause` väntar på Enter medan lampan byts; skriv `avbryt` för att stoppa filen. Efteråt visar `guide` vad som är gjort och nästa steg, och `help limits` vad talen inte säger.
+
+Provat: hela filen på påhittade bilder med låtsaskamera (`tests/test_demoflode.py`). Inte provat: med riktig kamera och lampbyte. `figure` (rapportfiguren) skrivs in sist i filen när kommandot finns.

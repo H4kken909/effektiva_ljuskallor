@@ -39,10 +39,17 @@ def new_state(settings):
         "use_response": False,  # True när responsen ska användas (response on och off)
         "reference": None,  # referensspektrumet med kanal, values i counts (reference)
         "mode": "direct",  # "direct" eller "transmission" (mode)
+        # bara visningen (theme, view): ändrar aldrig en mätning
+        "view": {"theme": "dark", "camera": True, "roi": True, "spectrum": True, "normalize": False,
+                 "xlim": None, "ylim": None, "compare": [], "analysis": None},
         "rows": "mean",  # medel eller median över ROI:ns rader (rows); inte i settings, så show är som förut
         "background": None,  # rader på var sida om ROI:n för bakgrunden (background N), None är av
         "taken": {},  # när dark, response, reference och calibrate gjordes (mark_taken), datetime med tidszon
         "rigg": None,  # uppställningens data ur rigg.json: {"file": ..., "fields": {...}} (rigg PATH)
+        "controls": {"auto": None, "exposure": None, "gain": None},  # kamerans reglage som du valt; None: drivrutinens
+        "series": None,  # mätserien (series start): {"name", "folder", "file"}; None utanför en serie
+        "annotations": {},  # current_mA, voltage_V, led, sample, lamp till varje save (series note)
+        "note": None,  # fri text till varje save (note)
     }
 
 
@@ -130,3 +137,53 @@ def warn_old_dark(state):
     minutes = age_minutes(state, "dark")
     if minutes is not None and minutes > DARK_MAX_MIN:
         out.warn(f"mörkret är {minutes} min gammalt (gräns {DARK_MAX_MIN}). Kör dark igen.")
+
+
+def describe(state):
+    """Källa, ROI, kanal och mode på en rad: kamera 0 · roi hela bilden · gray · direct."""
+    kind, value = state["settings"]["source"]
+    roi = state["settings"]["roi"]
+    where = "roi hela bilden" if roi is None else "roi " + " ".join(str(v) for v in roi)
+    source = f"kamera {value}" if kind == "camera" else f"fil {value}"
+    return f"{source} · {where} · {state['settings']['channel']} · {state['mode']}"
+
+
+def chain(state):
+    """Kedjan på en rad: kalibrering och mörker ja/nej, respons nej, på eller av."""
+    yes = {True: "ja", False: "nej"}
+    response = "nej" if state["response"] is None else ("på" if state["use_response"] else "av")
+    return (f"kalibrering {yes[state['coefficients'] is not None]} · mörker {yes[state['dark'] is not None]} · "
+            f"respons {response}")
+
+
+def status_text(state):
+    """Statusraden vid prompten: idle, källa, ROI, kanal, mode och kedjan."""
+    return f"idle · {describe(state)} · {chain(state)}"
+
+
+def controls_text(controls):
+    """Reglagen som du valt, på en rad: auto off, exposure -6, gain 0 (None hoppas över); tom text om inget är valt."""
+    words = []
+    for name, value in controls.items():
+        if value is not None:
+            words.append(f"{name} {('on' if value else 'off') if isinstance(value, bool) else f'{value:g}'}")
+    return ", ".join(words)
+
+
+def extra_lines(state):
+    """Raderna som show skriver sist, bara för det du valt (1.2.x): så är show som förut i facit."""
+    lines = []
+    if controls_text(state["controls"]):
+        lines.append(f"kamera: {controls_text(state['controls'])}")
+    if state["series"] is not None:
+        lines.append(f"serie: {state['series']['name']} ({state['series']['file']})")
+    if state["annotations"]:
+        lines.append(f"series note: {annotations_text(state['annotations'])}")
+    if state["note"]:
+        lines.append(f"note: {state['note']}")
+    return lines
+
+
+def annotations_text(annotations):
+    """series note på en rad: current_mA=20 voltage_V=2.9 led=röd (tal som out.fmt)."""
+    return " ".join(f"{key}={f'{value:g}' if isinstance(value, float) else value}" for key, value in annotations.items())

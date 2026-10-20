@@ -58,14 +58,15 @@ def _write_files(folder, spectrum, image, settings):
         header = [x_col, "value", "valid"]
         if transmission:
             header.append("absorbance")
-        writer.writerow(header)
-        for x, value, ok in zip(spectrum["x"], spectrum["values"], spectrum["mask"]):
+        extra = _extra_columns(spectrum, x_col)  # 1.2.2: raw_counts och x_px sist, så att kolumn 1-3 står kvar
+        writer.writerow(header + list(extra))
+        for k, (x, value, ok) in enumerate(zip(spectrum["x"], spectrum["values"], spectrum["mask"])):
             cell = f"{value:.10g}" if ok else ""
             row = [f"{x:.10g}", cell, "true" if ok else "false"]
             if transmission:
                 # Absorbans A = -log10(T), tom där T saknas eller är 0 eller mindre. Se rev7, Krav 22.
                 row.append(f"{-math.log10(value):.10g}" if ok and value > 0 else "")
-            writer.writerow(row)
+            writer.writerow(row + [_cell(column[k]) for column in extra.values()])
     raw_path = folder / "raw.png"
     try:
         written, encoded = cv2.imencode(".png", image)  # imencode och tofile, inte imwrite: klarar åäö i Windows
@@ -362,6 +363,8 @@ Kolumnerna i spectrum.csv
                    tom där värdet inte går att använda
   valid            true där värdet går att använda, annars false
   absorbance       bara i mode transmission: A = -log10(T), utan enhet
+  raw_counts       signalen i counts efter mörkeravdrag, före respons och transmission (för att räkna om)
+  x_px             bara efter calibrate: pixeln i hela bilden för raden
 
 Alla tal är relativa tal från kameran, inte watt.
 
@@ -389,3 +392,120 @@ def _write_readme(folder, settings):
         f"  mätt: {settings.get('measured_at')}",
     ]
     (folder / "README.txt").write_text(README_TEXT + "\n".join(lines) + "\n", encoding="utf-8")
+
+
+def save_roi_image(parent, image, roi):
+    """Sparar en kopia av bilden med ROI-rutan (grön) och mättade pixlar (255 i någon kanal) i magenta.
+
+    Parametrar: parent: mappen (str eller Path), skapas om den saknas; image: (H, W, 3) uint8 i BGR; roi: (x, y, w, h).
+    Returnerar: sökvägen parent/roi-ÅÅÅÅMMDD-HHMMSS.png (med -2, -3 ... om namnet redan finns).
+    Fel: OSError med files.write_failed om bilden inte går att skriva.
+    """
+    copy = image.copy()
+    copy[(image >= 255).any(axis=2)] = (255, 0, 255)
+    x, y, w, h = roi
+    cv2.rectangle(copy, (x, y), (x + w - 1, y + h - 1), (0, 255, 0), 1)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    path = Path(parent) / f"roi-{stamp}.png"
+    counter = 2
+    while path.exists():
+        path = Path(parent) / f"roi-{stamp}-{counter}.png"
+        counter += 1
+    path.parent.mkdir(parents=True, exist_ok=True)
+    ok, data = cv2.imencode(".png", copy)
+    if not ok:
+        raise OSError(f"files.write_failed: {path.name} kunde inte kodas som PNG")
+    data.tofile(str(path))  # tofile klarar åäö i sökvägen på Windows, det gör inte cv2.imwrite
+    return path
+
+
+def _extra_columns(spectrum, x_col):
+    """Kolumnerna sist i spectrum.csv (1.2.2): raw_counts (före respons och transmission) och x_px efter calibrate."""
+    extra = {}
+    if "raw" in spectrum:
+        extra["raw_counts"] = spectrum["raw"]
+    if "px" in spectrum and x_col == "x_nm":
+        extra["x_px"] = spectrum["px"]
+    return extra
+
+
+def _cell(value):
+    """Ett tal som i resten av CSV:n (.10g); tom cell för NaN."""
+    return f"{value:.10g}" if np.isfinite(value) else ""
+
+
+def save_excel(folder):
+    """Skriver folder/spectrum_sv.csv ur spectrum.csv för svensk Excel: semikolon, decimalkomma och utf-8 med BOM. 1.2.2.
+
+    Tomma celler står kvar tomma (inte 0); spectrum.csv ändras inte. Returnerar sökvägen.
+    Fel: OSError om en fil inte går att läsa eller skriva.
+    """
+    path = Path(folder) / "spectrum_sv.csv"
+    with open(Path(folder) / "spectrum.csv", newline="", encoding="utf-8") as f:
+        rows = list(csv.reader(f))
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f, delimiter=";")
+        for row in rows:
+            writer.writerow([cell.replace(".", ",") for cell in row])
+    return path
+
+
+Y_LABELS = {"transmission": "transmission (kvot)", "response": "korrigerad signal (relativ)", "direct": "signal (counts)"}
+
+
+def load_measurement(folder):
+    """Läser en mätmapp tillbaka: spectrum.csv efter rubrik (inte plats) och settings.json (om den finns). 1.2.2.
+
+    Returnerar: ordboken som measure ger (x, values, mask, x_label, y_label), raw och px när kolumnerna finns, settings
+    (ur settings.json, tom ordbok utan filen) och folder. Klarar gamla mappar med tre kolumner.
+    Fel: ValueError med input.invalid_argument om rubriken saknar x_nm eller x_px, value eller valid; OSError om filen saknas.
+    """
+    folder = Path(folder)
+    with open(folder / "spectrum.csv", newline="", encoding="utf-8-sig") as f:
+        rows = [row for row in csv.reader(f) if row]
+    header, body = rows[0], rows[1:]
+    x_col = "x_nm" if "x_nm" in header else "x_px"
+    if x_col not in header or "value" not in header or "valid" not in header:
+        raise ValueError(f"input.invalid_argument: {folder.name}/spectrum.csv saknar x_nm eller x_px, value eller valid")
+
+    def column(name):
+        k = header.index(name)
+        return np.array([float(row[k]) if row[k] else np.nan for row in body])
+
+    path = folder / "settings.json"
+    settings = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    mode = settings.get("mode", "direct")
+    if mode == "direct" and settings.get("use_response"):
+        mode = "response"
+    valid = header.index("valid")
+    spectrum = {
+        "x": column(x_col),
+        "values": column("value"),
+        "mask": np.array([row[valid] == "true" for row in body], dtype=bool),
+        "x_label": "pixel" if x_col == "x_px" else "våglängd (nm)",
+        "y_label": Y_LABELS.get(mode, "signal (counts)"),
+        "settings": settings,
+        "folder": folder.as_posix(),
+    }
+    for key, name in (("raw", "raw_counts"), ("px", "x_px")):
+        if name in header and name != x_col:
+            spectrum[key] = column(name)
+    return spectrum
+
+
+def save_columns(path, columns):
+    """Skriver en CSV med en kolumn per (rubrik, värden); NaN blir en tom cell, text skrivs som den är.
+
+    Skriver aldrig över. Fel: OSError om filen redan finns (FileExistsError) eller inte går att skriva.
+    """
+    with open(path, "x", newline="", encoding="utf-8") as f:  # "x": fel om filen redan finns
+        writer = csv.writer(f)
+        writer.writerow([name for name, _values in columns])
+        for row in zip(*(values for _name, values in columns)):
+            writer.writerow([v if isinstance(v, str) else ("" if math.isnan(v) else f"{v:.10g}") for v in row])
+
+
+def save_json(path, data):
+    """Skriver data som JSON med indrag och åäö som de är. Skriver aldrig över; fel: OSError som save_columns."""
+    with open(path, "x", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)

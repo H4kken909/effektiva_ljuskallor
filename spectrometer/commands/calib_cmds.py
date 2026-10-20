@@ -89,6 +89,8 @@ def spectrum_peaks(state, n):
     spectrum = state["spectrum"]
     if spectrum is None:
         raise ValueError("input.missing_data: Ingen mätning än. Kör step först.")
+    if "loaded_from" in spectrum:  # 1.2.2
+        raise ValueError("input.invalid_argument: toppar fungerar efter step, inte efter load (pixlarna räknas ur nuvarande roi)")
     image = state["image"]
     roi = state["settings"]["roi"] if state["settings"]["roi"] is not None else (0, 0, image.shape[1], image.shape[0])
     pixels = measure.pixel_axis(roi, state["settings"]["axis"])

@@ -45,7 +45,8 @@ def starta(tmp_path, *flaggor):
     miljo = {**os.environ, "PYTHONPATH": str(ROT), "PYTHONUTF8": "1", "MPLBACKEND": "Agg"}
     korning = subprocess.run([sys.executable, *flaggor], input=b"", capture_output=True, cwd=tmp_path, env=miljo,
                              timeout=120)
-    return korning.returncode, korning.stdout.decode("utf-8"), korning.stderr.decode("utf-8")
+    # Windows skriver \r\n i rör; jämför som rader oberoende av system.
+    return korning.returncode, korning.stdout.decode("utf-8").replace("\r\n", "\n"), korning.stderr.decode("utf-8").replace("\r\n", "\n")
 
 
 def test_version_flag(capsys):

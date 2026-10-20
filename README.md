@@ -591,3 +591,15 @@ Testerna visar att räkningen stämmer, inte att instrumentet mäter rätt. Att 
 ### Demo-dagen
 
 `demo/manus.md` (60 minuter med roller), `demo/checklista.md` (datum och tre rutor) och `demo/fragor.md` (förväntade frågor). Tal som saknas i dem fylls i från riktiga körningar på uppställningen.
+
+## Begränsningar
+
+Samma rader som `help limits` skriver i programmet (`tests/test_demoflode.py` kontrollerar att de är lika):
+
+- Intensiteten är relativ: kameran ger counts, inte watt, lumen eller verkningsgrad.
+- 8 bitar: varje pixel är 0–255; vid 255 är den mättad och toppen blir för låg (step varnar).
+- Fönstret är 366–766 nm med KO-kalibreringen: utanför finns ingen kalibrerad våglängd.
+- Upplösningen är FWHM för en smal linje (laser eller lysrörets 576,96 och 579,07 nm); calibrate save skriver den.
+- Färg och färgtemperatur kräver response on; färgtemperaturen gäller bara nära svartkroppskurvan.
+- Bandgapet är brantaste lutningen extrapolerad till A = 0; osäkerheten är bara ±0,5 pixelsteg.
+- Testerna visar att räkningen stämmer, inte att instrumentet mäter rätt.

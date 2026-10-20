@@ -38,7 +38,7 @@ def cmd_dark(state, args):
     def total_of(s):
         # Löpande summa: en bild i minnet i stället för N. PRO-01.
         total = source.read_frame(s).astype(np.float64)
-        for _ in range(n - 1):
+        for _ in out.progress(range(n - 1), "mörker"):
             total += source.read_frame(s)
         return total, source.describe(s)
 

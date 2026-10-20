@@ -89,13 +89,14 @@ Gör avsnitt 3 steg 1 till 4 först: ställ in, mörker och kalibrering.
 
 ## 5 Spara och öppna i Excel
 
-`save` skriver en mapp med tid och datum under `data/`, till exempel `data/ÅÅÅÅMMDD-HHMMSS`, med fyra filer:
+`save` skriver en mapp med tid och datum under `data/`, till exempel `data/ÅÅÅÅMMDD-HHMMSS`, med fem filer:
 
 - `README.txt`: vad mappen innehåller och vad kolumnerna betyder.
 - `spectrum.csv`: kolumnerna `x_px` (eller `x_nm` när en kalibrering finns), `value`, `valid` och vid transmission `absorbance`. `value` är det korrigerade värdet i relativa counts, inte råa counts.
 - `raw.png`: den sista bilden som lästes, avkodad till 8 bitar. Det är inte sensorns rådata.
 - `settings.json`: inställningarna som gällde.
 - `README.txt`: en kort förklaring av filerna och kolumnerna, och raderna om just den här mätningen (källa, kanal, läge, programversion).
+- `spectrum.png`: rapportfiguren ur mätningen i ljust tema, med mätmappen och inställningarna i rubriken.
 
 Dubbelklicka inte på `spectrum.csv`: svenskt Excel läser `1.5` som ett datum. Öppna i stället Data, Från text/CSV, välj avgränsare Komma och språk Engelska (USA). I Calc: Arkiv, Öppna, avgränsare Komma, teckenkodning UTF-8, språk Engelska (USA).
 

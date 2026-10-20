@@ -27,6 +27,8 @@ def test_state_changes_forget_the_measurement(tmp_path):
         "set min_response 0.02", "set min_reference 2", "set output_dir ut", "undo", "clear reference",
         "clear response", "clear calibration", "clear dark", "clear all", "reset",
         "rows median", "background 2", "background off", "rigg off",
+        f"source file {paths['lampa']}", "exposure -6", "gain 0", "auto off",
+        "series start s1", "series note current_mA=20",
     ]
     for line in lines:
         state["spectrum"] = {"x": "gammal"}  # en gammal mätning som ska glömmas

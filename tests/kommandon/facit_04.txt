@@ -14,7 +14,7 @@ cameras prova kamera 0 till 4 och skriv vilka som ger bild
 snap [N]: spara N råbilder (1) ur källan som PNG i output_dir, utan att mäta
 image [FIL]: spara en bild ur källan med ROI:n inritad (bild.png)
 step mät och skriv toppen
-save [DIR]: spara senaste mätningen
+save [DIR] [--excel]: spara senaste mätningen (--excel: också spectrum_sv.csv för svensk Excel)
 start [SEKUNDER]: live med kameran, Ctrl+C stoppar (med SEKUNDER: efter så lång tid)
 stability [N]: mät toppvärdet N gånger (30) och skriv variation och drift
 perf [N]: tidta N mätningar (20) utan fönster: median, 95:e percentil, bilder/s
@@ -37,6 +37,36 @@ background N|off: dra av bakgrunden ur N rader ovanför och under ROI:n (backgro
 response save FIL.npz: spara responsen med roi, kanal, axis och kalibrering (skriver aldrig över)
 response load FIL.npz: läs en sparad respons (samma roi, kanal och axis som nu)
 rigg PATH|off: läs uppställningens data ur en JSON-fil, save skriver den (rigg ensam visar den)
+theme light|dark: fönstrets färger
+view camera|roi|spectrum|normalize on|off, xlim|ylim MIN MAX|auto, compare add|clear, analysis NAMN|off (view ensam visar läget)
+graf visa senaste mätningen i ett fönster; stäng fönstret för att fortsätta
+roi show spara senaste bilden med ROI-rutan som data/roi-ÅÅÅÅMMDD-HHMMSS.png
+roi auto föreslå en ROI ur det ljusa bandet i senaste bilden (ändrar inget)
+roi profile bandets mitt, bredd vid halva höjden och bakgrund i senaste bilden
+roi band START WIDTH: ROI längs hela spektrumet, WIDTH pixlar tvärs från START
+roi move DX DY: flytta ROI:n så många pixlar (den gamla står kvar vid fel)
+axis detect föreslå riktning ur det ljusa bandet i senaste bilden (ändrar inget)
+exposure N: kamerans exponering i drivrutinens tal (fast exponering för serier)
+gain N: kamerans förstärkning i drivrutinens tal
+auto on|off: kamerans auto-exponering (off för serier, Krav 18 och 21)
+note [TEXT...]: anteckning som varje save skriver (note ensam visar den, note clear tar bort)
+series start NAMN: börja en mätserie; save sparar i output_dir/NAMN och skriver en rad i serie.csv
+series note NYCKEL=VÄRDE...: current_mA, voltage_V, led, sample eller lamp för nästa mätning
+series stop avsluta mätserien; save sparar i output_dir igen
+series plot NAMN... [--x current|voltage] [--droop] [UT.png]: relativ uteffekt mot ström, eller droop
+load MAPP: läs en sparad mätmapp till senaste mätningen (graf och view compare add visar den)
+fwhm [N]: läge, höjd och linjebredd (FWHM) för de N högsta topparna (5), och arean
+compare MAPP... [--norm]: mätmappar i samma figur, med topp, FWHM och area (--norm: formen)
+figure UT.png|UT.svg [MAPP...] [--norm] [--xlim MIN MAX] [--log] [--ev]: rapportfigur och UT.txt till bildtexten
+color färgen i senaste mätningen: x, y, färgtemperatur och avstånd till varmt och kallt vitt
+mix R G B --target X Y | --cct K | --sweep | --fwhm W: blanda tre sparade LED-mätningar till en färg
+bandgap [MAPP]: bandgap i eV ur absorptionskanten i senaste transmissionsmätningen eller i MAPP
+repeat N [UT.csv]: mät N gånger; medel och spridning för topp, toppläge och area, per position i UT.csv
+linearity E1 E2 E3 ...: arean vid varje exponering och avvikelsen från en rät linje
+calibrate save FIL.json: spara kalibreringen med residualer, kontrollfel och upplösning (resolution_nm)
+guide stegen för en mätning med x för det som är gjort, och nästa steg
+pause TEXT: skriv texten och vänta på Enter (i en kommandofil: tid att byta lampa)
+help limits programmets begränsningar: vad talen betyder och inte betyder
 spektro> source file tests/data/bilder/rand_x12.png
 spektro> roi full
 spektro> ROI:n kontrolleras vid nästa mätning.

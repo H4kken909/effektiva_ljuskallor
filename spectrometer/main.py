@@ -87,6 +87,10 @@ def main(argv=None):
     for stream in (sys.stdout, sys.stdin):
         if hasattr(stream, "reconfigure"):  # pytest byter ut sys.stdin mot ett objekt utan reconfigure
             stream.reconfigure(encoding="utf-8")  # samma bytes på Windows och Arch, vilken kodsida konsolen än har
+    try:
+        import readline  # noqa: F401  (Linux: pil upp ger historik och radredigering i prompten)
+    except ImportError:
+        pass  # Windows har inte readline; prompten fungerar ändå
     parser = argparse.ArgumentParser(
         prog="python -m spectrometer.main",
         description="Utan sökväg: prompten spektro>. Med sökväg: läser bildfilen, skriver toppen, sparar mätningen "
@@ -126,6 +130,7 @@ def main(argv=None):
         return 1 if failed else 0
     while True:
         try:
+            out.status(session.status_text(state))
             line = out.ask("spektro> ")
         except (EOFError, KeyboardInterrupt):
             out.say()
