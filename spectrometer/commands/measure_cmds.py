@@ -6,6 +6,7 @@ import time
 import numpy as np
 
 from spectrometer import (
+    display,
     files,
     measure,
     meta,
@@ -16,6 +17,7 @@ from spectrometer import (
     session,
     source,
 )
+from spectrometer.analysis import series
 
 LIVE_INTERVAL = 0.05  # sekunder per varv i live (mål 20 bilder/s); pausen är det som blir över
 
@@ -30,6 +32,8 @@ def cmd_step(state, args):
     word = "bild" if frames == 1 else "bilder"
     out.say(f"Topp {out.fmt(spectrum['values'][i])} vid {spectrum['x_label']} {out.fmt(spectrum['x'][i])} ({frames} {word})")
     quality.warn_saturated(spectrum["saturated_px"])
+    if source.auto_on(spectrum["camera"]):  # 1.2.0: KRV-03
+        out.warn("auto-exponering är på: kameran ändrar exponeringen själv mellan mätningarna. Kör auto off.")
     quality.warn_changed(spectrum["camera"], state["dark_camera"], "mörkret", "dark")
     session.warn_old_dark(state)  # PRO-12
     if state["reference"] is not None:
@@ -53,14 +57,24 @@ def cmd_step(state, args):
             )
 
 
-@registry.command("save", "[DIR]: spara senaste mätningen", "save [DIR]")
+@registry.command("save", "[DIR] [--excel]: spara senaste mätningen (--excel: också spectrum_sv.csv för svensk Excel)",
+                  "save [DIR] [--excel]")
 def cmd_save(state, args):
     """Kommandot save [DIR]: sparar senaste mätningen i en ny mätmapp under DIR eller output_dir."""
+    excel = "--excel" in args  # 1.2.2
+    args = [word for word in args if word != "--excel"]
     if len(args) > 1:
         raise ValueError("input.invalid_argument: save tar högst ett ord (DIR)")
+    if state["spectrum"] is not None and "loaded_from" in state["spectrum"]:
+        raise ValueError(f"input.invalid_argument: mätningen kommer från load {state['spectrum']['loaded_from']}, den är redan sparad")
     if state["spectrum"] is None:
         raise ValueError("input.missing_data: Ingen mätning än. Kör step först.")
     parent = args[0] if args else state["settings"]["output_dir"]
+    if state["series"] is not None:  # 1.2.1
+        if state["spectrum"].get("saturated_px"):
+            raise ValueError("input.invalid_argument: mätningen är mättad och sparas inte i serien. "
+                             "Sänk exposure eller strömmen")
+        parent = args[0] if args else state["series"]["folder"]
     saved = state["settings"].copy()
     saved["saturated_px"] = state["spectrum"].get("saturated_px")  # ROI-pixlar som var 255, i den värsta bilden
     saved["camera"] = state["spectrum"].get("camera")  # drivrutinens reglage under mätningen; för en fil bara kind: file, resten None
@@ -77,9 +91,22 @@ def cmd_save(state, args):
     if state["rigg"] is None and sys.stdout.isatty():
         out.warn("ingen rigg angiven (rigg rigg.json), uppställningens data saknas i settings.json")  # DOK-32
     saved = meta.put_before(saved, "rigg", state["rigg"])  # Krav 9, DOK-31
+    saved = meta.put_before(saved, "controls", state["controls"])  # 1.2.0: exposure, gain och auto som du valde
+    saved = meta.put_before(saved, "note", state["note"])  # 1.2.1
+    saved = meta.put_before(saved, "annotations", state["annotations"])  # 1.2.1: ström, spänning, LED, prov
+    saved = meta.put_before(saved, "series", None if state["series"] is None else state["series"]["name"])
     folder = files.save_measurement(parent, state["spectrum"], state["image"], saved)
     state["spectrum"]["saved_in"] = folder.as_posix()  # quit frågar inte om en sparad mätning
+    try:
+        display.save_png(state, folder)
+    except (ValueError, RuntimeError, OSError) as error:
+        out.warn(f"spectrum.png kunde inte ritas ({error}). Mätningen är sparad ändå.")
     out.say(f"Sparad i {folder.as_posix()}")
+    if state["series"] is not None:  # 1.2.1: en rad per mätning i serie.csv
+        rows = series.add_row(state["series"]["file"], folder, saved, state["spectrum"])
+        out.say(f"serie {state['series']['name']}: rad {rows} i {state['series']['file']}")
+    if excel:
+        out.say(f"Excel: {files.save_excel(folder).as_posix()}")
 
 
 @registry.command("start", "[SEKUNDER]: live med kameran, Ctrl+C stoppar (med SEKUNDER: efter så lång tid)",
@@ -99,7 +126,9 @@ def cmd_start(state, args):
     before = state["spectrum"]  # kurvan före live; measure lägger en ny i state varje varv
     try:
         src = source.open_source(kind, value)
+        measure.apply_controls(state, src)  # 1.2.0
         win = plot.open_plot()
+        win.update(display.window_info(state))
         begun = time.perf_counter()
         while True:
             if not plot.is_open(win):
@@ -111,7 +140,9 @@ def cmd_start(state, args):
             started = time.perf_counter()
             spectrum = measure.measure(state, src)
             masked = np.where(spectrum["mask"], spectrum["values"], np.nan)
-            plot.draw(win, spectrum["x"], masked, spectrum["x_label"], spectrum["y_label"])
+            if not _live_frame(state, win, spectrum, masked):
+                out.say("live stoppad")
+                break
             plot.pause(max(0.001, LIVE_INTERVAL - (time.perf_counter() - started)))
     except KeyboardInterrupt:
         out.say("live stoppad")
@@ -187,3 +218,34 @@ def cmd_perf(state, args):
     frames = state["settings"]["frames"]
     rate = n * frames / (reads.sum() + computes.sum())
     out.say(f"{n} mätningar med {frames} {'bild' if frames == 1 else 'bilder'}: {rate:.1f} bilder/s utan fönster")
+
+
+def _live_frame(state, win, spectrum, masked):
+    """Ett varv i live efter mätningen: info i win, kurvan, live-raden och tangenterna. Ger False när live ska sluta.
+
+    Tangenter (fönstret i fokus): q eller Ctrl+C stoppar, s sparar som save, p pausar (ingen mätning under paus,
+    fönstret lever och s sparar den stillastående kurvan), f c y n h ändrar bara visningen (display.view_key).
+    """
+    win.update(display.frame_info(state, win, spectrum, masked))
+    display.draw_spectrum(state, win, spectrum, masked)
+    out.live_line(win["status"])
+    paused = False
+    while True:
+        keys = win.get("keys") or []
+        while keys:
+            key = keys.pop(0)
+            if key in ("q", "ctrl+c"):
+                return False
+            if key == "p":
+                paused = not paused
+                win["paused"] = paused
+            elif key == "s":
+                cmd_save(state, [])
+            else:
+                display.view_key(win, key, spectrum, masked)
+            display.draw_spectrum(state, win, spectrum, masked)
+        if not paused:
+            return True
+        plot.pause(0.05)
+        if not plot.is_open(win):
+            return False

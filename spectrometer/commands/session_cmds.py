@@ -74,9 +74,9 @@ def cmd_history(state, args):
 
 
 def _name(line):
-    """Kommandots namn i en rad: första ordet (kortformer som q kommer i 1.1.5)."""
+    """Kommandots namn i en rad: första ordet med gemener, kortformer som q blir quit."""
     words = line.removeprefix("spektro>").split()
-    return words[0] if words else ""
+    return registry.ALIASES.get(words[0].lower(), words[0].lower()) if words else ""
 
 
 @registry.command("history save", "FIL: spara raderna som lyckades som en kommandofil (för run FIL)", "history save FIL")

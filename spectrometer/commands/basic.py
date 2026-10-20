@@ -12,8 +12,7 @@ def cmd_help(state, args):
         lines = registry.help_lines()
     else:
         lines = registry.help_for(" ".join(args))  # två ord för tvåordskommandon: help history save
-    for line in lines:
-        out.say(line)
+    out.table([line.split(" ", 1) for line in lines], " ")
 
 
 def _really_quit(state):
@@ -68,6 +67,8 @@ def cmd_show(state, args):
     out.say(f"referens: {reference}{_age(state, 'reference')}")
     out.say(f"mode: {state['mode']}")
     out.say(_describe("mätning", state["spectrum"]))
+    for line in session.extra_lines(state):  # 1.2.x: bara det du valt (kamera, serie, anteckning)
+        out.say(line)
 
 
 def _next_step(state):

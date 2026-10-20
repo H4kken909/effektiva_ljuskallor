@@ -123,10 +123,13 @@ def measure(state, src=None, timing=None):
     x = pixel_axis(roi, state["settings"]["axis"])
     saturated = calibrate_axis(state, x, saturated, np.isfinite(mean))[1]  # samma ordning som values: vänds med x
     stddev = calibrate_axis(state, x, stddev, np.isfinite(mean))[1]  # spridningen mellan bilderna, NaN för en bild
+    px = calibrate_axis(state, x, x, np.isfinite(mean))[1]  # 1.2.2: pixeln för varje position, också i nm-läge
     x, values, mask, x_label = calibrate_axis(state, x, mean, np.isfinite(mean))
     spectrum = {"x": x, "values": values, "mask": mask, "x_label": x_label, "y_label": "signal (counts)"}
     spectrum["saturated_px"], spectrum["saturated"] = saturated_px, saturated
     spectrum["stddev"] = stddev  # slumpbrus mellan bilderna i counts (stickprov, ddof=1); ingen osäkerhet för instrumentet
+    spectrum["px"] = px
+    spectrum["raw"] = np.where(mask, values, np.nan)  # 1.2.2: före respons och transmission, i counts
     spectrum["camera"] = camera  # kamerans reglage under mätningen (source.describe)
     apply_response(state, spectrum)
     apply_transmission(state, spectrum)
@@ -162,6 +165,8 @@ def _with_source(state, src, funktion):
             out.say("Öppnar kameran ...")  # kan ta en sekund, och uppvärmningen läses bort
         src = source.open_source(kind, value)
     try:
+        if opened_here:
+            apply_controls(state, src)  # 1.2.0: exposure, gain och auto varje gång kameran öppnas
         return funktion(src)
     finally:
         if opened_here:
@@ -187,3 +192,14 @@ def _read_frames(src, n, show):
     for _ in steps:
         images.append(source.read_frame(src))
     return images
+
+
+def apply_controls(state, src):
+    """Sätter exposure, gain och auto som du valt (state["controls"]; None hoppas över) i en nyöppnad kamera. 1.2.0.
+
+    auto först: på många kameror går exponeringen bara att sätta när auto är av. Varnar för det drivrutinen inte tar emot.
+    """
+    for name in ("auto", "exposure", "gain"):
+        value = state["controls"][name]
+        if value is not None and not source.set_control(src, name, value):
+            out.warn(f"kameran tog inte emot {name}; info visar vad drivrutinen har")

@@ -221,12 +221,12 @@ def test_elias_vertical_and_folder(tmp_path, capsys):
     assert "Topp 100 vid pixel 4 (1 bild)" in out
     folders = list((tmp_path / "data").iterdir())
     assert len(folders) == 1
-    assert sorted(p.name for p in folders[0].iterdir()) == ["README.txt", "raw.png", "settings.json", "spectrum.csv"]
+    assert sorted(p.name for p in folders[0].iterdir()) == ["README.txt", "raw.png", "settings.json", "spectrum.csv", "spectrum.png"]
     settings = json.loads((folders[0] / "settings.json").read_text(encoding="utf-8"))
     assert settings["axis"] == "vertical"
     rows = (folders[0] / "spectrum.csv").read_text(encoding="utf-8").splitlines()
     assert len(rows) == 11
-    assert rows[5] == "4,100,true"
+    assert rows[5] == "4,100,true,100"  # 1.2.2: raw_counts sist
 
 
 def test_elias_frames_reads_new_images(monkeypatch):

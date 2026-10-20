@@ -191,3 +191,36 @@ def next_in_folder(src):
     path = src["paths"][src["next"]]
     src["next"] += 1
     return open_source("file", path)["image"]
+
+
+CONTROLS = {"exposure": cv2.CAP_PROP_EXPOSURE, "gain": cv2.CAP_PROP_GAIN, "auto": cv2.CAP_PROP_AUTO_EXPOSURE}
+AUTO_VALUES = {"V4L2": (1.0, 3.0)}  # CAP_PROP_AUTO_EXPOSURE som (manuell, auto); V4L2 räknar 1 och 3
+AUTO_OTHER = (0.25, 0.75)  # DirectShow och övriga: OpenCV:s gamla skala (antaget, prova med info vid riggen)
+
+
+def set_control(src, name, value):
+    """Sätter ett reglage i en öppen kamera: exposure och gain med drivrutinens tal, auto med True eller False.
+
+    En bildfil (eller en kamera utan reglage) har inget att sätta. Returnerar: False om drivrutinen sa nej, annars True.
+    """
+    cap = src.get("cap")
+    if src["kind"] != "camera" or not hasattr(cap, "set"):
+        return True
+    if name == "auto":
+        manual, auto = AUTO_VALUES.get(describe(src)["backend"], AUTO_OTHER)
+        value = auto if value else manual
+    return bool(cap.set(CONTROLS[name], float(value)))
+
+
+def get_controls(src):
+    """exposure, gain och auto (True, False eller None om det inte går att se) som drivrutinen säger nu."""
+    info = describe(src)
+    return {"exposure": info["exposure"], "gain": info["gain"], "auto": auto_on(info)}
+
+
+def auto_on(camera):
+    """Sant om drivrutinen säger auto-exponering, falskt vid manuell, None annars (camera: ordboken från describe)."""
+    if camera is None or camera.get("auto_exposure") is None:
+        return None
+    manual, auto = AUTO_VALUES.get(camera["backend"], AUTO_OTHER)
+    return {manual: False, auto: True}.get(camera["auto_exposure"])

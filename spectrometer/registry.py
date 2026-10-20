@@ -4,6 +4,7 @@ help byggs ur registret i FEATURES-ordning och sedan i den ordning funktionerna 
 (facit_04 jämför help rad för rad). need() och to_int() är argumentkontrollerna som alla kommandon delar.
 """
 
+import difflib
 import os
 import shlex
 from collections.abc import Callable
@@ -23,6 +24,7 @@ class Command:
 
 
 COMMANDS: dict[str, Command] = {}
+ALIASES = {"h": "help", "?": "help", "q": "quit", "exit": "quit"}  # kortformer, slås upp före COMMANDS
 
 
 def command(name, text, usage=""):
@@ -59,7 +61,9 @@ def lookup(name):
     Fel: ValueError med input.invalid_argument om kommandot inte finns.
     """
     if name not in COMMANDS:
-        raise ValueError(f"input.invalid_argument: okänt kommando {name}. Skriv help för en lista.")
+        close = difflib.get_close_matches(name, COMMANDS, n=1)
+        hint = f" Menade du {close[0]}?" if close else ""
+        raise ValueError(f"input.invalid_argument: okänt kommando {name}.{hint} Skriv help för en lista.")
     return COMMANDS[name]
 
 
@@ -87,6 +91,7 @@ def run_command(state, line):
         raise ValueError("input.invalid_argument: citattecken saknar slut") from error
     if not words:
         return None  # tom rad: bara en ny prompt
+    words[0] = ALIASES.get(words[0].lower(), words[0].lower())
     pair = " ".join(words[:2])
     if pair in COMMANDS:  # tvåordskommando, till exempel history save
         return COMMANDS[pair].run(state, words[2:])

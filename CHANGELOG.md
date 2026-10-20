@@ -5,6 +5,10 @@ Formatet följer Keep a Changelog, och versionsnumren följer semantisk versione
 ## [Unreleased]
 - Startskärm: `py -m spektro` (Windows) eller `python3 -m spektro` (Linux) bygger `.venv` vid behov och startar programmet med prisma och gul text (`--windowed`, `--no-splash`, `--delay SEK`). Färgerna är ANSI-koder, inget nytt bibliotek i requirements.txt. Konsten ligger i `startskarm/prisma.py`, utanför `spectrometer/`; koden i `spectrometer/` är oförändrad sedan v1.0.0.
 
+## [1.0.32] - 2026-10-20
+
+- Utgåvorna 1.0.1-1.2.12 enligt planen (PowerShell-skripten spektro-*.ps1).
+
 ## [1.0.0] - 2026-10-19
 Kommentarer, README och testprotokoll för Delrapport 2. Koden är fryst och taggad v1.0.0.
 - 0.10.1: README.md och docstrings: provat i en ren klon
