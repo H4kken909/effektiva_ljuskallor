@@ -1,0 +1,11 @@
+1 tagg: v0.3.3beta2 | TEMP i plot.py: True
+1 TEMP på rad 27, sista def på rad 17
+2 Fönstret öppnas nu. Vänta tills spetsen blivit 100, Win+Shift+S, ta bilden av fönstret, stäng sedan fönstret.
+3 spektrum: 20 tal, enda icke-noll på plats 12 med värdet 200   OK
+3 sista raden: '1' (ska vara 1) | slutkod 0 | traceback: False
+4 skärmbild sparad: testfiler\testa02_fonster.png, 802x692, 35717 byte
+5 git restore: plot.py orörd igen
+5 __main__ finns i: main.py:81
+6 pytest -v: 6 passed in 0.54s | ruff: All checks passed!
+7 Rad skriven: Testa 0.2 Godkänt
+SLUT block 28: OK

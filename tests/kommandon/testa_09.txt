@@ -1,0 +1,30 @@
+mode transmission
+mode transmision
+source file tests/data/bilder/rand_x12.png
+roi 10 0 3 2
+channel red
+reference 1
+source file tests/kommandon/svart.png
+dark 1
+source file tests/data/bilder/rand_x12.png
+reference 1
+mode transmission
+step
+roi 10 0 2 2
+step
+roi 10 0 3 2
+channel green
+step
+channel red
+source file tests/kommandon/halv_x12.png
+step
+save
+show
+source file tests/kommandon/svart.png
+dark 1
+step
+mode direct
+source file tests/data/bilder/rand_x12.png
+step
+mode
+quit

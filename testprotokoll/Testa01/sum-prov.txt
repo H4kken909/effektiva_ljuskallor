@@ -1,0 +1,17 @@
+1 tagg: v0.3.3beta2 | calc.py andrad: False
+2 kanal, pixel BGR (10,20,30), pixel BGR (30,20,10):
+2   blue [[10.0]] [[30.0]]
+2   green [[20.0]] [[20.0]]
+2   red [[30.0]] [[10.0]]
+2   sum [[60.0]] [[60.0]]
+2   gray [[21.849999999999998]] [[18.15]]
+3 rader med sum i calc.py:
+3   CHANNEL_INDEX = {"blue": 0, "green": 1, "red": 2}
+3   >CHANNELS = ("gray", "sum", "red", "green", "blue")
+3   
+3   ## Grey weights
+3           result = cut[:, :, CHANNEL_INDEX[channel]]
+3   >    elif channel == "sum":
+3           result = blue + green + red
+3       elif channel == "gray":
+SLUT block 25: FEL sum ger 60 i provet (eller inget svar), ingen Issue -> klistra in det här

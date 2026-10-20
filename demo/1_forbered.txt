@@ -1,0 +1,5 @@
+source camera 0
+roi full
+channel gray
+frames 16
+show
