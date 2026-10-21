@@ -79,6 +79,8 @@ def test_clear_all_takes_only_the_chain(tmp_path, capsys):
     state = transmission_state(tmp_path)
     for line in ("rows median", "background 1", "note hej", "exposure -6", "theme dark", "view normalize on"):
         registry.run_command(state, line)
+    registry.run_command(state, "reference 1")  # rows och background glömde referensen: ta den igen
+    registry.run_command(state, "mode transmission")
     capsys.readouterr()
     registry.run_command(state, "clear all")
     assert capsys.readouterr().out.splitlines() == [
@@ -120,7 +122,8 @@ def test_image_without_file_goes_to_output_dir_with_a_stamp(tmp_path, monkeypatc
     registry.run_command(state, "image")
     registry.run_command(state, "image")
     saved = sorted((tmp_path / "data").glob("bild-*.png"))
-    assert len(saved) == 2 and saved[1].stem.endswith("-2")
+    stems = sorted((path.stem for path in saved), key=len)  # "-2" sorterar före ".png", så inte i namnordning
+    assert len(saved) == 2 and stems[1] == stems[0] + "-2"
     assert capsys.readouterr().out.count("Sparad: data/bild-") == 2
     framed = cv2.imread(str(saved[0]))
     assert tuple(framed[0, 10]) == (0, 255, 0)
