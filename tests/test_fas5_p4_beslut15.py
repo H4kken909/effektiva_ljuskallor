@@ -72,3 +72,23 @@ def test_help_texts_say_what_the_commands_do(capsys):
     assert "theme light|dark: fönstrets färger (theme ensam visar valet)" in text
     registry.run_command(state, "help theme")
     assert "theme light eller theme dark" in capsys.readouterr().out
+
+
+def test_clear_all_takes_only_the_chain(tmp_path, capsys):
+    """B6 (BESLUT 9): clear all tar mörker, kalibrering, respons, referens och mode; allt annat står kvar som help säger."""
+    state = transmission_state(tmp_path)
+    for line in ("rows median", "background 1", "note hej", "exposure -6", "theme dark", "view normalize on"):
+        registry.run_command(state, line)
+    capsys.readouterr()
+    registry.run_command(state, "clear all")
+    assert capsys.readouterr().out.splitlines() == [
+        "Mörker, kalibrering, respons och referens borttagna. Inställningarna står kvar.",
+        "mode: direct (ingen referens)",
+    ]
+    assert (state["dark"], state["coefficients"], state["response"], state["reference"]) == (None, None, None, None)
+    assert (state["use_response"], state["spectrum"], state["mode"]) == (False, None, "direct")
+    assert state["settings"]["roi"] == (0, 2, 20, 5)
+    assert (state["rows"], state["background"], state["note"]) == ("median", 1, "hej")
+    assert state["controls"]["exposure"] == -6
+    assert (state["view"]["theme"], state["view"]["normalize"]) == ("dark", True)
+    assert state["image"] is not None

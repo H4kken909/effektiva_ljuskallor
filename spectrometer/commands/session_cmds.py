@@ -108,7 +108,7 @@ def cmd_history_save(state, args):
                   "dark|calibration|response|reference|all: ta bort en del av kedjan, inställningarna står kvar",
                   "clear dark, clear calibration, clear response, clear reference eller clear all")
 def cmd_clear(state, args):
-    """Kommandot clear NAMN: tar bort mörker, kalibrering, respons, referens, eller allt utom inställningarna.
+    """Kommandot clear NAMN: tar bort mörker, kalibrering, respons eller referens; all tar alla fyra, inget annat.
 
     Det som mättes med det borttagna glöms också: dark tar referensen, calibration tar respons och referens (x i nm).
     Utan referens lämnas mode transmission (mode blir direct och det skrivs).
@@ -117,8 +117,13 @@ def cmd_clear(state, args):
     registry.need(args, ("NAMN",), "clear")
     name = args[0]
     if name == "all":
-        _renew(state, state["settings"])
-        out.say("Allt borttaget utom inställningarna.")
+        for keys, _ in PARTS.values():
+            for key in keys:
+                state[key] = None
+        state["use_response"] = False
+        state["spectrum"] = None
+        out.say("Mörker, kalibrering, respons och referens borttagna. Inställningarna står kvar.")
+        session.leave_transmission(state)
         return
     if name not in PARTS:
         raise ValueError("input.invalid_argument: clear: välj dark, calibration, response, reference eller all")
