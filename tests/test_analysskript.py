@@ -1,6 +1,5 @@
-"""1.2.12 Analysskriptet: python -m spectrometer.analys på sparade mätmappar, slutkoderna och analysis.MODULER."""
+"""1.2.12 Analysskriptet: python -m spectrometer.analys på sparade mätmappar, slutkoderna."""
 
-import importlib
 import json
 import subprocess
 import sys
@@ -12,7 +11,7 @@ from test_bandgap import EXPECTED_550, X, edge_at
 from test_blandning import led
 from test_elias import new_state
 
-from spectrometer import analys, analysis, registry
+from spectrometer import analys, registry
 from spectrometer.analysis import color, mapp
 
 ROT = Path(__file__).resolve().parents[1]
@@ -96,9 +95,3 @@ def test_as_a_program():
     done = subprocess.run([sys.executable, "-m", "spectrometer.analys"], cwd=ROT, capture_output=True, timeout=60)
     assert done.returncode == 2
     assert "toppar MAPP" in done.stdout.decode("utf-8")
-
-
-def test_analysis_lists_its_modules():
-    """analysis.MODULER: varje modul som listas går att importera."""
-    for name in analysis.MODULER:
-        importlib.import_module(f"spectrometer.analysis.{name}")

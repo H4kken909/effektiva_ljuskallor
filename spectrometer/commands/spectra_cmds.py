@@ -81,7 +81,7 @@ def cmd_fwhm(state, args):
     n = registry.to_int("N", args[0], 1) if args else 5
     spectrum, values = latest(state)
     x_unit, area_unit = units(spectrum)
-    found = peaks.find_peaks(spectrum["x"], values, spectrum["mask"])[:n]
+    found = peaks.find_peaks(values, spectrum["mask"])[:n]
     sigma = spread(spectrum)  # 1.2.14: slumpfelet per position, None vid en bild
     if not found:
         out.say("inga toppar")
@@ -124,7 +124,7 @@ def _row(spectrum, values):
     """En rad i compare: den högsta toppens läge, höjd och FWHM, och arean."""
     x_unit, area_unit = units(spectrum)
     area = f"area {out.fmt(peaks.area(spectrum['x'], values, spectrum['mask']))} {area_unit}"
-    found = peaks.find_peaks(spectrum["x"], values, spectrum["mask"])
+    found = peaks.find_peaks(values, spectrum["mask"])
     if not found:
         return f"ingen topp, {area}"
     where, height, width = summary(spectrum, values, found[0])

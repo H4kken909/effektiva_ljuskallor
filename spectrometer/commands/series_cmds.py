@@ -120,7 +120,7 @@ def cmd_series_plot(state, args):
         path = Path(state["settings"]["output_dir"]) / name / "serie.csv"
         if not path.is_file():
             raise ValueError(f"input.missing_data: {path.as_posix()} finns inte. Kör series start {name} och save")
-        xs, areas, _per_x = series.table(series.load(path), column)
+        xs, areas = series.table(series.load(path), column)
         xs, areas, spreads, counts = series.repeats(xs, areas)  # 1.2.14: samma ström flera gånger: medel ± spridning
         out.say(f"serie {name}: {xs.size} punkter ur {path.as_posix()}")
         eff = series.droop(xs, areas) if axis == "current" else None

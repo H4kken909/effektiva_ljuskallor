@@ -44,19 +44,12 @@ def cct_mccamy(x, y):
     return 449.0 * n**3 + 3525.0 * n**2 + 6823.3 * n + 5520.33
 
 
-def luminous_rel(x_nm, values, mask):
-    """Relativ ljusstyrka Σ V(λ)·S(λ): jämförbar mellan mätningar, aldrig lumen."""
-    return xyz(x_nm, values, mask)[1]
-
-
 def distance(p, q):
     """Avstånd i xy-planet."""
     return float(np.hypot(p[0] - q[0], p[1] - q[1]))
 
 
 C2 = 1.4388e7  # nm·K, andra strålningskonstanten i Plancks lag
-MCCAMY_K = (2000, 12500)  # där McCamy ungefär gäller
-UV_MAX = 0.05  # längre från svartkroppskurvan än så i (u, v): ingen färgtemperatur (Ohno 2014: CCT saknar mening där)
 MIN_COVERAGE = 0.95  # mindre av x̄, ȳ och z̄ inom mätningen än så: varning
 
 
@@ -182,7 +175,7 @@ def locus():
     Över 700 nm står punkten nästan still, och tabellens fyra decimaler gör den bara brusig; därför slutar kurvan där.
     """
     total = _X + _Y + _Z
-    keep = (total > 0) & (_NM <= 700)
+    keep = _NM <= 700
     return _NM[keep], _X[keep] / total[keep], _Y[keep] / total[keep]
 
 

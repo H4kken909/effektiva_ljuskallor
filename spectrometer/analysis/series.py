@@ -35,12 +35,12 @@ def load(series_csv):
 
 
 def table(rows, x="current_mA"):
-    """(x, area, area/x) sorterat på x, utan rader som saknar x eller area."""
+    """(x, area) sorterat på x, utan rader som saknar x eller area."""
     pts = [(r[x], r["area"]) for r in rows if np.isfinite(r[x]) and np.isfinite(r["area"]) and r[x] > 0]
     pts.sort()
     xs = np.array([p[0] for p in pts])
     areas = np.array([p[1] for p in pts])
-    return xs, areas, areas / xs
+    return xs, areas
 
 
 def droop(xs, areas):

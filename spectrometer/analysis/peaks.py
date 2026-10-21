@@ -2,19 +2,22 @@
 
 import numpy as np
 
+MIN_FRACTION = 0.05  # en topp ska vara minst så stor andel av högsta värdet
+MIN_DISTANCE = 3  # toppar närmare än så (punkter) slås ihop till den högsta
 
-def find_peaks(x, y, mask, prominence=0.05, min_distance=3):
-    """Lokala maxima över prominence·max, minst min_distance punkter isär. Ger index, störst först."""
+
+def find_peaks(y, mask):
+    """Lokala maxima över MIN_FRACTION·max, minst MIN_DISTANCE punkter isär. Ger index, störst först."""
     yy = np.where(mask, y, -np.inf)
     top = np.nanmax(yy[np.isfinite(yy)]) if np.any(np.isfinite(yy)) else 0.0
     hits = []
     for i in range(1, len(yy) - 1):
-        if yy[i] >= yy[i - 1] and yy[i] > yy[i + 1] and yy[i] >= prominence * top and np.isfinite(yy[i]):
+        if yy[i] >= yy[i - 1] and yy[i] > yy[i + 1] and yy[i] >= MIN_FRACTION * top and np.isfinite(yy[i]):
             hits.append(i)
     hits.sort(key=lambda i: -yy[i])
     kept = []
     for i in hits:
-        if all(abs(i - j) >= min_distance for j in kept):
+        if all(abs(i - j) >= MIN_DISTANCE for j in kept):
             kept.append(i)
     return kept
 
@@ -87,16 +90,11 @@ def fwhm(x, y, i):
     return width(x, y, i)[0]
 
 
-def area(x, y, mask, lo=None, hi=None):
-    """Trapetsarea under kurvan där masken är sann, valfritt mellan lo och hi i x-enheter."""
-    sel = mask.copy()
-    if lo is not None:
-        sel &= x >= lo
-    if hi is not None:
-        sel &= x <= hi
-    if np.count_nonzero(sel) < 2:
+def area(x, y, mask):
+    """Trapetsarea under kurvan där masken är sann."""
+    if np.count_nonzero(mask) < 2:
         return float("nan")
-    return float(np.trapezoid(y[sel], x[sel]))
+    return float(np.trapezoid(y[mask], x[mask]))
 
 
 def fwhm_sigma(x, y, i, sigma):

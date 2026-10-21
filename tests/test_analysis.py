@@ -13,7 +13,7 @@ def test_peaks_fwhm_area():
     x = np.arange(400.0, 700.0, 1.0)
     y = gauss(x, 450, 5, 100) + gauss(x, 600, 10, 50)
     m = np.ones_like(x, dtype=bool)
-    idx = peaks.find_peaks(x, y, m)
+    idx = peaks.find_peaks(y, m)
     assert [round(x[i]) for i in idx] == [450, 600]
     assert abs(peaks.fwhm(x, y, idx[0]) - 2.3548 * 5) < 0.2  # FWHM = 2.3548·σ
     assert abs(peaks.centroid(x, y, idx[1]) - 600) < 0.01
