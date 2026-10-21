@@ -35,10 +35,10 @@ kalibrering, respons, referens, mode och senaste mätningen (BESLUT 9). Ordninge
 ## 3. Filformat in
 
 - Bildfiler (PNG/JPG via OpenCV) som källa; kamera N via OpenCV.
-- Punktfil (`calibrate PATH`): CSV med pixel och våglängd; mall `kalibrering/punkter_MALL.csv`.
-- Linjefil (`toppar LINJEFIL`): CSV med kända linjer, `kalibrering/hg_linjer.csv`.
-- Känd fördelning (`response build KNOWNFILE`): CSV, `kalibrering/lampa_A.csv`, `tests/kommandon/x12_kand.csv`.
-- Kommandofil (`run FIL`, `--kor FIL`): textfil med en kommandorad per rad (`exempel/*.txt`, `demo/*.txt`,
+- Punktfil (`calibrate PATH`): CSV med pixel och våglängd; mall `exempel/kalibrering/punkter_MALL.csv`.
+- Linjefil (`toppar LINJEFIL`): CSV med kända linjer, `exempel/kalibrering/hg_linjer.csv`.
+- Känd fördelning (`response build KNOWNFILE`): CSV, `exempel/kalibrering/lampa_A.csv`, `tests/kommandon/x12_kand.csv`.
+- Kommandofil (`run FIL`, `--kor FIL`): textfil med en kommandorad per rad (`exempel/*.txt`, `exempel/demo/*.txt`,
   `tests/kommandon/testa_*.txt`).
 - `rigg PATH`: JSON med fälten i `docs/rigg.md` (mall `exempel/rigg.json`).
 - `response load FIL.npz`, `dark load FIL.npy`, `load MAPP` (en sparad mätmapp).
@@ -72,8 +72,12 @@ kalibrering, respons, referens, mode och senaste mätningen (BESLUT 9). Ordninge
 - `tests/test_elias.py` är hjälpbibliotek för 29 testmoduler (FakeCamera, new_state m.fl.).
 - `startskarm.prisma` (bara från `spektro.py`, valfritt).
 - Repots filer som tester läser: `tests/data/bilder/rand_x12.png`, `tests/kommandon/*`, `tests/data/*`,
-  `kalibrering/{hg_linjer,lampa_A,punkter_MALL}.csv`, `exempel/*.txt`, `exempel/rigg.json`, `demo/*.txt`,
+  `exempel/kalibrering/{hg_linjer,lampa_A,punkter_MALL}.csv`, `exempel/*.txt`, `exempel/rigg.json`, `exempel/demo/*.txt`,
   `docs/rigg.md`, `README.md` (måste innehålla `Topp 200 vid pixel 12 (1 bild)` och `- <rad>` för varje rad i
   `demo_cmds.LIMITS`), `CHANGELOG.md` (översta rubriken = `__version__`). Se KODKARTA 7.8–7.9.
 - Pytest körs från repots rot (`pythonpath = ["."]`, `testpaths = ["tests"]`). CI: `ruff check .` och
   `pytest -q -p no:cacheprovider` på Ubuntu och Windows, Python 3.12.
+
+## 6. Flyttat 2026-10-21 21:35 (Elias önskan, fas 8)
+
+`demo/` och `kalibrering/` ligger nu i `exempel/`; alla hänvisningar i kod, tester, README och kommandofiler följde med (MANIFEST 17–18).
