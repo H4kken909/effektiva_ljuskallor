@@ -85,7 +85,7 @@ Gör avsnitt 3 steg 1 till 4 först: ställ in, mörker och kalibrering.
 4. `save`. Då får `spectrum.csv` också kolumnen `absorbance`.
 5. `mode direct` tar dig tillbaka till direkt mätning.
 
-Ändrar du `channel`, bandets läge i sidled eller bredd i `roi`, eller kalibreringen efter `reference`, svarar `step` med ett fel som slutar `kör reference igen`. Gör det. Ändrar du bara höjden på `roi` märker programmet inget: kör `reference` igen ändå. Tar du om `dark` försvinner referensen, och programmet säger det.
+Ändrar du `roi`, `channel`, `axis`, `rows` eller `background` efter `reference`, eller tar om `dark`, glöms referensen: programmet skriver `Referensen glömd. Kör reference igen.` (efter `dark`: `referensen togs bort`) och `mode: direct (ingen referens)`, och nästa `step` mäter direkt. Kör `reference` och `mode transmission` igen. Ändrar du kalibreringen svarar `step` med ett fel som slutar `kör reference igen`: gör det.
 
 ## 5 Spara och öppna i Excel
 
