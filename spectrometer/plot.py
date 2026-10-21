@@ -1,4 +1,7 @@
-"""Fönstret: öppnar, ritar, väntar och stänger. Räknar inte; den enda modulen i programmet som använder matplotlib."""
+"""Fönstret: öppnar, ritar, väntar och stänger. Räknar inte.
+
+Den enda modulen i programmet som använder matplotlib.
+"""
 
 import time
 
@@ -11,7 +14,7 @@ from spectrometer import theme
 
 
 def open_plot():
-    """Öppnar ett fönster med en tom kurva: mörkt tema, layout som följer fönstrets storlek och 60 % av skärmen."""
+    """Öppnar ett fönster med en tom kurva: mörkt tema, layout efter fönstrets storlek och 60 % av skärmen."""
     plt.ion()
     fig, ax = plt.subplots()
     line = ax.plot([], [])[0]
@@ -66,7 +69,7 @@ def _set_labels(ax, x_label, y_label):
 
 
 def _size_window(fig, share):
-    """Fönstret share av skärmens bredd och höjd (Tk). Agg i testerna och andra backends har inget sådant fönster."""
+    """Fönstret share av skärmens bredd och höjd (Tk). Agg i testerna och andra backends saknar sådant fönster."""
     try:
         window = fig.canvas.manager.window
         width, height = window.winfo_screenwidth(), window.winfo_screenheight()
@@ -103,7 +106,7 @@ def _decorate(win):
 
 
 def _live_texts(win):
-    """Det cmd_start lagt i win: rubrik, varning i rött, referens, 100 %-linje, toppmarkör, fast y-skala och fotrad."""
+    """Det cmd_start lagt i win: rubrik, röd varning, referens, 100 %-linje, toppmarkör, fast y-skala och fotrad."""
     ax, colors = win["ax"], win["colors"]
     scale = "" if win.get("yscale", "fast") == "fast" else f" · y {win['yscale']}"
     ax.set_title(win.get("title", "") + scale, loc="left", fontsize=9, color=colors["fg"])
@@ -160,7 +163,10 @@ def _themed_legend(ax, colors, loc, fontsize):
 
 
 def _due(win, key, every):
-    """Sant om det gått minst every sekunder sedan förra gången; då sparas tiden i win[key]. Första gången är sant."""
+    """Sant om det gått minst every sekunder sedan förra gången; då sparas tiden i win[key].
+
+    Första gången är den sant.
+    """
     now = time.perf_counter()
     if now - win.get(key, -every) < every:
         return False
@@ -172,7 +178,7 @@ CAMERA_EVERY = 0.25  # sekunder mellan två kamerabilder i fönstret: begränsat
 
 
 def _areas(win):
-    """Delar fönstret en gång, vid första ritningen: kamera och ROI-remsa överst (1:3), analyspanelen till höger."""
+    """Delar fönstret en gång, vid första ritningen: kamera och ROI-remsa överst (1:3), analyspanel till höger."""
     if "areas" in win:
         return
     view = win.get("view", {})
@@ -228,7 +234,10 @@ def _show_image(win, key, rgb, extent):
 
 
 def _keys(win):
-    """Tangentkön: varje tangent i fönstret hamnar i win["keys"], som start läser. Matplotlibs egna tangenter stängs av."""
+    """Tangentkön: varje tangent i fönstret hamnar i win["keys"], som start läser.
+
+    Matplotlibs egna tangenter stängs av.
+    """
     for name in [key for key in plt.rcParams if key.startswith("keymap.")]:
         plt.rcParams[name] = []
     win["keys"] = []
@@ -256,7 +265,8 @@ def _help_text(win):
             return
         ax, colors = win["ax"], win["colors"]
         box = {"facecolor": colors["bg"], "edgecolor": colors["grid"]}
-        win["help_text"] = ax.text(0.01, 0.97, "", transform=ax.transAxes, va="top", fontsize=8, color=colors["fg"], bbox=box)
+        win["help_text"] = ax.text(0.01, 0.97, "", transform=ax.transAxes, va="top", fontsize=8, color=colors["fg"],
+                                   bbox=box)
     win["help_text"].set_text(text)
     win["help_text"].set_visible(bool(text))
 
@@ -269,7 +279,10 @@ def _report_figure(width, height):
 
 
 def save_png(path, x, values, x_label, y_label, title):
-    """Rapportfigur som PNG: ljust tema, 200 dpi, topp markerad. values har NaN där mätningen är ogiltig (luckor i kurvan)."""
+    """Rapportfigur som PNG: ljust tema, 200 dpi, topp markerad.
+
+    values har NaN där mätningen är ogiltig (luckor i kurvan).
+    """
     fig = _report_figure(8, 4.5)
     ax = fig.add_subplot()
     colors = theme.apply(fig, ax, "light")
@@ -277,7 +290,8 @@ def save_png(path, x, values, x_label, y_label, title):
     if np.any(np.isfinite(values)):
         i = int(np.nanargmax(values))
         ax.plot([x[i]], [values[i]], "v", color=colors["warn"])
-        ax.annotate(f"{x[i]:g}", (x[i], values[i]), textcoords="offset points", xytext=(5, 5), fontsize=8, color=colors["fg"])
+        ax.annotate(f"{x[i]:g}", (x[i], values[i]), textcoords="offset points", xytext=(5, 5), fontsize=8,
+                    color=colors["fg"])
     _set_labels(ax, x_label, y_label)
     ax.set_title(title, loc="left", fontsize=8, color=colors["fg"])
     fig.savefig(path, dpi=200)
@@ -312,7 +326,7 @@ def _panel(win):
 
 
 def _compare(win):
-    """Jämförelsekurvorna (view compare add) som tunna linjer med egen stil och etikett; skapas en gång per fönster."""
+    """Jämförelsekurvorna (view compare add) som tunna linjer med egen stil och etikett, skapade en gång."""
     if "compare_lines" in win:
         return
     styles = ("-.", ":", (0, (5, 1)), (0, (3, 1, 1, 1)))
@@ -396,7 +410,8 @@ def save_cie(path, locus, planck, marks, points):
     ax.plot(planck[1], planck[2], color=colors["ref"], linewidth=1.0, label="Planck-kurvan")
     for kelvin, x, y in zip(*marks):
         ax.plot([x], [y], "|", color=colors["ref"])
-        ax.annotate(f"{kelvin:g} K", (x, y), textcoords="offset points", xytext=(-6, -10), fontsize=6, color=colors["ref"])
+        ax.annotate(f"{kelvin:g} K", (x, y), textcoords="offset points", xytext=(-6, -10), fontsize=6,
+                    color=colors["ref"])
     if len(points) == 3:
         corners = [p[0] for p in points] + [points[0][0]], [p[1] for p in points] + [points[0][1]]
         ax.plot(*corners, "--", color=colors["grid"], linewidth=1.0, label="triangeln de tre spänner")

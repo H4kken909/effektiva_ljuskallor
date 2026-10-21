@@ -6,12 +6,10 @@ Används av main.py. Filen vet ingenting om state, filer eller kameran.
 import numpy as np
 from numpy.polynomial import polynomial as poly
 
-# Variables
-## Channels
 CHANNEL_INDEX = {"blue": 0, "green": 1, "red": 2}
 CHANNELS = ("gray", "sum", "red", "green", "blue")
 
-## Grey weights
+# Gråvikter: gray = 0.299·R + 0.587·G + 0.114·B
 blue_weight: float = 0.114
 green_weight: float = 0.587
 red_weight: float = 0.299
@@ -113,7 +111,9 @@ def fit_wavelength(pixels, wavelengths, degree):
     if np.unique(pixels).size < pixels.size:
         raise ValueError("input.invalid_argument: samma pixel står två gånger")
     if pixels.size < degree + 1:
-        raise ValueError(f"input.invalid_argument: grad {degree} behöver minst {degree + 1} punkter, fick {pixels.size}")
+        raise ValueError(
+            f"input.invalid_argument: grad {degree} behöver minst {degree + 1} punkter, fick {pixels.size}"
+        )
     # Minsta kvadrat-anpassning, koefficienterna i stigande ordning. Se rev7, RX10.
     return poly.polyfit(pixels, wavelengths, degree)
 
@@ -144,9 +144,7 @@ def build_response(wavelengths, measured, known_wavelengths, known_values):
     Fel: ValueError med input.missing_data om inget värde är giltigt eller toppen inte är större än 0.
     """
     # Interpolation utan extrapolation: NaN utanför de kända punkterna. Se rev7, RX15.
-    known_at_lamp = np.interp(
-        wavelengths, known_wavelengths, known_values, left=np.nan, right=np.nan
-    )
+    known_at_lamp = np.interp(wavelengths, known_wavelengths, known_values, left=np.nan, right=np.nan)
     valid = np.isfinite(measured) & np.isfinite(known_at_lamp) & (known_at_lamp > 0)
     # Respons = uppmätt delat med känt, där det är giltigt. Se rev7, RX14.
     ratio = np.full(measured.shape[0], np.nan)
@@ -185,7 +183,10 @@ def apply_response(signal, response, mask, min_response):
 
     Parametrar: signal: (P,) float64 i counts; response: (P,) float64, relativ, utan enhet;
     mask: (P,) bool, True där värdet duger; min_response: minsta giltiga respons, utan enhet.
-    Returnerar och Fel: som _divide_where_above; values är relativa.
+    Returnerar: (values, mask): den korrigerade signalen, (P,) float64 och relativ, NaN där den inte går att räkna,
+    och den nya masken (P,) bool.
+    Fel: ValueError med input.invalid_argument om min_response inte är ändlig och större än 0, eller om signal
+    eller response har NaN eller inf på en giltig plats.
     """
     # Korrigerad signal = signal delad med responsen. Se rev7, RX16.
     return _divide_where_above(signal, response, mask, min_response, ("min_response", "signal", "response"))
@@ -196,7 +197,10 @@ def transmission_ratio(sample, reference, mask, min_reference):
 
     Parametrar: sample: provet, (P,) float64 i counts, får vara negativt; reference: referensen, (P,) float64 i counts;
     mask: (P,) bool, True där värdet duger; min_reference: minsta giltiga referens i counts.
-    Returnerar och Fel: som _divide_where_above; values är transmissionen som kvot.
+    Returnerar: (values, mask): transmissionen som kvot, (P,) float64, NaN där den inte går att räkna, och den nya
+    masken (P,) bool.
+    Fel: ValueError med input.invalid_argument om min_reference inte är ändlig och större än 0, eller om sample
+    eller reference har NaN eller inf på en giltig plats.
     """
     # Transmission T = I_prov / I_ref. Se rev7, T06 och RX17.
     return _divide_where_above(sample, reference, mask, min_reference, ("min_reference", "sample", "reference"))
@@ -205,7 +209,8 @@ def transmission_ratio(sample, reference, mask, min_reference):
 def extract_median(table):
     """Medianen av raderna i tabellen, ett värde per kolumn: som extract_spectrum, men median i stället för medel.
 
-    Medianen bryr sig inte om en enstaka het pixel eller en rad med ströljus; medlet har mindre brus när raderna är lika.
+    Medianen bryr sig inte om en enstaka het pixel eller en rad med ströljus; medlet har mindre brus när raderna
+    är lika.
     ROI-14; RX05 är medlet.
     """
     return np.median(table, axis=0)
@@ -230,7 +235,9 @@ def side_background(image, roi, margin, channel, axis="horizontal"):
     h, w = image.shape[:2]
     for sx, sy, sw, sh in sides:
         if sx < 0 or sy < 0 or sx + sw > w or sy + sh > h:
-            raise ValueError(f"input.invalid_argument: bakgrunden behöver {margin} fria rader på båda sidor om roi {roi}")
+            raise ValueError(
+                f"input.invalid_argument: bakgrunden behöver {margin} fria rader på båda sidor om roi {roi}"
+            )
     rows = np.vstack([prepare(image, side, axis, channel) for side in sides])
     return np.median(rows, axis=0)
 

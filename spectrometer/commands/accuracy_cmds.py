@@ -25,7 +25,8 @@ def _spread(name, values, unit="", percent=True):
     return f"{name}: medel {out.fmt(mean)}{unit}, spridning {out.fmt(sd)}{unit}{share}"
 
 
-@registry.command("repeat", "N [UT.csv]: mät N gånger; medel och spridning för topp, toppläge och area, per position i UT.csv",
+@registry.command("repeat",
+                  "N [UT.csv]: mät N gånger; medel och spridning för topp, toppläge och area, per position i UT.csv",
                   "repeat N [UT.csv]")
 def cmd_repeat(state, args):
     """Kommandot repeat N [UT.csv]: N mätningar i rad med samma källa och inställningar; senaste mätningen står kvar.
@@ -44,11 +45,10 @@ def cmd_repeat(state, args):
     if path.exists():
         raise ValueError(f"input.invalid_argument: {path.as_posix()} finns redan, välj ett annat namn")
     copy = state.copy()  # measure lägger mätningarna i kopian
-    spectra = measure._with_source(state, None, lambda src: [measure.measure(copy, src) for _ in range(n)])
+    spectra = measure._with_source(state, lambda src: [measure.measure(copy, src) for _ in range(n)])
     numbers = np.array([_peak_and_area(spectrum) for spectrum in spectra])
     calibrated = state["coefficients"] is not None
-    frames = state["settings"]["frames"]
-    out.say(f"repeat: {n} mätningar med {registry.plural(frames, 'bild', 'bilder')} var")
+    out.say(f"repeat: {n} mätningar med {registry.plural(state['settings']['frames'], 'bild', 'bilder')} var")
     out.say(_spread("topp", numbers[:, 0]))
     out.say(_spread("toppläge", numbers[:, 1], " nm" if calibrated else " pixel", percent=False))
     out.say(_spread("area", numbers[:, 2]))
@@ -72,7 +72,8 @@ def cmd_linearity(state, args):
     eller avbryt; felen ur measure.
     """
     exposures = np.array([registry.to_float("E", word, 0) for word in args])
-    if len(set(exposures)) < 3 or len(set(exposures)) < len(exposures):
+    distinct = len(set(exposures))
+    if distinct < 3 or distinct < len(exposures):
         raise ValueError("input.invalid_argument: linearity behöver minst tre olika exponeringar (E1 E2 E3)")
     copy = state.copy()
 
@@ -84,7 +85,7 @@ def cmd_linearity(state, args):
             found.append(measure.measure(copy, src))
         return found
 
-    spectra = measure._with_source(state, None, series)
+    spectra = measure._with_source(state, series)
     areas = np.array([_peak_and_area(spectrum)[2] for spectrum in spectra])
     slope, intercept = np.polyfit(exposures, areas, 1)
     line = slope * exposures + intercept
@@ -114,7 +115,8 @@ def _resolution(state):
     return float(width), None
 
 
-@registry.command("calibrate save", "FIL.json: spara kalibreringen med residualer, kontrollfel och upplösning (resolution_nm)",
+@registry.command("calibrate save",
+                  "FIL.json: spara kalibreringen med residualer, kontrollfel och upplösning (resolution_nm)",
                   "calibrate save FIL.json")
 def cmd_calibrate_save(state, args):
     """Kommandot calibrate save FIL.json: kalibreringen med residualer, kontrollfel, rms, nm per pixel och upplösning.
@@ -142,8 +144,8 @@ def cmd_calibrate_save(state, args):
     fit, check = errors[~is_check], errors[is_check]
     rms = float(np.sqrt(np.mean(fit**2)))
     middle = float(np.mean(state["pixel_range"]))
-    nm_per_pixel = float(np.abs(np.diff(calc.evaluate_wavelength(np.array([middle, middle + 1]), coefficients)))[0])
-    nm_per_pixel = round(nm_per_pixel, 6)  # som error_nm: en ulp-skillnad mellan datorer ska inte synas i filen
+    step = np.abs(np.diff(calc.evaluate_wavelength(np.array([middle, middle + 1]), coefficients)))[0]
+    nm_per_pixel = round(float(step), 6)  # som error_nm: en ulp-skillnad mellan datorer ska inte synas i filen
     resolution, why = _resolution(state)
     if resolution is not None:
         resolution = round(resolution, 6)
@@ -159,7 +161,8 @@ def cmd_calibrate_save(state, args):
         "nm_per_pixel": nm_per_pixel,
         "resolution_nm": resolution,
     })
-    out.say(f"kalibrering: rms {out.fmt(rms)} nm över {fit.size} anpassningspunkter, {out.fmt(nm_per_pixel)} nm per pixel")
+    out.say(f"kalibrering: rms {out.fmt(rms)} nm över {fit.size} anpassningspunkter, "
+            f"{out.fmt(nm_per_pixel)} nm per pixel")
     if fit.size <= coefficients.size:
         out.warn("lika många punkter som koefficienter: residualerna är 0 per definition, lägg till punkter")
     if check.size:

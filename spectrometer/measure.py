@@ -20,8 +20,10 @@ def frame_spectrum(state, image):
         corrected = calc.subtract_dark(image.astype(np.float64), state["dark"])
     roi = calc.roi_or_whole(cfg["roi"], image)
     table = calc.prepare(corrected, roi, cfg["axis"], cfg["channel"])
-    extract = calc.extract_median if state["rows"] == "median" else calc.extract_spectrum  # ROI-14
-    values = extract(table)
+    if state["rows"] == "median":  # ROI-14
+        values = calc.extract_median(table)
+    else:
+        values = calc.extract_spectrum(table)
     if state["background"] is not None:
         # Bakgrunden bredvid bandet (ströljus i kameran) dras av efter mörkret. ROI-21.
         values = values - calc.side_background(corrected, roi, state["background"], cfg["channel"], cfg["axis"])
@@ -100,14 +102,15 @@ def measure(state, src=None, timing=None):
 
     Ordning: frames bilder (mörker, ROI, kanal, medel per bild), medel över bilderna, nm, respons, transmission.
     Parametrar: state: programmets state; src: en redan öppen källa som lånas (start), eller None för att öppna och
-    stänga källan här; timing: en ordbok som får sekunderna för read (bilderna ur källan) och compute (resten), eller None.
+    stänga källan här; timing: en ordbok som får sekunderna för read (bilderna ur källan) och compute (resten),
+    eller None.
     Returnerar: spektrumet, en ordbok med x, values, mask, x_label, y_label, saturated_px, saturated, stddev och camera.
     Fel: ValueError med input.invalid_argument eller input.missing_data, RuntimeError med camera.open_failed eller
     camera.read_failed.
     """
     n = state["settings"]["frames"]
     started = time.perf_counter()
-    images, camera = _with_source(state, src, lambda s: (_read_frames(s, n, src is None), source.describe(s)))
+    images, camera = _with_source(state, lambda s: (_read_frames(s, n, src is None), source.describe(s)), src)
     read_done = time.perf_counter()
     spectrum = _spectrum_of_images(state, images, camera)
     apply_response(state, spectrum)
@@ -124,22 +127,23 @@ def _spectrum_of_images(state, images, camera):
     """Medel över bilderna på en kalibrerad, stigande x-axel: spektrumet före respons och transmission."""
     spectra = []
     saturated_px, saturated = 0, False  # flest mättade ROI-pixlar i en bild, och var längs spektrumet (alla bilder)
+    cfg = state["settings"]
     for image in images:
         values, roi = frame_spectrum(state, image)
         spectra.append(values)
         part = quality.crop(image, roi)
-        saturated_px = max(saturated_px, quality.saturated_count(part, state["settings"]["channel"]))
-        saturated = saturated | quality.saturated_positions(part, state["settings"]["axis"], state["settings"]["channel"])
+        saturated_px = max(saturated_px, quality.saturated_count(part, cfg["channel"]))
+        saturated = saturated | quality.saturated_positions(part, cfg["axis"], cfg["channel"])
     mean, stddev = calc.average_spectra(np.stack(spectra))
-    pixels = pixel_axis(roi, state["settings"]["axis"])
+    pixels = pixel_axis(roi, cfg["axis"])
     # Kalibrera axeln en gång. Positionsnumren 0..P-1 följer med och visar hur axeln eventuellt vändes (stigande x),
     # så att alla serier längs spektrumet läggs i samma ordning som x.
     x, order, mask, x_label = calibrate_axis(state, pixels, np.arange(pixels.size), np.isfinite(mean))
     values = mean[order]
     spectrum = {"x": x, "values": values, "mask": mask, "x_label": x_label, "y_label": "signal (counts)"}
     spectrum["saturated_px"], spectrum["saturated"] = saturated_px, saturated[order]
-    spectrum["stddev"] = stddev[order]  # slumpbrus mellan bilderna i counts (stickprov, ddof=1); ingen osäkerhet för instrumentet
-    spectrum["frames"] = state["settings"]["frames"]  # 1.2.14: antalet bilder bakom medlet, till slumpfelet i fwhm
+    spectrum["stddev"] = stddev[order]  # slumpbrus mellan bilderna i counts (stickprov, ddof=1), inte instrumentets
+    spectrum["frames"] = cfg["frames"]  # 1.2.14: antalet bilder bakom medlet, till slumpfelet i fwhm
     spectrum["px"] = pixels[order]  # 1.2.2: pixeln för varje position, också i nm-läge
     spectrum["raw"] = np.where(mask, values, np.nan)  # 1.2.2: före respons och transmission, i counts
     spectrum["camera"] = camera  # kamerans reglage under mätningen (source.describe)
@@ -156,12 +160,13 @@ def measure_direct(state, n):
     return measure(direct)
 
 
-def _with_source(state, src, funktion):
+def _with_source(state, funktion, src=None):
     """Kör funktion(src) med en öppen källa och ger det funktion ger.
 
-    Parametrar: state: programmets state (källan står i settings); src: en öppen källa som lånas (start), eller None
-    för att öppna källan här och alltid stänga den efteråt, också vid fel och Ctrl+C; funktion: tar den öppna källan.
-    Exempel: images = _with_source(state, None, lambda s: source.read_frames(s, 16))
+    Parametrar: state: programmets state (källan står i settings); funktion: tar den öppna källan; src: en öppen
+    källa som lånas (start), eller None för att öppna källan här och alltid stänga den efteråt, också vid fel och
+    Ctrl+C.
+    Exempel: images = _with_source(state, lambda s: source.read_frames(s, 16))
     """
     opened_here = src is None
     if opened_here:
@@ -202,7 +207,8 @@ def _read_frames(src, n, show):
 def apply_controls(state, src):
     """Sätter exposure, gain och auto som du valt (state["controls"]; None hoppas över) i en nyöppnad kamera. 1.2.0.
 
-    auto först: på många kameror går exponeringen bara att sätta när auto är av. Varnar för det drivrutinen inte tar emot.
+    auto först: på många kameror går exponeringen bara att sätta när auto är av. Varnar för det drivrutinen inte tar
+    emot.
     """
     for name in ("auto", "exposure", "gain"):
         value = state["controls"][name]

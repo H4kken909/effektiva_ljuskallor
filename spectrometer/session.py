@@ -50,7 +50,8 @@ def new_state(settings):
         "series": None,  # mätserien (series start): {"name", "folder", "file"}; None utanför en serie
         "annotations": {},  # current_mA, voltage_V, led, sample, lamp till varje save (series note)
         "note": None,  # fri text till varje save (note)
-        "start_settings": None,  # inställningarna när startflaggorna tillämpats (main), det reset går tillbaka till; ej i settings.json
+        # inställningarna när startflaggorna tillämpats (main), det reset går tillbaka till; ej i settings.json
+        "start_settings": None,
     }
 
 
@@ -210,4 +211,6 @@ def extra_lines(state):
 
 def annotations_text(annotations):
     """series note på en rad: current_mA=20 voltage_V=2.9 led=röd (tal som out.fmt)."""
-    return " ".join(f"{key}={out.fmt(value) if isinstance(value, float) else value}" for key, value in annotations.items())
+    return " ".join(
+        f"{key}={out.fmt(value) if isinstance(value, float) else value}" for key, value in annotations.items()
+    )

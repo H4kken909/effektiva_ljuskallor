@@ -33,8 +33,9 @@ def cmd_step(state, args):
         raise ValueError("input.missing_data: ingen giltig position i spektrumet "
                          "(alla under tröskeln eller utanför kalibreringen)")
     i = int(np.nanargmax(calc.masked_values(spectrum)))
-    frames = registry.plural(state["settings"]["frames"], "bild", "bilder")
-    out.say(f"Topp {out.fmt(spectrum['values'][i])} vid {spectrum['x_label']} {out.fmt(spectrum['x'][i])} ({frames})")
+    bilder_text = registry.plural(state["settings"]["frames"], "bild", "bilder")
+    out.say(f"Topp {out.fmt(spectrum['values'][i])} vid {spectrum['x_label']} {out.fmt(spectrum['x'][i])} "
+            f"({bilder_text})")
     _warn_after_step(state, spectrum, i)
 
 
@@ -76,13 +77,14 @@ def cmd_save(state, args):
     if spectrum is None:
         raise ValueError("input.missing_data: Ingen mätning än. Kör step först.")
     if "loaded_from" in spectrum:
-        raise ValueError(f"input.invalid_argument: mätningen kommer från load {spectrum['loaded_from']}, den är redan sparad")
-    parent = args[0] if args else state["settings"]["output_dir"]
-    if state["series"] is not None:  # 1.2.1
-        if spectrum["saturated_px"]:
-            raise ValueError("input.invalid_argument: mätningen är mättad och sparas inte i serien. "
-                             "Sänk exposure eller strömmen")
-        parent = args[0] if args else state["series"]["folder"]
+        raise ValueError(
+            f"input.invalid_argument: mätningen kommer från load {spectrum['loaded_from']}, den är redan sparad"
+        )
+    if state["series"] is not None and spectrum["saturated_px"]:  # 1.2.1
+        raise ValueError("input.invalid_argument: mätningen är mättad och sparas inte i serien. "
+                         "Sänk exposure eller strömmen")
+    default_parent = state["settings"]["output_dir"] if state["series"] is None else state["series"]["folder"]
+    parent = args[0] if args else default_parent
     saved = _settings_to_save(state, spectrum)
     folder = files.save_measurement(parent, spectrum, state["image"], saved)
     spectrum["saved_in"] = folder.as_posix()  # quit frågar inte om en sparad mätning
@@ -99,10 +101,10 @@ def cmd_save(state, args):
 
 
 def _settings_to_save(state, spectrum):
-    """Innehållet i settings.json: inställningarna, mätningens villkor, metadata, rigg, reglage, serie och settings_id."""
+    """Innehållet i settings.json: inställningarna, mätningens villkor, metadata, rigg, reglage, serie, settings_id."""
     saved = state["settings"].copy()
     saved["saturated_px"] = spectrum["saturated_px"]  # ROI-pixlar som var 255, i den värsta bilden
-    saved["camera"] = spectrum["camera"]  # drivrutinens reglage under mätningen; för en fil bara kind: file, resten None
+    saved["camera"] = spectrum["camera"]  # drivrutinens reglage under mätningen; fil: bara kind: file, resten None
     saved["pixel_range"] = [float(v) for v in state["pixel_range"]] if state["pixel_range"] is not None else None
     saved["image_size"] = [state["image"].shape[1], state["image"].shape[0]]  # bredd, höjd i pixlar
     saved["calibration_points_file"] = state["calibration_points_file"]
@@ -190,7 +192,7 @@ def cmd_stability(state, args):
     """
     registry.at_most_one(args, "stability", "N")
     n = registry.to_int("N", args[0], 3) if args else 30
-    peaks = measure._with_source(state, None, lambda s: peak_series(state, s, n))
+    peaks = measure._with_source(state, lambda s: peak_series(state, s, n))
     mean = np.mean(peaks)
     if mean <= 0:
         raise ValueError("input.missing_data: toppvärdet är 0, inget ljus i ROI:n")
@@ -201,7 +203,7 @@ def cmd_stability(state, args):
 
 
 def time_series(state, src, n):
-    """Tiderna för n mätningar i rad ur en öppen källa, som två arrayer med sekunder: läs och räkna. state ändras inte."""
+    """Tiderna för n mätningar i rad ur en öppen källa som två arrayer med sekunder: läs, räkna. state ändras inte."""
     copy = state.copy()
     reads, computes = [], []
     for _ in range(n):
@@ -220,7 +222,7 @@ def cmd_perf(state, args):
     """
     registry.at_most_one(args, "perf", "N")
     n = registry.to_int("N", args[0], 1) if args else 20
-    reads, computes = measure._with_source(state, None, lambda s: time_series(state, s, n))
+    reads, computes = measure._with_source(state, lambda s: time_series(state, s, n))
     for name, seconds in (("läs", reads), ("räkna", computes)):
         out.say(f"{name}: median {np.median(seconds) * 1000:.2f} ms, p95 {np.percentile(seconds, 95) * 1000:.2f} ms")
     frames = state["settings"]["frames"]

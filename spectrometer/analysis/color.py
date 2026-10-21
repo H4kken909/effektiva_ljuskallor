@@ -44,17 +44,12 @@ def cct_mccamy(x, y):
     return 449.0 * n**3 + 3525.0 * n**2 + 6823.3 * n + 5520.33
 
 
-def distance(p, q):
-    """Avstånd i xy-planet."""
-    return float(np.hypot(p[0] - q[0], p[1] - q[1]))
-
-
 C2 = 1.4388e7  # nm·K, andra strålningskonstanten i Plancks lag
 MIN_COVERAGE = 0.95  # mindre av x̄, ȳ och z̄ inom mätningen än så: varning
 
 
 def planck(x_nm, kelvin):
-    """Svartkroppsstrålning vid kelvin K, relativ: λ^-5 / (e^(c2/(λT)) − 1). För tester, färgtemperatur och mix --cct."""
+    """Svartkroppsstrålning vid kelvin K, relativ: λ^-5 / (e^(c2/(λT)) − 1). För tester, CCT och mix --cct."""
     lam = np.asarray(x_nm, dtype=np.float64)
     return lam**-5 / np.expm1(C2 / (lam * kelvin))
 
@@ -106,8 +101,10 @@ def cct_line(x, y):
     if limit:
         return f"färgtemperatur: ingen (närmast svartkroppskurvan utanför {CCT_K[0]:.0f}–{CCT_K[1]:.0f} K)"
     if abs(duv) > DUV_MAX:
-        return f"färgtemperatur: ingen (Duv {duv:+.4f}: längre än {DUV_MAX:g} från svartkroppskurvan, CCT saknar mening)"
-    return f"färgtemperatur: {cct:.0f} K, Duv {duv:+.4f} (närmast på svartkroppskurvan i uv; McCamy {cct_mccamy(x, y):.0f} K)"
+        return (f"färgtemperatur: ingen (Duv {duv:+.4f}: längre än {DUV_MAX:g} från svartkroppskurvan, "
+                "CCT saknar mening)")
+    return (f"färgtemperatur: {cct:.0f} K, Duv {duv:+.4f} "
+            f"(närmast på svartkroppskurvan i uv; McCamy {cct_mccamy(x, y):.0f} K)")
 
 
 def coverage(x_nm, mask):
@@ -131,7 +128,7 @@ def report(x_nm, values, mask):
     x, y = xy(X, Y, Z)
     lines = [f"färg: x {x:.4f}  y {y:.4f}  (CIE 1931 2°)", cct_line(x, y)]
     for name, point in (("varmt vitt", WARM_WHITE), ("kallt vitt", COOL_WHITE)):
-        lines.append(f"avstånd till {name} {point}: {distance((x, y), point):.4f}")
+        lines.append(f"avstånd till {name} {point}: {np.hypot(x - point[0], y - point[1]):.4f}")
     share = coverage(x_nm, mask & np.isfinite(values))
     lines.append(f"täckning: {100 * share:.1f} % av x̄, ȳ och z̄ inom det mätta intervallet")
     if share < MIN_COVERAGE:

@@ -20,7 +20,8 @@ def open_source(kind, value):
 
     Parametrar: kind: "file" eller "camera"; value: sökvägen till bildfilen (str eller Path),
     eller kamerans nummer N (int): N i /dev/videoN på Linux, 0 för första kameran på Windows.
-    Returnerar: källan som en ordbok: {"kind": "file", "image": (H, W, 3) uint8} eller {"kind": "camera", "cap": VideoCapture}.
+    Returnerar: källan som en ordbok: {"kind": "file", "image": (H, W, 3) uint8} eller
+    {"kind": "camera", "cap": VideoCapture}.
     Fel: ValueError med input.invalid_argument för okänd sort; RuntimeError med camera.open_failed om kameran eller
     filen inte går att öppna, filen inte är en bild eller inte har 8 bitar per kanal och formen (H, W, 3).
     """
@@ -81,7 +82,9 @@ def _read_image_file(path):
     if img.ndim != 3 or img.shape[-1] != 3:
         raise RuntimeError(f"camera.open_failed: Image is not (H, W, 3), shape is {img.shape}")
     if img.shape[0] * img.shape[1] > MAX_MPIXEL * 1e6:
-        raise ValueError(f"input.invalid_argument: bilden är {img.shape[0] * img.shape[1] / 1e6:.3g} Mpixel, högst {MAX_MPIXEL:g}")
+        raise ValueError(
+            f"input.invalid_argument: bilden är {img.shape[0] * img.shape[1] / 1e6:.3g} Mpixel, högst {MAX_MPIXEL:g}"
+        )
     return img
 
 
@@ -131,7 +134,9 @@ def warm_up(src):
             read_frame(src)
         except RuntimeError as error:
             close_source(src)
-            raise RuntimeError("camera.open_failed: kameran öppnades men ger ingen bild; prova nästa nummer") from error
+            raise RuntimeError(
+                "camera.open_failed: kameran öppnades men ger ingen bild; prova nästa nummer"
+            ) from error
     return src
 
 
@@ -165,7 +170,10 @@ def describe(src):
 
 
 def probe(max_index=4):
-    """Provar kamera 0 till max_index: öppnar, läser en bild och stänger. Ger [(index, bredd, höjd)] för dem som ger bild."""
+    """Provar kamera 0 till max_index: öppnar, läser en bild och stänger.
+
+    Ger [(index, bredd, höjd)] för de kameror som ger en bild.
+    """
     found = []
     for index in range(max_index + 1):
         try:
@@ -194,7 +202,10 @@ def open_folder(folder):
 
 
 def next_in_folder(src):
-    """Nästa bild i mappen, kontrollerad som en bildfil. Fel: RuntimeError med camera.read_failed när bilderna är slut."""
+    """Nästa bild i mappen, kontrollerad som en bildfil.
+
+    Fel: RuntimeError med camera.read_failed när bilderna är slut.
+    """
     if src["next"] >= len(src["paths"]):
         raise RuntimeError(f"camera.read_failed: slut på bilderna i mappen ({len(src['paths'])} st)")
     path = src["paths"][src["next"]]
@@ -210,7 +221,8 @@ AUTO_OTHER = (0.25, 0.75)  # DirectShow och övriga: OpenCV:s gamla skala (antag
 def set_control(src, name, value):
     """Sätter ett reglage i en öppen kamera: exposure och gain med drivrutinens tal, auto med True eller False.
 
-    En bildfil (eller en kamera utan reglage) har inget att sätta. Returnerar: False om drivrutinen sa nej, annars True.
+    En bildfil (eller en kamera utan reglage) har inget att sätta.
+    Returnerar: False om drivrutinen sa nej, annars True.
     """
     cap = src.get("cap")
     if src["kind"] != "camera" or not hasattr(cap, "set"):

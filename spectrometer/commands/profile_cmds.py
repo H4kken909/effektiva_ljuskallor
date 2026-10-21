@@ -1,4 +1,4 @@
-"""response save och load: responsen som .npz med roi, kanal, axis och kalibrering; dark save och load: mörkret som .npy."""
+"""response save och load: responsen som .npz med roi, kanal, axis och kalibrering; dark save och load: .npy."""
 
 import zipfile
 from datetime import datetime
@@ -21,7 +21,8 @@ def _empty_if_none(value, dtype):
     return np.array([] if value is None else value, dtype=dtype)
 
 
-@registry.command("response save", "FIL.npz: spara responsen med roi, kanal, axis och kalibrering (skriver aldrig över)",
+@registry.command("response save",
+                  "FIL.npz: spara responsen med roi, kanal, axis och kalibrering (skriver aldrig över)",
                   "response save FIL.npz")
 def cmd_response_save(state, args):
     """Kommandot response save FIL.npz: x, values, roi, channel, axis, coefficients och pixel_range med np.savez.
@@ -91,15 +92,17 @@ def cmd_response_load(state, args):
     if not np.array_equal(saved.get("coefficients", np.array([])), state["coefficients"]):
         out.warn("kalibreringen är en annan än när responsen gjordes")
     values = saved["values"]
-    state["response"] = {"x": saved["x"], "values": values,
-                         "frames": int(saved.get("frames", 0)) or None, "known_file": str(saved.get("known_file", "")) or None}
+    state["response"] = {"x": saved["x"], "values": values, "frames": int(saved.get("frames", 0)) or None,
+                         "known_file": str(saved.get("known_file", "")) or None}
     taken = str(saved.get("taken", ""))
     session.mark_taken(state, "response", datetime.fromisoformat(taken) if taken else None)
     state["spectrum"] = None
-    out.say(f"respons: laddad ur {args[0]}, {np.count_nonzero(np.isfinite(values))} av {len(values)} positioner giltiga")
+    out.say(f"respons: laddad ur {args[0]}, "
+            f"{np.count_nonzero(np.isfinite(values))} av {len(values)} positioner giltiga")
 
 
-@registry.command("dark save", "FIL.npy: spara mörkret (hela bilden) som .npy (skriver aldrig över)", "dark save FIL.npy")
+@registry.command("dark save", "FIL.npy: spara mörkret (hela bilden) som .npy (skriver aldrig över)",
+                  "dark save FIL.npy")
 def cmd_dark_save(state, args):
     """Kommandot dark save FIL.npy: mörkret, (H, W, 3) i counts, med np.save som float32 (halva filen). 1.2.14.
 
@@ -155,7 +158,7 @@ def cmd_dark_load(state, args):
                          f"{image.shape[1]} x {image.shape[0]}")
     roi = state["settings"]["roi"]
     if roi is not None and (roi[0] + roi[2] > width or roi[1] + roi[3] > height):
-        raise ValueError(f"input.invalid_argument: roi {' '.join(str(v) for v in roi)} ligger utanför mörkret "
+        raise ValueError(f"input.invalid_argument: roi {_roi_text(roi)} ligger utanför mörkret "
                          f"({width} x {height} pixlar)")
     state["dark"], state["dark_frames"], state["dark_camera"] = dark, None, None
     session.mark_taken(state, "dark", datetime.fromtimestamp(Path(args[0]).stat().st_mtime).astimezone())

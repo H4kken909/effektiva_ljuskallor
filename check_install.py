@@ -122,12 +122,15 @@ def kolla_bibliotek(rot):
                 if niva == "OK":
                     rader.append(("OK", f"{hittat} {har}"))
                 elif niva == "VARNING":
-                    rader.append((niva, f"{hittat} {har} är installerat, {namn} har {version} (bara patchnivån skiljer)"))
+                    rader.append(
+                        (niva, f"{hittat} {har} är installerat, {namn} har {version} (bara patchnivån skiljer)")
+                    )
                 else:
                     rader.append((niva, f"{hittat} {har} är installerat, {namn} har {version}. {INSTALLERA}"))
     if all(version_av(namn) for namn in OPENCV):
         rader.append(
-            ("VARNING", "opencv-python och opencv-python-headless är båda installerade och krockar. Avinstallera båda, installera om.")
+            ("VARNING", "opencv-python och opencv-python-headless är båda installerade och krockar. "
+                        "Avinstallera båda, installera om.")
         )
     return rader
 
@@ -156,7 +159,7 @@ def kolla_opencv():
 
 
 def kolla_tk():
-    """Skapar ett Tk-fönster och släpper det (matplotlib ritar med Tk). Ingen skärm (SSH) är VARNING, ingen Tk är FEL."""
+    """Skapar ett Tk-fönster och släpper det (matplotlib ritar med Tk). Ingen skärm (SSH) är VARNING, ingen Tk FEL."""
     try:
         import tkinter
     except ImportError:
@@ -189,7 +192,7 @@ def kor_alla(rot):
 
 
 def kolla_kamera(index, antal):
-    """Öppnar kamera index, läser antal bilder och ger en rad per bild med storleken. Varnar om första bilden är mörk."""
+    """Öppnar kamera index, läser antal bilder och ger en rad per bild med storleken. Varnar om första är mörk."""
     try:
         import cv2
     except ImportError as error:
@@ -197,7 +200,8 @@ def kolla_kamera(index, antal):
     cap = cv2.VideoCapture(index, kamerabackend(cv2)[0])
     if not cap.isOpened():
         cap.release()
-        text = f"camera.open_failed: kunde inte öppna kamera {index}. Stäng program som håller kameran eller prova ett annat index."
+        text = (f"camera.open_failed: kunde inte öppna kamera {index}. "
+                "Stäng program som håller kameran eller prova ett annat index.")
         return [("FEL", text)]
     rader = []
     medel = []

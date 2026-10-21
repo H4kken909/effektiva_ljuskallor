@@ -13,7 +13,8 @@ def find_peaks(y, mask):
         return []  # helt platt kurva: ingen topp, inte heller i sista pixeln
     finite = yy[np.isfinite(yy)]
     limit = MIN_FRACTION * (finite.max() if finite.size else 0.0)
-    around = np.pad(yy, 1, constant_values=-np.inf)  # utanför kanten räknas som lägre: första och sista pixeln kan vara toppar
+    # Utanför kanten räknas som lägre: första och sista pixeln kan vara toppar.
+    around = np.pad(yy, 1, constant_values=-np.inf)
     hits = []
     for i in range(len(yy)):
         if around[i + 1] >= around[i] and around[i + 1] > around[i + 2] and yy[i] >= limit and np.isfinite(yy[i]):

@@ -28,7 +28,7 @@ def cmd_dark(state, args):
             total += source.read_frame(s)
         return total, source.describe(s)
 
-    total, camera = measure._with_source(state, None, total_of)
+    total, camera = measure._with_source(state, total_of)
     # Mörkret är medlet av N bilder, pixel för pixel och kanal för kanal. Se rev7, RX03.
     state["dark"] = total / n
     state["dark_frames"] = n
@@ -71,7 +71,8 @@ def _response_build(state, args):
     quality.warn_saturated(lamp["saturated_px"])
 
 
-@registry.command("response", "build KNOWNFILE [N] | on | off | export PATH", "response build KNOWNFILE [N], response on, response off eller response export PATH")
+@registry.command("response", "build KNOWNFILE [N] | on | off | export PATH",
+                  "response build KNOWNFILE [N], response on, response off eller response export PATH")
 def cmd_response(state, args):
     """Kommandot response build KNOWNFILE [N], response on, response off eller response export PATH."""
     if not args or args[0] not in ("build", "on", "off", "export"):
@@ -112,7 +113,9 @@ def _check_reference(state, args):
         return
     again = measure.measure_direct(state, n)
     if not np.array_equal(again["x"], reference["x"]) or state["settings"]["channel"] != reference["channel"]:
-        raise ValueError("input.invalid_argument: x-axeln eller kanalen skiljer sig från referensens, kör reference igen")
+        raise ValueError(
+            "input.invalid_argument: x-axeln eller kanalen skiljer sig från referensens, kör reference igen"
+        )
     valid = reference["mask"] & again["mask"] & (reference["values"] > state["settings"]["min_reference"])
     if not np.any(valid):
         raise ValueError("input.missing_data: ingen position i referensen över min_reference")
@@ -120,10 +123,12 @@ def _check_reference(state, args):
     np.divide(np.abs(again["values"] - reference["values"]), reference["values"], out=change, where=valid)
     j = int(np.argmax(change))
     where = f"{again['x_label']} {again['x'][j]:g}"
-    out.say(f"Referenskontroll: största skillnad {100 * change[j]:.1f} % vid {where} ({registry.plural(n, 'bild', 'bilder')})")
+    out.say(f"Referenskontroll: största skillnad {100 * change[j]:.1f} % vid {where} "
+            f"({registry.plural(n, 'bild', 'bilder')})")
 
 
-@registry.command("reference", "[N] | check [N]: mät referens utan prov, eller jämför med den sparade", "reference [N] eller reference check [N]")
+@registry.command("reference", "[N] | check [N]: mät referens utan prov, eller jämför med den sparade",
+                  "reference [N] eller reference check [N]")
 def cmd_reference(state, args):
     """Kommandot reference [N]: referensen utan prov, utan respons och transmission, sparad med kanalen.
 

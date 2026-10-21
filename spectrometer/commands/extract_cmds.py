@@ -29,7 +29,8 @@ def cmd_rows(state, args):
     out.say(f"rows: {args[0]}")
 
 
-@registry.command("background", "N|off: dra av bakgrunden ur N rader ovanför och under ROI:n (background ensam visar läget)",
+@registry.command("background",
+                  "N|off: dra av bakgrunden ur N rader ovanför och under ROI:n (background ensam visar läget)",
                   "background, background N eller background off")
 def cmd_background(state, args):
     """Kommandot background [N|off]: medianen av N rader på var sida om ROI:n dras av efter mörkret.

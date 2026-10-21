@@ -1,4 +1,5 @@
-"""Vad fönstret ska visa, räknat ur state: rubrik, varningar, referens, jämförelser, kamerabild, analyspanel, tangenter.
+"""Vad fönstret ska visa, räknat ur state: rubrik, varningar, referens, jämförelser, kamerabild, analyspanel,
+tangenter.
 
 Ritar inget själv: resultatet läggs i fönstrets ordbok (win) och plot.py ritar. Allt här är bara visning;
 sparade värden ändras aldrig (normering och frusen kurva finns bara i fönstret). Analyspanelerna colour, rgb, droop,
@@ -18,7 +19,10 @@ PANELS = ("peaks", "calibration", "transmission", "response", "colour", "rgb", "
 
 
 def window_info(state):
-    """Det som står still under en live-körning: fönstertitel, rubrikens första rad, vyn, referens och jämförelser."""
+    """Det som står still under en live-körning.
+
+    Fönstertitel, rubrikens första rad, vyn, referens och jämförelser.
+    """
     kind, value = state["settings"]["source"]
     return {
         "name": f"spektro - {kind} {value} - {state['mode']}",
@@ -74,7 +78,7 @@ def frame_info(state, win, spectrum, values):
         text += f" · {(len(laps) - 1) / (laps[-1] - laps[0]):.1f} bilder/s"
     image = state["image"]
     roi = state["settings"]["roi"]
-    if roi is None and image is not None:
+    if image is not None:
         roi = calc.roi_or_whole(roi, image)  # hela bilden när ingen ROI är vald
     return {
         "title": f"{win.get('head', '')}\n{text}",
@@ -135,7 +139,7 @@ def view_key(win, key, spectrum, values):
 
 
 def save_png(state, folder):
-    """Rapportfiguren folder/spectrum.png ur senaste mätningen: ljust tema, mätmappen och inställningarna i rubriken."""
+    """Rapportfiguren folder/spectrum.png ur senaste mätningen: ljust tema, mätmapp och inställningar i rubriken."""
     spectrum = state["spectrum"]
     values = calc.masked_values(spectrum)
     title = f"{folder.name} · {session.describe(state)} · frames {state['settings']['frames']}"
@@ -143,7 +147,10 @@ def save_png(state, folder):
 
 
 def _top_five(values):
-    """Index för de fem högsta topparna i kurvan, högst först. Bara för visning (linjebredd och area ger kommandot fwhm)."""
+    """Index för de fem högsta topparna i kurvan, högst först.
+
+    Bara för visning (linjebredd och area ger kommandot fwhm).
+    """
     y = np.where(np.isfinite(values), values, -np.inf)
     half = max(2, len(y) // 20)  # en topp är störst inom ±5 % av kurvans längd och över 5 % av största värdet
     local = np.lib.stride_tricks.sliding_window_view(np.pad(y, half, constant_values=-np.inf), 2 * half + 1)
@@ -181,7 +188,8 @@ def panel(state, name, spectrum, values):
         if spectrum["y_label"] == "signal (counts)" and np.array_equal(spectrum["x"], ref["x"]):
             lines.append((spectrum["x"], values, "prov"))
         return {"title": "transmission: referensen (counts)", "x_label": ref["x_label"], "lines": lines, "points": None,
-                "text": f"{np.count_nonzero(ref['mask'])} giltiga positioner\nkanal {ref['channel']} · mode {state['mode']}"}
+                "text": f"{np.count_nonzero(ref['mask'])} giltiga positioner\n"
+                        f"kanal {ref['channel']} · mode {state['mode']}"}
     if name == "response":
         response = state["response"]
         if response is None:
@@ -189,8 +197,10 @@ def panel(state, name, spectrum, values):
         valid = np.count_nonzero(np.isfinite(response["values"]))
         return {"title": "response: relativ respons", "x_label": "våglängd (nm)", "points": None,
                 "lines": [(response["x"], response["values"], "respons")],
-                "text": f"{valid} av {len(response['values'])} giltiga\nrespons {'på' if state['use_response'] else 'av'}"}
-    found = state["view"].get("results", {}).get(name)  # övriga paneler är nycklarna i RESULT_PANELS (view_cmds kollar)
+                "text": f"{valid} av {len(response['values'])} giltiga\n"
+                        f"respons {'på' if state['use_response'] else 'av'}"}
+    # Övriga paneler är nycklarna i RESULT_PANELS (view_cmds kollar).
+    found = state["view"].get("results", {}).get(name)
     build, command = RESULT_PANELS[name]
     if found is None:
         return _unavailable(name, f"inget resultat än. Kör {command}.")
@@ -221,7 +231,10 @@ def _colour(found):
 
 
 def _rgb(found):
-    """rgb: de tre LED:erna, triangeln de spänner och blandningen (eller målfärgerna i --sweep), vikterna i tabellen."""
+    """rgb: de tre LED:erna, triangeln de spänner och blandningen (eller målfärgerna i --sweep).
+
+    Vikterna står i tabellen.
+    """
     corners = found["corners"]
     xs, ys = [c[0] for c in corners], [c[1] for c in corners]
     tx, ty = _closed(xs, ys)
@@ -258,10 +271,10 @@ def _droop(found):
 
 def _edge(found):
     """edge: absorbansen mot fotonenergin och den anpassade kanten; E_g i tabellen."""
-    E, A = found["E"], found["A"]
     return {"title": f"edge: {found['method']}", "x_label": "fotonenergi (eV)", "y_label": "absorbans",
-            "lines": [(E, A, "absorbans"), (*found["line"], "kanten")], "points": ([found["point"][0]], [found["point"][1]]),
-            "marker": "o", "legend": True, "text": f"E_g {found['eg']:.3f} eV\n{found['nm']:.1f} nm"}
+            "lines": [(found["E"], found["A"], "absorbans"), (*found["line"], "kanten")],
+            "points": ([found["point"][0]], [found["point"][1]]), "marker": "o", "legend": True,
+            "text": f"E_g {found['eg']:.3f} eV\n{found['nm']:.1f} nm"}
 
 
 def _performance(found):

@@ -61,6 +61,6 @@ def changed_controls(now, then):
 
 
 def warn_changed(now, then, what, command):
-    """Varnar för varje reglage som ändrats sedan what (mörkret, referensen) togs, och säger vilket kommando som hjälper."""
+    """Varnar för varje reglage som ändrats sedan what (mörkret, referensen) togs, och vilket kommando som hjälper."""
     for name, value, old in changed_controls(now, then):
         out.warn(f"{name} är {value:g} men {what} togs vid {old:g}. Kör {command} igen.")

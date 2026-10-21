@@ -5,7 +5,8 @@ import numpy as np
 from spectrometer import calc, files, measure, out, peaks, registry, session
 
 
-@registry.command("calibrate", "PATH [DEGREE [MARGIN]]: anpassa våglängd till en punktfil", "calibrate PATH [DEGREE [MARGIN]]")
+@registry.command("calibrate", "PATH [DEGREE [MARGIN]]: anpassa våglängd till en punktfil",
+                  "calibrate PATH [DEGREE [MARGIN]]")
 def cmd_calibrate(state, args):
     """Kommandot calibrate PATH [DEGREE [MARGIN]]: anpassar våglängden till punktfilen och prövar mot kontrollpunkterna.
 
@@ -26,7 +27,7 @@ def cmd_calibrate(state, args):
     check_pixels, check_wavelengths = pixels[is_check], wavelengths[is_check]
     coefficients = calc.fit_wavelength(fit_pixels, fit_wavelengths, degree)  # bara anpassningspunkter
     _say_coefficients(coefficients)
-    valid_range = _valid_range(fit_pixels, coefficients, margin)
+    valid_range = _say_and_check_range(fit_pixels, coefficients, margin)
     residuals = fit_wavelengths - calc.evaluate_wavelength(fit_pixels, coefficients)
     for pixel, residual, step in zip(fit_pixels, residuals, _nm_per_pixel(fit_pixels, coefficients)):
         out.say(f"residual: {out.fmt(round(residual, 6) + 0.0)}")
@@ -44,10 +45,11 @@ def cmd_calibrate(state, args):
     _set_calibration(state, coefficients, valid_range, fit_range, files.points_file_info(args[0]))
 
 
-def _valid_range(fit_pixels, coefficients, margin):
-    """Det giltiga intervallet (låg, hög) i pixlar: de anpassade pixlarna och margin gånger deras bredd på var sida.
+def _say_and_check_range(fit_pixels, coefficients, margin):
+    """Skriver det anpassade och det giltiga intervallet och ger det giltiga som (låg, hög) i pixlar.
 
-    Linjen måste vara monoton i intervallet, annars får två pixlar samma våglängd.
+    Giltigt är de anpassade pixlarna och margin gånger deras bredd på var sida. Linjen måste vara monoton i
+    intervallet, annars får två pixlar samma våglängd.
     Fel: ValueError med input.invalid_argument om den inte är det.
     """
     low, high = np.min(fit_pixels), np.max(fit_pixels)
@@ -83,18 +85,18 @@ def _nm_per_pixel(pixels, coefficients):
 
 
 def _set_calibration(state, coefficients, pixel_range, fit_range, points_file):
-    """Lägger kalibreringen i state, glömmer responsen om x i nm ändrats och glömmer mätningen."""
-    _forget_response_if_changed(state, coefficients)
+    """Lägger kalibreringen i state och glömmer mätningen; glömmer också responsen om koefficienterna ändrats.
+
+    Responsen gjordes mot x i nm från den gamla kalibreringen. LOG-21.
+    """
+    if not np.array_equal(state["coefficients"], coefficients):
+        session.forget_response(state)
     state["coefficients"] = coefficients
     state["pixel_range"] = pixel_range
     state["fit_range"] = fit_range
     state["calibration_points_file"] = points_file
     session.mark_taken(state, "calibrate")
     state["spectrum"] = None
-
-
-PEAK_MIN_FRACTION = 0.1  # en topp ska vara minst 10 % av det högsta giltiga värdet (antaget, prova vid riggen)
-PEAK_MIN_DISTANCE = 3  # toppar närmare än 3 pixlar slås ihop till den högsta
 
 
 def spectrum_peaks(state, n):
@@ -105,7 +107,8 @@ def spectrum_peaks(state, n):
     """
     spectrum = registry.need_spectrum(state)
     if "loaded_from" in spectrum:  # 1.2.2
-        raise ValueError("input.invalid_argument: toppar fungerar efter step, inte efter load (pixlarna räknas ur nuvarande roi)")
+        raise ValueError("input.invalid_argument: toppar fungerar efter step, inte efter load "
+                         "(pixlarna räknas ur nuvarande roi)")
     image = state["image"]
     roi = calc.roi_or_whole(state["settings"]["roi"], image)
     pixels = measure.pixel_axis(roi, state["settings"]["axis"])
@@ -114,16 +117,17 @@ def spectrum_peaks(state, n):
     if not spectrum["mask"].any():
         return []
     values = calc.masked_values(spectrum)
-    min_height = PEAK_MIN_FRACTION * np.max(spectrum["values"][spectrum["mask"]])
+    min_height = peaks.PEAK_MIN_FRACTION * np.max(spectrum["values"][spectrum["mask"]])
     found = []
-    for i in peaks.find_peaks(spectrum["values"], spectrum["mask"], min_height, PEAK_MIN_DISTANCE)[:n]:
+    for i in peaks.find_peaks(spectrum["values"], spectrum["mask"], min_height, peaks.PEAK_MIN_DISTANCE)[:n]:
         position = peaks.refine_peak(values, i)
         pixel = float(np.interp(position, np.arange(pixels.size), pixels))
         found.append((round(pixel, 1), float(spectrum["values"][i])))
     return sorted(found)
 
 
-@registry.command("toppar", "[N] eller LINJEFIL [UT.csv]: toppar ur senaste step, med LINJEFIL ett förslag till punktfil")
+@registry.command("toppar",
+                  "[N] eller LINJEFIL [UT.csv]: toppar ur senaste step, med LINJEFIL ett förslag till punktfil")
 def cmd_toppar(state, args):
     """Kommandot toppar [N]: de N högsta topparna (efter calibrate även nm); toppar LINJEFIL [UT.csv]: punktfilsförslag.
 
@@ -139,7 +143,7 @@ def cmd_toppar(state, args):
     n = registry.to_int("N", args[0], 1) if args else 5
     found = spectrum_peaks(state, n)
     if not found:
-        out.say(f"inga toppar över {PEAK_MIN_FRACTION * 100:g} % av det högsta värdet")
+        out.say(f"inga toppar över {peaks.PEAK_MIN_FRACTION * 100:g} % av det högsta värdet")
     for k, (pixel, value) in enumerate(found, start=1):
         text = f"topp {k}: pixel {pixel:.1f} värde {out.fmt(value)}"
         if state["coefficients"] is not None:
@@ -158,7 +162,8 @@ def propose_points(state, line_path, out_path):
 
     Programmet kalibrerar inte själv: en människa granskar raderna och kör sedan calibrate. Med out_path skrivs
     filen också (aldrig över en befintlig). Den andra toppen blir kontrollpunkt (check 1) när det finns minst tre.
-    Fel: ValueError med input.missing_data utan mätning eller med färre än två toppar; fel ur load_lines och save_points.
+    Fel: ValueError med input.missing_data utan mätning eller med färre än två toppar; fel ur load_lines och
+    save_points.
     """
     lines = files.load_lines(line_path)
     found = spectrum_peaks(state, lines.size)
@@ -200,12 +205,6 @@ def turning_point(coefficients):
     if coefficients.size < 3 or coefficients[2] == 0:
         return None
     return -coefficients[1] / (2 * coefficients[2])
-
-
-def _forget_response_if_changed(state, coefficients):
-    """Glömmer responsen när koefficienterna ändras: den gjordes mot x i nm från den gamla kalibreringen. LOG-21."""
-    if not np.array_equal(state["coefficients"], coefficients):
-        session.forget_response(state)
 
 
 def load_settings_calibration(state, args):

@@ -1,4 +1,4 @@
-"""reset, undo, history, clear och set: nollställ, ångra, se och spara raderna, ta bort en del av kedjan, ändra en gräns."""
+"""reset, undo, history, clear och set: nollställ, ångra, se och spara raderna, ta bort en del av kedjan, ändra gräns."""
 
 import sys
 from datetime import datetime
@@ -30,7 +30,7 @@ def _renew(state, settings):
     state["start_settings"] = start
 
 
-@registry.command("reset","[ja]: nollställ allt som vid start (i en terminal med mörker eller kalibrering: reset ja)",
+@registry.command("reset", "[ja]: nollställ allt som vid start (i en terminal med mörker eller kalibrering: reset ja)",
                   "reset eller reset ja")
 def cmd_reset(state, args):
     """Kommandot reset [ja]: ny state med DEFAULTS. I en terminal frågar det först om något går förlorat; undo ångrar.
@@ -86,11 +86,13 @@ def _name(line):
     return registry.ALIASES.get(words[0].lower(), words[0].lower()) if words else ""
 
 
-@registry.command("history save", "FIL: spara raderna som lyckades som en kommandofil (för run FIL)", "history save FIL")
+@registry.command("history save", "FIL: spara raderna som lyckades som en kommandofil (för run FIL)",
+                  "history save FIL")
 def cmd_history_save(state, args):
     """Kommandot history save FIL: raderna utan fel och inte ångrade, utan NOT_SAVED, i en ny kommandofil.
 
-    Fel: ValueError med input.invalid_argument om FIL redan finns (skriver aldrig över); OSError om den inte går att skriva.
+    Fel: ValueError med input.invalid_argument om FIL redan finns (skriver aldrig över); OSError om den inte går att
+    skriva.
     """
     registry.need(args, ("FIL",), "history save")
     lines = [line for line, status in state.get("history") or [] if status == "ok" and _name(line) not in NOT_SAVED]
@@ -101,7 +103,8 @@ def cmd_history_save(state, args):
     out.say(f"history: {len(lines)} rader sparade i {args[0]}")
 
 
-@registry.command("clear", "dark|calibration|response|reference|all: ta bort en del av kedjan, inställningarna står kvar",
+@registry.command("clear",
+                  "dark|calibration|response|reference|all: ta bort en del av kedjan, inställningarna står kvar",
                   "clear dark, clear calibration, clear response, clear reference eller clear all")
 def cmd_clear(state, args):
     """Kommandot clear NAMN: tar bort mörker, kalibrering, respons, referens, eller allt utom inställningarna.

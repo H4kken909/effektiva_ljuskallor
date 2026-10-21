@@ -22,7 +22,7 @@ def rows():
     result = []
     for cmd in registry.COMMANDS.values():
         paragraphs = (inspect.getdoc(cmd.run) or "").split("\n\n")
-        what = paragraphs[0].partition("\n")[0]  # första raden
+        what = paragraphs[0].partition("\n")[0]
         errors = " ".join(" ".join(p.split()).removeprefix("Fel: ") for p in paragraphs if p.startswith("Fel:"))
         result.append((cmd.name, cmd.usage or cmd.name, what, errors))
     return result

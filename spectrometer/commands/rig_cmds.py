@@ -32,7 +32,9 @@ def cmd_rigg(state, args):
     except json.JSONDecodeError as error:
         raise ValueError(f"input.invalid_argument: {path.name} är inte giltig JSON (rad {error.lineno})") from error
     if not isinstance(fields, dict):
-        raise ValueError(f"input.invalid_argument: {path.name} ska vara ett JSON-objekt {{...}} med fälten i docs/rigg.md")
+        raise ValueError(
+            f"input.invalid_argument: {path.name} ska vara ett JSON-objekt {{...}} med fälten i docs/rigg.md"
+        )
     state["rigg"] = {"file": path.as_posix(), "fields": fields}
     state["spectrum"] = None
     out.say(f"rigg: {path.as_posix()} ({len(fields)} fält)")

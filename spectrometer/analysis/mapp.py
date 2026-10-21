@@ -23,11 +23,11 @@ def read(path):
     with open(csv_path, newline="", encoding="utf-8-sig") as f:  # newline="": både CRLF och LF går
         reader = csv.reader(f)
         numbered = [(reader.line_num, row) for row in reader if row]
+    header = numbered[0][1] if numbered else []
     for line_no, row in numbered[1:]:
-        if len(row) != len(numbered[0][1]):  # en rad med fel antal fält ger annars IndexError nedan
+        if len(row) != len(header):  # en rad med fel antal fält ger annars IndexError nedan
             raise ValueError(f"input.invalid_argument: {csv_path.as_posix()} rad {line_no}: fel antal fält")
-    rows = [row for _, row in numbered]
-    header, body = (rows[0], rows[1:]) if rows else ([], [])
+    body = [row for _, row in numbered[1:]]
     columns = {}
     for k, name in enumerate(header):
         numbers = _numbers([row[k] for row in body])
@@ -35,7 +35,9 @@ def read(path):
             columns[name] = numbers
     x_name = "x_nm" if "x_nm" in columns and np.all(np.isfinite(columns["x_nm"])) else "x_px"
     if "value" not in columns or "valid" not in header or x_name not in columns:
-        raise ValueError(f"input.invalid_argument: {csv_path.as_posix()}: kolumnerna x_px eller x_nm, value och valid behövs")
+        raise ValueError(
+            f"input.invalid_argument: {csv_path.as_posix()}: kolumnerna x_px eller x_nm, value och valid behövs"
+        )
     valid = np.array([row[header.index("valid")] == "true" for row in body], dtype=bool)
     settings_path = csv_path.parent / "settings.json"
     settings = {}

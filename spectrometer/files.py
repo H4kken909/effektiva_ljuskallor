@@ -19,7 +19,11 @@ from spectrometer import out
 
 SAVED_FILES = ("spectrum.csv", "raw.png", "settings.json", "README.txt")  # filerna som varje hel mätmapp har
 MIN_FREE_MB = 50  # en 1080p-PNG är några MB (antaget); under 50 MB ledigt sparas inget
-Y_LABELS = {"transmission": "transmission (kvot)", "response": "korrigerad signal (relativ)", "direct": "signal (counts)"}
+Y_LABELS = {
+    "transmission": "transmission (kvot)",
+    "response": "korrigerad signal (relativ)",
+    "direct": "signal (counts)",
+}
 
 
 def save_measurement(parent, spectrum, image, settings):
@@ -82,8 +86,10 @@ def _csv_rows(path):
 def load_points(path):
     """Läser en punktfil med kolumnerna pixel, wavelength_nm och check (0 för anpassning, 1 för kontroll).
 
-    Returnerar: (pixels, wavelengths, is_check): pixlar i hela bilden (K,) float64, våglängder i nm (K,) float64 och is_check (K,) bool, True för en kontrollpunkt.
-    Fel: ValueError med input.invalid_argument, filnamnet och radnumret vid fel rubrik, fel antal fält, ett fält som inte är ett tal, ett ogiltigt värde eller check som inte är 0 eller 1; OSError om filen saknas.
+    Returnerar: (pixels, wavelengths, is_check): pixlar i hela bilden (K,) float64, våglängder i nm (K,) float64 och
+    is_check (K,) bool, True för en kontrollpunkt.
+    Fel: ValueError med input.invalid_argument, filnamnet och radnumret vid fel rubrik, fel antal fält, ett fält som
+    inte är ett tal, ett ogiltigt värde eller check som inte är 0 eller 1; OSError om filen saknas.
     """
     name = Path(path).name
     pixels = []
@@ -92,7 +98,9 @@ def load_points(path):
     for line_no, row in _csv_rows(path):
         if line_no == 1:
             if row != ["pixel", "wavelength_nm", "check"]:
-                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel rubrik, väntade pixel,wavelength_nm,check")
+                raise ValueError(
+                    f"input.invalid_argument: {name} rad {line_no}: fel rubrik, väntade pixel,wavelength_nm,check"
+                )
             continue
         if len(row) != 3:
             raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel antal fält, väntade 3")
@@ -119,7 +127,8 @@ def load_known(path):
 
     Returnerar: (wavelengths, values): våglängder i stigande nm (K,) float64 och relativ effekt per nm (K,) float64.
     Fel: ValueError med input.invalid_argument, filnamnet och radnumret vid fel rubrik, fel antal fält, ett fält som
-    inte är ett tal, ett ogiltigt värde, en våglängd som inte stiger eller färre än två datarader; OSError om filen saknas.
+    inte är ett tal, ett ogiltigt värde, en våglängd som inte stiger eller färre än två datarader; OSError om filen
+    saknas.
     """
     name = Path(path).name
     wavelengths = []
@@ -244,8 +253,12 @@ def points_file_info(path):
     Returnerar: {"path": "kalibrering/punkter.csv", "sha256": "3f2a...", "time": "2026-10-20T14:03:12"}.
     Fel: OSError om filen inte går att läsa.
     """
-    digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()[:12]
-    return {"path": Path(path).as_posix(), "sha256": digest, "time": datetime.now().isoformat(timespec="seconds")}
+    path = Path(path)
+    return {
+        "path": path.as_posix(),
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest()[:12],
+        "time": datetime.now().isoformat(timespec="seconds"),
+    }
 
 
 def load_saved_calibration(path):
@@ -265,7 +278,9 @@ def load_saved_calibration(path):
     if not isinstance(saved, dict) or saved.get("coefficients") is None:
         raise ValueError(f"input.missing_data: {name} har ingen kalibrering (coefficients saknas)")
     if saved.get("pixel_range") is None:
-        raise ValueError(f"input.missing_data: {name} saknar pixel_range (sparad före 1.0.26), kalibrera med punktfilen")
+        raise ValueError(
+            f"input.missing_data: {name} saknar pixel_range (sparad före 1.0.26), kalibrera med punktfilen"
+        )
     try:
         coefficients = np.array(saved["coefficients"], dtype=np.float64)
         low, high = (float(v) for v in saved["pixel_range"])
@@ -295,7 +310,7 @@ def save_response(path, wavelengths, values):
 
 
 def _unused_path(folder, stem, suffix=""):
-    """folder/stem+suffix, eller med -2, -3 ... efter stem när namnet redan finns (en befintlig fil skrivs aldrig över)."""
+    """folder/stem+suffix, eller med -2, -3 ... efter stem när namnet finns (en befintlig fil skrivs aldrig över)."""
     path = folder / (stem + suffix)
     counter = 2
     while path.exists():
@@ -325,7 +340,8 @@ def _check_files(folder):
 def _rename(partial, folder):
     """Byter namn från .partial till det slutliga namnet med os.replace; tre försök vid PermissionError.
 
-    Windows Defender eller OneDrive kan låsa en ny fil en kort stund (antaget), därför en halv sekund mellan försöken.
+    Windows Defender eller OneDrive kan låsa en ny fil en kort stund (antaget), därför en halv sekund mellan
+    försöken.
     """
     for _ in range(2):
         try:
@@ -426,7 +442,7 @@ def _cell(value):
 
 
 def save_excel(folder):
-    """Skriver folder/spectrum_sv.csv ur spectrum.csv för svensk Excel: semikolon, decimalkomma och utf-8 med BOM. 1.2.2.
+    """Skriver folder/spectrum_sv.csv ur spectrum.csv för svensk Excel: semikolon, decimalkomma, utf-8 med BOM. 1.2.2.
 
     Tomma celler står kvar tomma (inte 0); spectrum.csv ändras inte. Returnerar sökvägen.
     Fel: OSError om en fil inte går att läsa eller skriva.
@@ -460,13 +476,16 @@ def load_measurement(folder):
 
     Returnerar: ordboken som measure ger (x, values, mask, x_label, y_label), raw och px när kolumnerna finns, settings
     (ur settings.json, tom ordbok utan filen) och folder. Klarar gamla mappar med tre kolumner.
-    Fel: ValueError med input.invalid_argument om rubriken saknar x_nm eller x_px, value eller valid; OSError om filen saknas.
+    Fel: ValueError med input.invalid_argument om rubriken saknar x_nm eller x_px, value eller valid; OSError om filen
+    saknas.
     """
     folder = Path(folder)
     header, body = _read_spectrum_table(folder)
     x_col = "x_nm" if "x_nm" in header else "x_px"
     if x_col not in header or "value" not in header or "valid" not in header:
-        raise ValueError(f"input.invalid_argument: {folder.name}/spectrum.csv saknar x_nm eller x_px, value eller valid")
+        raise ValueError(
+            f"input.invalid_argument: {folder.name}/spectrum.csv saknar x_nm eller x_px, value eller valid"
+        )
 
     def column(name):
         k = header.index(name)

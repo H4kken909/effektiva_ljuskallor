@@ -30,7 +30,8 @@ def _rows(path):
     return len(series.load(path)) if Path(path).is_file() else 0
 
 
-@registry.command("series start", "NAMN: börja en mätserie; save sparar i output_dir/NAMN och skriver en rad i serie.csv",
+@registry.command("series start",
+                  "NAMN: börja en mätserie; save sparar i output_dir/NAMN och skriver en rad i serie.csv",
                   "series start NAMN")
 def cmd_series_start(state, args):
     """Kommandot series start NAMN: mätmapparna i output_dir/NAMN och en rad per save i serie.csv där; finns den fortsätter den."""
@@ -51,7 +52,8 @@ def cmd_series_start(state, args):
 def cmd_series_note(state, args):
     """Kommandot series note NYCKEL=VÄRDE...: ström, spänning, LED, prov och lampa till varje save tills de byts.
 
-    Glömmer mätningen: värdena beskriver nästa step. Fel: ValueError med input.invalid_argument vid okänd nyckel eller fel tal.
+    Glömmer mätningen: värdena beskriver nästa step.
+    Fel: ValueError med input.invalid_argument vid okänd nyckel eller fel tal.
     """
     if not args:
         raise ValueError("input.invalid_argument: series note: NYCKEL=VÄRDE saknas")
@@ -76,7 +78,8 @@ def cmd_series_stop(state, args):
     registry.need(args, (), "series stop")
     if state["series"] is None:
         raise ValueError("input.missing_data: ingen serie pågår. Kör series start NAMN")
-    out.say(f"serie {state['series']['name']} stoppad: {_rows(state['series']['file'])} rader i {state['series']['file']}")
+    current = state["series"]
+    out.say(f"serie {current['name']} stoppad: {_rows(current['file'])} rader i {current['file']}")
     state["series"] = None
     state["annotations"] = {}
 
@@ -87,7 +90,10 @@ DROOP_LABEL = "relativ effektivitet (area/I, max 1)"
 
 
 def _plot_words(args):
-    """Orden efter series plot som (namnen, x-axeln, droop, UT eller None). Fel: ValueError med input.invalid_argument."""
+    """Orden efter series plot som (namnen, x-axeln, droop, UT eller None).
+
+    Fel: ValueError med input.invalid_argument.
+    """
     words, axis = list(args), "current"
     if "--x" in words:
         k = words.index("--x")
@@ -105,7 +111,8 @@ def _plot_words(args):
     return names, axis, droop, target
 
 
-@registry.command("series plot", "NAMN... [--x current|voltage] [--droop] [UT.png]: relativ uteffekt mot ström, eller droop",
+@registry.command("series plot",
+                  "NAMN... [--x current|voltage] [--droop] [UT.png]: relativ uteffekt mot ström, eller droop",
                   "series plot NAMN... [--x current|voltage] [--droop] [UT.png|UT.svg]")
 def cmd_series_plot(state, args):
     """Kommandot series plot NAMN...: area mot ström (Krav 18), eller med --droop area/I delad med sitt max (Krav 21).

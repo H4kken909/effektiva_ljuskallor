@@ -55,8 +55,7 @@ def cmd_sammanfatta(args):
         i = int(np.nanargmax(np.where(mask, saved["values"], np.nan)))
         out.say(f"max: {out.fmt(saved['values'][i])} vid {unit} {out.fmt(saved['x'][i])}")
     out.say(f"bilder: {settings.get('frames', 'okänt')}, mättade pixlar: {settings.get('saturated_px', 'okänt')}")
-    top3 = _top_peaks(saved, peaks.PEAK_MIN_FRACTION, 3)
-    tops = ", ".join(f"{unit} {x:.1f} ({out.fmt(value)})" for x, value in top3)
+    tops = ", ".join(f"{unit} {x:.1f} ({out.fmt(value)})" for x, value in _top_peaks(saved, peaks.PEAK_MIN_FRACTION, 3))
     out.say(f"toppar: {tops or 'inga'}")
     out.say("Relativa tal från kameran.")
 

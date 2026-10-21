@@ -29,7 +29,9 @@ def open_log():
     if log.handlers:
         return
     Path("logs").mkdir(exist_ok=True)
-    handler = RotatingFileHandler(Path("logs") / "spektro.log", maxBytes=1_000_000, backupCount=3, encoding="utf-8", delay=True)
+    handler = RotatingFileHandler(
+        Path("logs") / "spektro.log", maxBytes=1_000_000, backupCount=3, encoding="utf-8", delay=True
+    )
     handler.setFormatter(logging.Formatter("%(asctime)s spektro " + __version__ + " %(message)s"))
     log.addHandler(handler)
     log.setLevel(logging.INFO)
@@ -80,8 +82,8 @@ def main(argv=None):
     """Kör prompten spektro> tills quit, Ctrl+D eller Ctrl+C vid prompten; ett fel blir en rad Fel:.
 
     Med en sökväg efter kommandot mäts bara den bildfilen en gång (run_file). Flaggorna (-h visar dem): --version,
-    --kor FIL [--avsluta], --camera N, --input PATH, --output DIR. Med --avsluta: 1 om en rad i filen gav Fel:, annars 0;
-    argparse ger 2 vid en felaktig flagga. argv: orden efter programnamnet, None läser sys.argv.
+    --kor FIL [--avsluta], --camera N, --input PATH, --output DIR. Med --avsluta: 1 om en rad i filen gav Fel:,
+    annars 0; argparse ger 2 vid en felaktig flagga. argv: orden efter programnamnet, None läser sys.argv.
     Returnerar: slutkoden. Med en sökväg den från run_file. Annars 1 om något kommando gav Fel: och stdin inte är en
     terminal (en kommandofil eller ett rör), annars 0.
     """
@@ -98,7 +100,9 @@ def main(argv=None):
         "och ritar spektrumet.",
     )
     parser.add_argument("path", nargs="?", help="sökvägen till en bildfil (utan den startar prompten)")
-    parser.add_argument("--version", action="version", version=f"spektro {__version__}", help="skriv versionen och avsluta")
+    parser.add_argument(
+        "--version", action="version", version=f"spektro {__version__}", help="skriv versionen och avsluta"
+    )
     parser.add_argument("--kor", metavar="FIL", help="kör kommandofilen FIL (som run FIL) före första prompten")
     parser.add_argument("--avsluta", action="store_true", help="med --kor: avsluta efter filen, slutkod 0 eller 1")
     where = parser.add_mutually_exclusive_group()

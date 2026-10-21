@@ -50,7 +50,9 @@ def droop(xs, areas):
 
 
 def add_row(series_csv, folder, saved, spectrum):
-    """Lägger mätningen i folder som en rad i serie.csv: tid, series note, note, topp, area och exponering. Ger antalet rader.
+    """Lägger mätningen i folder som en rad i serie.csv: tid, series note, note, topp, area och exponering.
+
+    Ger antalet rader.
 
     area är trapetsytan under kurvan där masken är sann: relativ uteffekt (counts·nm eller counts·pixel), aldrig watt.
     exposure och gain är vad drivrutinen sa under mätningen (tomt för en bildfil).

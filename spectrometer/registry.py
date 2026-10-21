@@ -128,7 +128,8 @@ def to_int(name, text, smallest):
 def to_float(name, text, above):
     """Gör om ett ord till ett ändligt tal som är större än above.
 
-    Fel: ValueError med input.invalid_argument om ordet inte är ett tal, är inf eller nan, eller inte är större än above.
+    Fel: ValueError med input.invalid_argument om ordet inte är ett tal, är inf eller nan, eller inte är större än
+    above.
     """
     try:
         number = float(text)
@@ -190,7 +191,7 @@ def at_most_one(args, name, what):
 
 
 def plural(n, one, many):
-    """Antalet med ordet i rätt form: plural(1, "bild", "bilder") är "1 bild", plural(5, "bild", "bilder") är "5 bilder"."""
+    """Antalet med ordet i rätt form: plural(1, "bild", "bilder") är "1 bild", plural(5, ...) är "5 bilder"."""
     return f"{n} {one if n == 1 else many}"
 
 

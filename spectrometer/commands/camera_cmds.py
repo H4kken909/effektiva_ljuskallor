@@ -10,7 +10,10 @@ from spectrometer import measure, out, registry, session, source
 
 
 def _number(name, text):
-    """Ett ändligt tal; får vara negativt (DirectShow har exponering som -6). Fel: ValueError med input.invalid_argument."""
+    """Ett ändligt tal; får vara negativt (DirectShow har exponering som -6).
+
+    Fel: ValueError med input.invalid_argument.
+    """
     try:
         value = float(text)
     except ValueError as error:
@@ -21,14 +24,17 @@ def _number(name, text):
 
 
 def _choose(state, name, value):
-    """Sparar valet (en ny ordbok, så att undo fungerar) och glömmer mätningen; med kameran som källa provas det direkt."""
+    """Sparar valet (en ny ordbok, så att undo fungerar) och glömmer mätningen.
+
+    Med kameran som källa provas valet direkt.
+    """
     state["controls"] = state["controls"] | {name: value}
     state["spectrum"] = None
     chosen = session.controls_text({name: value})
     if state["settings"]["source"][0] != "camera":
         out.say(f"{chosen} (sätts när kameran öppnas)")
         return
-    said = measure._with_source(state, None, source.get_controls)[name]  # öppnar, sätter, läser tillbaka, stänger
+    said = measure._with_source(state, source.get_controls)[name]  # öppnar, sätter, läser tillbaka, stänger
     out.say(f"{chosen} (drivrutinen säger {session.controls_text({name: said}) or f'{name} okänt'})")
 
 

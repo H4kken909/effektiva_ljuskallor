@@ -1,8 +1,14 @@
 """Fönstrets färger, light och dark. plot.py anropar apply(); ingen annan modul vet om färger."""
 
 THEMES = {
-    "light": {"bg": "#ffffff", "axes": "#ffffff", "fg": "#18211c", "grid": "#d6dbd6", "line": "#1f66b0", "ref": "#b5470f", "warn": "#c2341f"},
-    "dark": {"bg": "#111827", "axes": "#1f2937", "fg": "#e5e7eb", "grid": "#374151", "line": "#22d3ee", "ref": "#f59e0b", "warn": "#f87171"},
+    "light": {
+        "bg": "#ffffff", "axes": "#ffffff", "fg": "#18211c", "grid": "#d6dbd6",
+        "line": "#1f66b0", "ref": "#b5470f", "warn": "#c2341f",
+    },
+    "dark": {
+        "bg": "#111827", "axes": "#1f2937", "fg": "#e5e7eb", "grid": "#374151",
+        "line": "#22d3ee", "ref": "#f59e0b", "warn": "#f87171",
+    },
 }
 
 

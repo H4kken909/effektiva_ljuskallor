@@ -11,7 +11,8 @@ from spectrometer import __version__, calc, files, out, plot, registry
 from spectrometer.analysis import bandgap, color, mapp, peaks
 
 
-@registry.command("load", "MAPP: läs en sparad mätmapp till senaste mätningen (graf och view compare add visar den)", "load MAPP")
+@registry.command("load", "MAPP: läs en sparad mätmapp till senaste mätningen (graf och view compare add visar den)",
+                  "load MAPP")
 def cmd_load(state, args):
     """Kommandot load MAPP: spectrum.csv och settings.json ur mätmappen blir senaste mätningen; skriver toppen som step.
 
@@ -35,7 +36,10 @@ UNITS = {"signal (counts)": "counts", "korrigerad signal (relativ)": "relativ", 
 
 
 def latest(state):
-    """Senaste mätningen (step eller load) och värdena med NaN där masken är falsk. Fel: input.missing_data utan mätning."""
+    """Senaste mätningen (step eller load) och värdena med NaN där masken är falsk.
+
+    Fel: ValueError med input.missing_data utan mätning.
+    """
     spectrum = state["spectrum"]
     if spectrum is None:
         raise ValueError("input.missing_data: Ingen mätning än. Kör step eller load först.")
@@ -106,7 +110,9 @@ def load_curves(folders):
     """
     spectra = [files.load_measurement(folder) for folder in folders]
     if len({(s["x_label"], s["y_label"]) for s in spectra}) > 1:
-        raise ValueError("input.invalid_argument: mapparna har olika enheter (pixel eller nm; counts, relativ eller kvot)")
+        raise ValueError(
+            "input.invalid_argument: mapparna har olika enheter (pixel eller nm; counts, relativ eller kvot)"
+        )
     return [(s, _curve_name(s)) for s in spectra]
 
 
@@ -116,7 +122,10 @@ def _curve_name(spectrum):
 
 
 def normalized(values, name):
-    """values delad med sitt största giltiga värde, bara för visning. Fel: ValueError om det största värdet inte är över 0."""
+    """values delad med sitt största giltiga värde, bara för visning.
+
+    Fel: ValueError med input.invalid_argument om det största värdet inte är över 0.
+    """
     top = np.nanmax(values) if np.any(np.isfinite(values)) else 0.0
     if top <= 0:
         raise ValueError(f"input.invalid_argument: {name} går inte att normera, största värdet är {top:g}")
@@ -152,7 +161,8 @@ def cmd_compare(state, args):
         values = calc.masked_values(spectrum)
         out.say(f"{name}: {_row(spectrum, values)}")
         curves.append((spectrum["x"], normalized(values, name) if norm else values, name))
-    out.say("normerade till sitt max: formen, inte nivån" if norm else "Relativa tal från kameran; inte watt, lumen eller verkningsgrad.")
+    out.say("normerade till sitt max: formen, inte nivån" if norm
+            else "Relativa tal från kameran; inte watt, lumen eller verkningsgrad.")
     first = loaded[0][0]
     out.say("Stäng fönstret (krysset) för att komma tillbaka till prompten.")
     plot.show_spectra(curves, first["x_label"], NORM_LABEL if norm else first["y_label"])
@@ -162,7 +172,10 @@ FLAGS = ("--norm", "--log", "--ev", "--cie")  # 1.2.16: --cie
 
 
 def _figure_words(args):
-    """Orden efter figure som (UT, mapparna, flaggorna, xlim). Fel: ValueError med input.invalid_argument vid fel ord."""
+    """Orden efter figure som (UT, mapparna, flaggorna, xlim).
+
+    Fel: ValueError med input.invalid_argument vid fel ord.
+    """
     if not args or not args[0].lower().endswith((".png", ".svg")):
         raise ValueError("input.invalid_argument: figure: första ordet ska vara UT.png eller UT.svg")
     rest, xlim = list(args[1:]), None
@@ -177,17 +190,20 @@ def _figure_words(args):
         del rest[k:k + 3]
     unknown = [word for word in rest if word.startswith("--") and word not in FLAGS]
     if unknown:
-        raise ValueError(f"input.invalid_argument: figure: okänd flagga {unknown[0]}, välj {', '.join(FLAGS)} eller --xlim")
+        raise ValueError(
+            f"input.invalid_argument: figure: okänd flagga {unknown[0]}, välj {', '.join(FLAGS)} eller --xlim"
+        )
     return args[0], [word for word in rest if word not in FLAGS], {word for word in rest if word in FLAGS}, xlim
 
 
 def _conditions(spectrum, state):
-    """Villkoren till bildtexten: ur settings.json när mätningen är sparad eller laddad, annars ur state (inte sparad)."""
+    """Villkoren till bildtexten: ur settings.json när mätningen är sparad eller laddad, annars ur state."""
     settings = spectrum.get("settings")
     if settings is None and "saved_in" in spectrum:
         settings = files.load_measurement(spectrum["saved_in"])["settings"]
     if settings is None:
-        settings = dict(state["settings"], mode=state["mode"], use_response=state["use_response"], program_version=__version__)
+        settings = dict(state["settings"], mode=state["mode"], use_response=state["use_response"],
+                        program_version=__version__)
     folder = spectrum.get("folder", spectrum.get("saved_in", "inte sparad"))  # folder: laddad, saved_in: sparad
     return (f"mapp {folder}, mätt {settings.get('measured_at', 'okänt')}, "
             f"kanal {settings.get('channel')}, frames {settings.get('frames')}, läge {settings.get('mode')}, "
@@ -215,7 +231,9 @@ def _figure_cie(state, path, folders, others):
         if spectrum["x_label"] != "våglängd (nm)":
             raise ValueError("input.missing_data: ingen kalibrering, kör calibrate först")
         if not settings.get("use_response") or settings.get("mode") != "direct":
-            raise ValueError("input.missing_data: figure --cie kräver response on i mode direct (annars är det kamerans färg)")
+            raise ValueError(
+                "input.missing_data: figure --cie kräver response on i mode direct (annars är det kamerans färg)"
+            )
         measured.append((spectrum, "senaste mätningen"))
     points = [(*color.xy(*color.xyz(s["x"], s["values"], s["mask"])), name) for s, name in measured]
     plot.save_cie(path, color.locus(), color.planck_locus(), color.planck_locus(CIE_MARKS), points)
@@ -254,7 +272,9 @@ def _figure_curves(state, path, folders, flags, xlim):
     _write_caption(path, [head, *lines, tail])
 
 
-@registry.command("figure", "UT.png|UT.svg [MAPP...] [--norm] [--xlim MIN MAX] [--log] [--ev] [--cie]: rapportfigur och UT.txt till bildtexten",
+@registry.command("figure",
+                  "UT.png|UT.svg [MAPP...] [--norm] [--xlim MIN MAX] [--log] [--ev] [--cie]: "
+                  "rapportfigur och UT.txt till bildtexten",
                   "figure UT.png [MAPP...] [--norm] [--xlim MIN MAX] [--log] [--ev] [--cie]")
 def cmd_figure(state, args):
     """Kommandot figure UT.png|UT.svg: senaste mätningen, eller mapparna i samma axlar, som egen figur till rapporten.

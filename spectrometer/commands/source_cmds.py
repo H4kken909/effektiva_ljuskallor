@@ -1,4 +1,7 @@
-"""source, roi, channel, axis och frames: var bilden kommer ifrån och vilken del som mäts. Sist kommandon som tittar på källan."""
+"""source, roi, channel, axis och frames: var bilden kommer ifrån och vilken del som mäts.
+
+Sist kommandon som tittar på källan.
+"""
 
 from spectrometer import calc, files, measure, out, registry, session, source
 
@@ -38,11 +41,8 @@ def cmd_roi(state, args):
         out.say("roi full")
         return
     registry.need(args, ("x", "y", "width", "height"), "roi")
-    x = registry.to_int("x", args[0], 0)
-    y = registry.to_int("y", args[1], 0)
-    width = registry.to_int("width", args[2], 1)
-    height = registry.to_int("height", args[3], 1)
-    new_roi = (x, y, width, height)
+    new_roi = (registry.to_int("x", args[0], 0), registry.to_int("y", args[1], 0),
+               registry.to_int("width", args[2], 1), registry.to_int("height", args[3], 1))
     if state["image"] is not None:
         cfg = state["settings"]
         calc.prepare(state["image"], new_roi, cfg["axis"], cfg["channel"])
@@ -90,7 +90,7 @@ def cmd_info(state, args):
     Exponering och gain är drivrutinens egna tal utan enhet; de jämförs bara med sig själva (step varnar vid ändring).
     """
     registry.need(args, (), "info")
-    image, camera = measure._with_source(state, None, lambda s: (source.read_frame(s), source.describe(s)))
+    image, camera = measure._with_source(state, lambda s: (source.read_frame(s), source.describe(s)))
     height, width = image.shape[:2]
     kind, value = state["settings"]["source"]
     if kind != "camera":
@@ -121,7 +121,7 @@ def cmd_snap(state, args):
     """Kommandot snap [N]: läser N bilder ur källan och sparar dem som PNG; state ändras inte."""
     registry.at_most_one(args, "snap", "N")
     n = registry.to_frames(args[0]) if args else 1
-    images = measure._with_source(state, None, lambda s: source.read_frames(s, n))
+    images = measure._with_source(state, lambda s: source.read_frames(s, n))
     for path in files.save_snaps(state["settings"]["output_dir"], images):
         out.say(f"Sparad: {path.as_posix()}")
 
@@ -133,6 +133,6 @@ def cmd_image(state, args):
     path = args[0] if args else "bild.png"
     if not path.lower().endswith(".png"):
         raise ValueError(f"input.invalid_argument: {path}: filnamnet ska sluta på .png")
-    image = measure._with_source(state, None, source.read_frame)
+    image = measure._with_source(state, source.read_frame)
     files.save_png(path, image, state["settings"]["roi"])
     out.say(f"Sparad: {path}")

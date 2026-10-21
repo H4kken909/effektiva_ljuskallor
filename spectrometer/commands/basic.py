@@ -55,16 +55,12 @@ def cmd_show(state, args):
     registry.need(args, (), "show")
     for key, value in state["settings"].items():
         out.say(_describe(key, value))
-    calibration = "ja" if state["coefficients"] is not None else "nej"
-    dark = "ja" if state["dark"] is not None else "nej"
-    response = "ja" if state["response"] is not None else "nej"
-    reference = "ja" if state["reference"] is not None else "nej"
+    out.say(f"kalibrering: {out.YES[state['coefficients'] is not None]}")
+    out.say(f"mörker: {out.YES[state['dark'] is not None]}{_age(state, 'dark')}")
     use = "on" if state["use_response"] else "off"
-    out.say(f"kalibrering: {calibration}")
-    out.say(f"mörker: {dark}{_age(state, 'dark')}")
     unused = " (används inte i mode transmission)" if state["use_response"] and state["mode"] == "transmission" else ""
-    out.say(f"respons: {response}, {use}{unused}")
-    out.say(f"referens: {reference}{_age(state, 'reference')}")
+    out.say(f"respons: {out.YES[state['response'] is not None]}, {use}{unused}")
+    out.say(f"referens: {out.YES[state['reference'] is not None]}{_age(state, 'reference')}")
     out.say(f"mode: {state['mode']}")
     out.say(_describe("mätning", state["spectrum"]))
     for line in session.extra_lines(state):  # 1.2.x: bara det du valt (kamera, serie, anteckning)
@@ -107,6 +103,6 @@ def cmd_version(state, args):
 
 
 def _age(state, what):
-    """Texten efter ja i show: " (för 47 min sedan)" när what är minst AGE_SHOWN_MIN minuter gammalt, annars tom. PRO-11."""
+    """Texten efter ja i show: " (för 47 min sedan)" när what är minst AGE_SHOWN_MIN min gammalt, annars tom. PRO-11."""
     minutes = session.age_minutes(state, what)
     return f" (för {minutes} min sedan)" if minutes is not None and minutes >= session.AGE_SHOWN_MIN else ""

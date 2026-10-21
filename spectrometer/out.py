@@ -7,7 +7,8 @@ import os
 import sys
 import time
 
-# Färg bara när både in- och utmatning är en terminal och NO_COLOR saknas. Pipat (facit, tester) blir det print som förut.
+# Färg bara när både in- och utmatning är en terminal och NO_COLOR saknas.
+# Pipat (facit, tester) blir det print som förut.
 FARG = sys.stdin.isatty() and sys.stdout.isatty() and "NO_COLOR" not in os.environ
 STIL = {"ok": "green", "info": "blue", "run": "cyan", "warn": "yellow", "error": "bold red", "prompt": "cyan",
         "idle": "dim", "running": "green"}
@@ -135,7 +136,7 @@ def pm(value, uncertainty, unit=""):
     pm(546.07, 0.4, "nm") ger "546.1 ± 0.4 nm" och pm(1234.5, 37) ger "1230 ± 40".
     """
     tail = f" {unit}" if unit else ""
-    if not 0 < uncertainty < float("inf") or not abs(value) < float("inf"):
+    if not (0 < uncertainty < float("inf") and abs(value) < float("inf")):
         return f"{fmt(value)}{tail}"
     mantissa, exponent = f"{uncertainty:e}".split("e")
     decimals = (2 if mantissa[0] in "12" else 1) - 1 - int(exponent)

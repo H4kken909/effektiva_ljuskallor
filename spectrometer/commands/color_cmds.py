@@ -86,9 +86,9 @@ def _sweep(primaries):
     found = []
     for name, (x, y) in color.TARGETS.items():
         w = color.weights(primaries, (x, y))
-        enough = "ja" if np.all(w >= 0) else "nej"
-        out.say(f"{name:<11} {x:.4f}  {y:.4f}  {w[0]:6.3f}  {w[1]:6.3f}  {w[2]:6.3f}  {enough}")
-        found.append((name, x, y, enough == "ja"))
+        enough = bool(np.all(w >= 0))
+        out.say(f"{name:<11} {x:.4f}  {y:.4f}  {w[0]:6.3f}  {w[1]:6.3f}  {w[2]:6.3f}  {out.YES[enough]}")
+        found.append((name, x, y, enough))
     return found
 
 
@@ -102,7 +102,8 @@ def _widths(leds, corners, fwhm):
             f"gaussiska med FWHM {fwhm:g} nm {color.triangle_area(model):.4f}")
 
 
-@registry.command("mix", "R G B --target X Y | --cct K | --sweep | --fwhm W: blanda tre sparade LED-mätningar till en färg",
+@registry.command("mix",
+                  "R G B --target X Y | --cct K | --sweep | --fwhm W: blanda tre sparade LED-mätningar till en färg",
                   "mix MAPP_R MAPP_G MAPP_B --target X Y, --cct K, --sweep eller --fwhm W")
 def cmd_mix(state, args):
     """Kommandot mix MAPP_R MAPP_G MAPP_B och ett val: vikterna som blandar tre LED-mätningar till en färg (Krav 19).

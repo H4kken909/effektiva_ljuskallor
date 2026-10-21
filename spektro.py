@@ -111,8 +111,7 @@ def ordna_miljon():
         summa = hashlib.sha256(KRAV.read_bytes()).hexdigest()
         if not MARKOR.exists() or MARKOR.read_text() != summa:
             print("Installerar paketen i requirements.txt ...")
-            pip = [str(VENV_PY), "-m", "pip", "install", "-q", "-r", str(KRAV)]
-            subprocess.run(pip, check=True)
+            subprocess.run([str(VENV_PY), "-m", "pip", "install", "-q", "-r", str(KRAV)], check=True)
             MARKOR.write_text(summa)
     except (OSError, subprocess.CalledProcessError) as fel:
         sys.exit(f"Kunde inte ordna miljön i {VENV}: {fel}")
@@ -120,7 +119,7 @@ def ordna_miljon():
 
 def kor_i_miljon():
     """Kör spektro.py igen med Python i .venv och avsluta med dess kod."""
-    barn = subprocess.Popen([str(VENV_PY), str(ROT / "spektro.py"), *sys.argv[1:]])
+    barn = subprocess.Popen([VENV_PY, ROT / "spektro.py", *sys.argv[1:]])
     while True:
         try:
             sys.exit(barn.wait())
@@ -168,8 +167,7 @@ def maximera_windows():
 def maximera_linux():
     """Maximera terminalfönstret med wmctrl eller xterm-koden."""
     if shutil.which("wmctrl"):
-        lage = "add,maximized_vert,maximized_horz"
-        subprocess.run(["wmctrl", "-r", ":ACTIVE:", "-b", lage], check=False)
+        subprocess.run(["wmctrl", "-r", ":ACTIVE:", "-b", "add,maximized_vert,maximized_horz"], check=False)
     else:
         skriv("\x1b[9;1t")  # xterm-koden för maximera
     time.sleep(0.2)

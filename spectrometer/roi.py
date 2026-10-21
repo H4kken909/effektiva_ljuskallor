@@ -1,4 +1,7 @@
-"""ROI-hjälp ur en bild: profilen tvärs spektrumet, bandet, ett ROI-förslag och riktningen. Ren NumPy; vet inget om state."""
+"""ROI-hjälp ur en bild: profilen tvärs spektrumet, bandet, ett ROI-förslag och riktningen.
+
+Ren NumPy; vet inget om state.
+"""
 
 import numpy as np
 
@@ -6,7 +9,7 @@ from spectrometer import calc
 
 
 def cross_profile(image, axis, channel):
-    """Medel längs spektrumriktningen: ett tal per bildrad (horizontal) eller per kolumn (vertical), float64 i counts."""
+    """Medel längs spektrumriktningen: ett tal per bildrad (horizontal) eller kolumn (vertical), float64 i counts."""
     height, width = image.shape[:2]
     return calc.prepare(image, (0, 0, width, height), axis, channel).mean(axis=1)
 
