@@ -89,8 +89,6 @@ def _analysis(state, rest):
     """view analysis NAMN väljer panelen till höger om spektrumet i nästa fönster; off tar bort den. Beräknar inget."""
     registry.need(rest, ("NAMN",), "view analysis")
     name = rest[0]
-    if name in display.LATER:
-        raise ValueError(f"input.invalid_argument: view analysis {name} är otillgängligt än (kommer med 1.2.x)")
     if name != "off" and name not in display.PANELS:
         raise ValueError(f"input.invalid_argument: okänd panel {name}, välj {', '.join(display.PANELS)} eller off")
     state["view"]["analysis"] = None if name == "off" else name

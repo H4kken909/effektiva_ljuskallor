@@ -15,7 +15,6 @@ COUNTS_TOP = {"sum": 800.0}  # fast y-skala för counts: 0-270 (255 plus margina
 YSCALES = ("fast", "auto", "zoom")  # tangenten y växlar i den här ordningen
 KEYS_HELP = "s spara · p paus · f frys · c rensa · y skala · n normera · h hjälp · q stopp"
 PANELS = ("peaks", "calibration", "transmission", "response", "colour", "rgb", "droop", "edge", "performance")
-LATER = ()  # 1.2.16: alla paneler finns; view analysis svarade förut otillgängligt för colour, rgb, droop, edge, performance
 # Panelen och kommandot vars senaste resultat den visar (remember); panelen räknar inget själv (rev7 4E).
 RESULTS = {"colour": "color", "rgb": "mix", "droop": "series plot NAMN", "edge": "bandgap", "performance": "perf"}
 
