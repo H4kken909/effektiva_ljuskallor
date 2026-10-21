@@ -60,10 +60,18 @@ def forget_response(state):
 
 
 def forget_reference(state):
-    """Glömmer referensen och säger det; gör ingenting om det inte finns någon referens."""
+    """Glömmer referensen och säger det; gör ingenting om det inte finns någon referens. Transmission lämnas."""
     if state["reference"] is not None:
         state["reference"] = None
         out.say("Referensen glömd. Kör reference igen.")
+        leave_transmission(state)
+
+
+def leave_transmission(state):
+    """Utan referens går transmission inte att mäta: mode blir direct och det skrivs. Inget händer i mode direct."""
+    if state["mode"] == "transmission":
+        state["mode"] = "direct"
+        out.say("mode: direct (ingen referens)")
 
 
 def after_new_dark(state):
@@ -71,6 +79,7 @@ def after_new_dark(state):
     if state["reference"] is not None:
         state["reference"] = None
         out.say("referensen togs bort: kör reference igen")
+        leave_transmission(state)
     if state["response"] is not None:
         out.warn("responsen byggdes med det gamla mörkret")
 

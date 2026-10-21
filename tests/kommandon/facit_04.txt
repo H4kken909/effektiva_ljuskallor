@@ -12,10 +12,10 @@ frames N: bilder per mätning
 info källan: storlek, format och kamerans reglage
 cameras prova kamera 0 till 4 och skriv vilka som ger bild
 snap [N]: spara N råbilder (1) ur källan som PNG i output_dir, utan att mäta
-image [FIL]: spara en bild ur källan med ROI:n inritad (bild.png)
+image [FIL]: spara en bild ur källan med ROI:n inritad (utan FIL: bild-ÅÅÅÅMMDD-HHMMSS.png i output_dir)
 step mät och skriv toppen
 save [DIR] [--excel]: spara senaste mätningen (--excel: också spectrum_sv.csv för svensk Excel)
-start [SEKUNDER]: live med kameran, Ctrl+C stoppar (med SEKUNDER: efter så lång tid)
+start [SEKUNDER]: live med kameran tills Ctrl+C, q eller SEKUNDER; i fönstret: s spara, p paus, f frys, c rensa, y skala, n normera, h hjälp
 stability [N]: mät toppvärdet N gånger (30) och skriv variation och drift
 perf [N]: tidta N mätningar (20) utan fönster: median, 95:e percentil, bilder/s
 calibrate PATH [DEGREE [MARGIN]]: anpassa våglängd till en punktfil
@@ -39,10 +39,10 @@ response load FIL.npz: läs en sparad respons (samma roi, kanal och axis som nu)
 dark save FIL.npy: spara mörkret (hela bilden) som .npy (skriver aldrig över)
 dark load FIL.npy: läs ett sparat mörker (samma bildstorlek, samma exponering och gain som då)
 rigg PATH|off: läs uppställningens data ur en JSON-fil, save skriver den (rigg ensam visar den)
-theme light|dark: fönstrets färger
+theme light|dark: fönstrets färger (theme ensam visar valet)
 view camera|roi|spectrum|normalize on|off, xlim|ylim MIN MAX|auto, compare add|clear, analysis NAMN|off (view ensam visar läget)
 graf visa senaste mätningen i ett fönster; stäng fönstret för att fortsätta
-roi show spara senaste bilden med ROI-rutan som data/roi-ÅÅÅÅMMDD-HHMMSS.png
+roi show spara senaste bilden med ROI-rutan som roi-ÅÅÅÅMMDD-HHMMSS.png i output_dir
 roi auto föreslå en ROI ur det ljusa bandet i senaste bilden (ändrar inget)
 roi profile bandets mitt, bredd vid halva höjden och bakgrund i senaste bilden
 roi band START WIDTH: ROI längs hela spektrumet, WIDTH pixlar tvärs från START

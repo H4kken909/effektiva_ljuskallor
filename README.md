@@ -68,7 +68,7 @@ Tabellen fylls av `python tools/gen_kommandon.py` ur koden (`--check` säger om 
 | image | image | Kommandot image [FIL]: läser en bild och sparar en kopia med ROI:n som grön ram, för att se var ROI:n ligger. |
 | step | step | Kommandot step: mäter, skriver toppen och antalet bilder, varnar vid mättnad och transmission över 1,05. |
 | save | save [DIR] [--excel] | Kommandot save [DIR]: sparar senaste mätningen i en ny mätmapp under DIR eller output_dir. |
-| start | start [SEKUNDER] | Kommandot start [SEKUNDER]: spektrumet live tills Ctrl+C, tills fönstret stängs eller efter SEKUNDER. |
+| start | start [SEKUNDER] | Kommandot start [SEKUNDER]: spektrumet live tills Ctrl+C eller q, tills fönstret stängs eller efter SEKUNDER. |
 | stability | stability | Kommandot stability [N]: N bilder i rad med samma källa; skriver hur toppvärdet varierar och driver. |
 | perf | perf | Kommandot perf [N]: N mätningar med nuvarande källa, ROI, kanal och frames, utan fönster; skriver tiderna. |
 | calibrate | calibrate PATH [DEGREE [MARGIN]] | Kommandot calibrate PATH [DEGREE [MARGIN]]: anpassar våglängden till punktfilen och prövar mot kontrollpunkterna. |
@@ -83,7 +83,7 @@ Tabellen fylls av `python tools/gen_kommandon.py` ur koden (`--check` säger om 
 | undo | undo | Kommandot undo: lägger tillbaka state från före senaste ändrande raden vid prompten; mätningen glöms. |
 | history | history [N] | Kommandot history [N]: de N senaste raderna som skrevs vid prompten, numrerade från början av sessionen. |
 | history save | history save FIL | Kommandot history save FIL: raderna utan fel och inte ångrade, utan NOT_SAVED, i en ny kommandofil. |
-| clear | clear dark, clear calibration, clear response, clear reference eller clear all | Kommandot clear NAMN: tar bort mörker, kalibrering, respons, referens, eller allt utom inställningarna. |
+| clear | clear dark, clear calibration, clear response, clear reference eller clear all | Kommandot clear NAMN: tar bort mörker, kalibrering, respons eller referens; all tar alla fyra, inget annat. |
 | set | set min_response TAL, set min_reference TAL eller set output_dir MAPP | Kommandot set NYCKEL VÄRDE för min_response och min_reference (ändliga tal över 0) och output_dir. |
 | rows | rows, rows mean eller rows median | Kommandot rows [mean\|median]: medel (calc.extract_spectrum) eller median (calc.extract_median) över raderna. |
 | background | background, background N eller background off | Kommandot background [N\|off]: medianen av N rader på var sida om ROI:n dras av efter mörkret. |
@@ -92,7 +92,7 @@ Tabellen fylls av `python tools/gen_kommandon.py` ur koden (`--check` säger om 
 | dark save | dark save FIL.npy | Kommandot dark save FIL.npy: mörkret, (H, W, 3) i counts, med np.save som float32 (halva filen). 1.2.14. |
 | dark load | dark load FIL.npy | Kommandot dark load FIL.npy: som dark, men mörkret läses ur filen. 1.2.14. |
 | rigg | rigg, rigg PATH eller rigg off | Kommandot rigg [PATH\|off]: läser rigg.json (fälten i docs/rigg.md) till state["rigg"]; save skriver den. DOK-31. |
-| theme | theme | Kommandot theme light eller theme dark: färgerna i nästa fönster (start, graf). |
+| theme | theme light eller theme dark | Kommandot theme light eller theme dark: färgerna i nästa fönster (start, graf); theme ensam visar valet. |
 | view | view | Kommandot view: vad nästa fönster (start, graf) visar. Ändrar bara visningen, aldrig en mätning. |
 | graf | graf | Kommandot graf: senaste mätningen med samma rubrik och rutor som live, i ett fönster som väntar tills det stängs. |
 | roi show | roi show | Kommandot roi show: kopia av senaste bilden med ROI-rutan och mättade pixlar i magenta; sökvägen skrivs. |

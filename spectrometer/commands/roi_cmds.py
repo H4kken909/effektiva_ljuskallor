@@ -25,7 +25,7 @@ def _set_roi(state, new_roi):
     registry.COMMANDS["roi"].run(state, [str(v) for v in new_roi])
 
 
-@registry.command("roi show", "spara senaste bilden med ROI-rutan som data/roi-ÅÅÅÅMMDD-HHMMSS.png")
+@registry.command("roi show", "spara senaste bilden med ROI-rutan som roi-ÅÅÅÅMMDD-HHMMSS.png i output_dir")
 def cmd_roi_show(state, args):
     """Kommandot roi show: kopia av senaste bilden med ROI-rutan och mättade pixlar i magenta; sökvägen skrivs."""
     registry.need(args, (), "roi show")

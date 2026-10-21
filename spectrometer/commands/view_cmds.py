@@ -11,9 +11,9 @@ from spectrometer import calc, display, out, plot, registry, theme
 PANES = ("camera", "roi", "spectrum")  # kamerabilden med ROI-rutan, ROI-remsan och spektrumet
 
 
-@registry.command("theme", "light|dark: fönstrets färger")
+@registry.command("theme", "light|dark: fönstrets färger (theme ensam visar valet)", "theme light eller theme dark")
 def cmd_theme(state, args):
-    """Kommandot theme light eller theme dark: färgerna i nästa fönster (start, graf)."""
+    """Kommandot theme light eller theme dark: färgerna i nästa fönster (start, graf); theme ensam visar valet."""
     if not args:
         out.say(f"theme: {state['view']['theme']}")
         return

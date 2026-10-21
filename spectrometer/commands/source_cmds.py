@@ -1,5 +1,7 @@
 """source, roi, channel, axis och frames, sist info, cameras, snap och image: källan och vilken del som mäts."""
 
+from pathlib import Path
+
 from spectrometer import calc, files, measure, out, registry, session, source
 
 
@@ -123,13 +125,22 @@ def cmd_snap(state, args):
         out.say(f"Sparad: {path.as_posix()}")
 
 
-@registry.command("image", "[FIL]: spara en bild ur källan med ROI:n inritad (bild.png)")
+@registry.command("image", "[FIL]: spara en bild ur källan med ROI:n inritad (utan FIL: bild-ÅÅÅÅMMDD-HHMMSS.png i output_dir)")
 def cmd_image(state, args):
-    """Kommandot image [FIL]: läser en bild och sparar en kopia med ROI:n som grön ram, för att se var ROI:n ligger."""
+    """Kommandot image [FIL]: läser en bild och sparar en kopia med ROI:n som grön ram, för att se var ROI:n ligger.
+
+    Utan FIL hamnar den i output_dir med tidsstämpel, som snap. En fil som finns skrivs aldrig över.
+    Fel: ValueError med input.invalid_argument om FIL inte slutar på .png eller redan finns.
+    """
     registry.at_most_one(args, "image", "FIL")
-    path = args[0] if args else "bild.png"
-    if not path.lower().endswith(".png"):
-        raise ValueError(f"input.invalid_argument: {path}: filnamnet ska sluta på .png")
+    if args and not args[0].lower().endswith(".png"):
+        raise ValueError(f"input.invalid_argument: {args[0]}: filnamnet ska sluta på .png")
+    if args and Path(args[0]).exists():
+        raise ValueError(f"input.invalid_argument: {args[0]} finns redan, image skriver inte över")
     image = measure._with_source(state, source.read_frame)
-    files.save_png(path, image, state["settings"]["roi"])
-    out.say(f"Sparad: {path}")
+    if args:
+        files.save_png(args[0], image, state["settings"]["roi"])
+        out.say(f"Sparad: {args[0]}")
+        return
+    path = files.save_framed_image(state["settings"]["output_dir"], image, state["settings"]["roi"])
+    out.say(f"Sparad: {path.as_posix()}")

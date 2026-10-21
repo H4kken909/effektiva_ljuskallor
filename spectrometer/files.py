@@ -274,13 +274,12 @@ def load_saved_calibration(path):
     }
 
 
-def save_response(path, wavelengths, values):
-    """Skriver responsen som CSV: wavelength_nm, response (relativ) och valid; tom cell där responsen saknas (NaN)."""
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(["wavelength_nm", "response", "valid"])
-        for x, value in zip(wavelengths, values):
-            writer.writerow([f"{x:.10g}", _cell(value), "true" if np.isfinite(value) else "false"])
+def write_response(f, wavelengths, values):
+    """Skriver responsen som CSV i den öppna filen f: wavelength_nm, response (relativ) och valid; tom cell vid NaN."""
+    writer = csv.writer(f)
+    writer.writerow(["wavelength_nm", "response", "valid"])
+    for x, value in zip(wavelengths, values):
+        writer.writerow([f"{x:.10g}", _cell(value), "true" if np.isfinite(value) else "false"])
 
 
 def _unused_path(folder, stem, suffix=""):
@@ -375,6 +374,15 @@ def _write_readme(folder, settings):
         f"  mätt: {settings.get('measured_at')}",
     ]
     (folder / "README.txt").write_text(README_TEXT + "\n".join(lines) + "\n", encoding="utf-8")
+
+
+def save_framed_image(parent, image, roi):
+    """Sparar bilden med ROI:n som grön ram som parent/bild-ÅÅÅÅMMDD-HHMMSS.png (med -2, -3 ... om namnet finns)."""
+    folder = Path(parent)
+    folder.mkdir(parents=True, exist_ok=True)
+    path = _unused_path(folder, f"bild-{datetime.now():%Y%m%d-%H%M%S}", ".png")
+    save_png(path, image, roi)
+    return path
 
 
 def save_roi_image(parent, image, roi):
