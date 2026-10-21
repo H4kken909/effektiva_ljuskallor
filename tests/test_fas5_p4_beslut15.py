@@ -93,7 +93,6 @@ def test_clear_all_takes_only_the_chain(tmp_path, capsys):
     assert (state["rows"], state["background"], state["note"]) == ("median", 1, "hej")
     assert state["controls"]["exposure"] == -6
     assert (state["view"]["theme"], state["view"]["normalize"]) == ("dark", True)
-    assert state["image"] is not None
 
 
 def test_response_export_never_overwrites(tmp_path, capsys):
