@@ -1,4 +1,4 @@
-# Kopierar mätdata (data\) till ett USB-minne eller gruppens delade mapp efter varje labbpass. Skriver aldrig över.
+﻿# Kopierar mätdata (data\) till ett USB-minne eller gruppens delade mapp efter varje labbpass. Skriver aldrig över.
 # Användning: .\dev\verktyg\kopiera-data.ps1 D:\matdata   (kopian hamnar i D:\matdata\ÅÅÅÅ-MM-DD, mappen skapas)
 # robocopy /E: alla undermappar. /XC /XN /XO: en fil som redan finns i målet hoppas över. /XD *.partial: halva sparningar.
 param([Parameter(Mandatory = $true)][string]$Mal)

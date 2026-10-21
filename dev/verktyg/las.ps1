@@ -1,4 +1,4 @@
-# Öppnar kamerans inställningsruta (DirectShow), så att exponering, vitbalans och gain kan låsas för hand.
+﻿# Öppnar kamerans inställningsruta (DirectShow), så att exponering, vitbalans och gain kan låsas för hand.
 # Användning: .\dev\verktyg\las.ps1 N   (N = kamerans nummer, som i source camera N)
 # I rutan: bocka ur Auto för exponering och vitbalans, sätt gain till 0, tryck OK. Rutans namn beror på kameran.
 # Antaget: inställningen gäller tills kameran kopplas ur. Prova med info före och efter.
