@@ -20,14 +20,14 @@ def open_plot():
     return win
 
 
-def draw(win, x, values, x_label, y_label, info=None):
+def draw(win, x, values, x_label, y_label):
     """Byter kurvans värden och ritar om."""
     win["line"].set_data(x, values)
     win["ax"].relim()
     win["ax"].autoscale_view()
     win["ax"].set_xlabel(x_label)
     win["ax"].set_ylabel(y_label)
-    _decorate(win, info)
+    _decorate(win)
     plt.pause(0.001)
 
 
@@ -87,10 +87,8 @@ def _theme(win):
     return win["colors"]
 
 
-def _decorate(win, info):
-    """Efter kurvan: info (om given) in i win, temat, fönstertiteln och axeltexterna med enhet."""
-    if info:
-        win.update(info)
+def _decorate(win):
+    """Efter kurvan: temat, fönstertiteln och axeltexterna med enhet."""
     _theme(win)
     if win.get("name") and win.get("named") != win["name"]:
         win["fig"].canvas.manager.set_window_title(win["name"])
@@ -253,7 +251,7 @@ def _help_text(win):
     win["help_text"].set_visible(bool(text))
 
 
-def save_png(path, x, values, x_label, y_label, title=""):
+def save_png(path, x, values, x_label, y_label, title):
     """Rapportfigur som PNG utan fönster (Figure och FigureCanvasAgg, inte pyplot): ljust tema, 200 dpi, topp markerad.
 
     Går utan skärm och i testerna; values har NaN där mätningen är ogiltig (luckor i kurvan).

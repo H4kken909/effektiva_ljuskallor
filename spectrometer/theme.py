@@ -6,7 +6,7 @@ THEMES = {
 }
 
 
-def apply(fig, ax, name="dark"):
+def apply(fig, ax, name):
     """Sätt temat på figuren och axlarna; ger färgerna så att plot.py kan färga kurvorna."""
     t = THEMES[name]
     fig.set_facecolor(t["bg"])

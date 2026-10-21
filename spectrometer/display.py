@@ -195,12 +195,10 @@ def panel(state, name, spectrum, values):
         return {"title": "response: relativ respons", "x_label": "våglängd (nm)", "points": None,
                 "lines": [(response["x"], response["values"], "respons")],
                 "text": f"{valid} av {len(response['values'])} giltiga\nrespons {'på' if state['use_response'] else 'av'}"}
-    if name in RESULTS:
-        found = state["view"].get("results", {}).get(name)
-        if found is None:
-            return _unavailable(name, f"inget resultat än. Kör {RESULTS[name]}.")
-        return PANEL_BUILDERS[name](found)
-    return _unavailable(name, "okänd panel")
+    found = state["view"].get("results", {}).get(name)  # övriga paneler är nycklarna i RESULTS (view_cmds kollar namnet)
+    if found is None:
+        return _unavailable(name, f"inget resultat än. Kör {RESULTS[name]}.")
+    return PANEL_BUILDERS[name](found)
 
 
 def remember(state, name, result):

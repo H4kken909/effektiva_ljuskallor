@@ -16,8 +16,8 @@ def background(values):
     return float(np.median(values))
 
 
-def find_band(profile, fraction=0.5):
-    """Sammanhängande stycke runt största värdet där profilen är över bakgrund + fraction · (topp - bakgrund).
+def find_band(profile):
+    """Sammanhängande stycke runt största värdet där profilen är över bakgrund + halva (topp - bakgrund).
 
     Returnerar: (start, längd) i index, eller None när profilen är platt (inget band).
     """
@@ -25,7 +25,7 @@ def find_band(profile, fraction=0.5):
     low = background(profile)
     if profile[i] <= low:
         return None
-    above = profile > low + fraction * (profile[i] - low)
+    above = profile > low + 0.5 * (profile[i] - low)
     start, stop = i, i + 1
     while start > 0 and above[start - 1]:
         start -= 1
@@ -38,12 +38,6 @@ def band_roi(shape, axis, start, length):
     """ROI (x, y, w, h) över hela bilden längs spektrumet och length pixlar tvärs, från start."""
     height, width = shape[:2]
     return (0, start, width, length) if axis == "horizontal" else (start, 0, length, height)
-
-
-def suggest(image, axis, channel):
-    """ROI-förslag ur bandet vid halva höjden (find_band); None när bilden inte har något band."""
-    band = find_band(cross_profile(image, axis, channel))
-    return None if band is None else band_roi(image.shape, axis, *band)
 
 
 def detect_axis(image, channel):

@@ -220,7 +220,7 @@ def get_controls(src):
 
 def auto_on(camera):
     """Sant om drivrutinen säger auto-exponering, falskt vid manuell, None annars (camera: ordboken från describe)."""
-    if camera is None or camera.get("auto_exposure") is None:
+    if camera.get("auto_exposure") is None:
         return None
     manual, auto = AUTO_VALUES.get(camera["backend"], AUTO_OTHER)
     return {manual: False, auto: True}.get(camera["auto_exposure"])

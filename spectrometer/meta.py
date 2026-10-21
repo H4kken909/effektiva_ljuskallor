@@ -103,7 +103,7 @@ def with_metadata(state, saved):
     }
     extra["settings_id"] = settings_id(saved | extra)
     keys = list(saved)
-    cut = keys.index("coefficients") if "coefficients" in keys else len(keys)
+    cut = keys.index("coefficients")
     return {key: saved[key] for key in keys[:cut]} | extra | {key: saved[key] for key in keys[cut:]}
 
 
@@ -118,11 +118,11 @@ def version_line():
     )
 
 
-def put_before(saved, key, value, before="coefficients"):
-    """En ny ordbok: saved med key: value just före before (sist om before saknas).
+def put_before(saved, key, value):
+    """En ny ordbok: saved med key: value just före coefficients.
 
     Så hamnar nya nycklar före coefficients, och slutet av settings.json är som förut (test_metadata).
     """
     keys = [k for k in saved if k != key]
-    cut = keys.index(before) if before in keys else len(keys)
+    cut = keys.index("coefficients")
     return {k: saved[k] for k in keys[:cut]} | {key: value} | {k: saved[k] for k in keys[cut:]}

@@ -28,14 +28,11 @@ def state_with(tmp_path, image):
     return state
 
 
-def test_profil_band_och_forslag():
+def test_profil_och_band():
     image = band_image()
     profile = roi.cross_profile(image, "horizontal", "gray")
     assert profile.shape == (20,)
     assert roi.find_band(profile) == (8, 4)
-    assert roi.suggest(image, "horizontal", "gray") == (0, 8, 30, 4)
-    assert roi.suggest(band_image(vertical=True), "vertical", "gray") == (5, 0, 3, 20)
-    assert roi.suggest(np.full((20, 30, 3), 7, dtype="uint8"), "horizontal", "gray") is None
 
 
 def test_riktning():

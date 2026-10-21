@@ -27,7 +27,8 @@ def test_draw_ljust_tema_titel_och_enhet():
     win = plot.open_plot()
     try:
         info = {"view": {"theme": "light"}, "name": "spektro - camera 0 - direct"}
-        plot.draw(win, np.arange(5.0), np.ones(5), "pixel", "signal (counts)", info)
+        win.update(info)
+        plot.draw(win, np.arange(5.0), np.ones(5), "pixel", "signal (counts)")
         assert to_hex(win["fig"].get_facecolor()) == "#ffffff"
         assert win["fig"].canvas.manager.get_window_title() == "spektro - camera 0 - direct"
         assert win["ax"].get_xlabel() == "pixel (läge i bilden)"
@@ -94,14 +95,16 @@ def test_draw_rubrik_varning_referens_och_topp():
         x = np.arange(5.0)
         info = {"title": "fil a.png · roi hela bilden\nTopp 3 vid pixel 2", "warn": "MÄTTAD - sänk exponeringen",
                 "ref": (x, np.full(5, 2.0)), "peak": ([2.0], [3.0]), "fixed_y": (0.0, 270.0), "foot": "mörker nej"}
-        plot.draw(win, x, np.array([0, 1, 3, 1, 0.0]), "pixel", "signal (counts)", info)
+        win.update(info)
+        plot.draw(win, x, np.array([0, 1, 3, 1, 0.0]), "pixel", "signal (counts)")
         ax = win["ax"]
         assert ax.get_title(loc="left").endswith("Topp 3 vid pixel 2")
         assert ax.get_title(loc="right") == "MÄTTAD - sänk exponeringen"
         assert ax.get_ylim() == (0.0, 270.0)
         assert [t.get_text() for t in ax.get_legend().get_texts()] == ["senaste mätningen", "referens"]
         lines = len(ax.lines)
-        plot.draw(win, x, np.ones(5), "pixel", "signal (counts)", {"warn": None, "ref": None, "peak": None})
+        win.update({"warn": None, "ref": None, "peak": None})
+        plot.draw(win, x, np.ones(5), "pixel", "signal (counts)")
         assert ax.get_title(loc="right") == ""
         assert not win["ref_line"].get_visible()
         assert len(ax.lines) == lines
@@ -117,7 +120,8 @@ def test_draw_kamerabild_roi_ruta_och_remsa():
         image[8:12, :, 0] = 200  # blått band i BGR
         view = {"theme": "dark", "camera": True, "roi": True, "spectrum": True}
         info = {"image": image, "roi": (0, 8, 30, 4), "axis": "horizontal", "view": view}
-        plot.draw(win, np.arange(30.0), np.ones(30), "pixel", "signal (counts)", info)
+        win.update(info)
+        plot.draw(win, np.arange(30.0), np.ones(30), "pixel", "signal (counts)")
         assert win["camera_ax"].get_visible()
         assert win["camera_image"].get_array().shape == (20, 30, 3)
         assert tuple(win["camera_image"].get_array()[9, 0]) == (0, 0, 200)  # RGB: blått sist
@@ -160,7 +164,8 @@ def test_draw_frusen_kurva_hjalp_paus_och_zoom():
         x = np.arange(5.0)
         info = {"frozen": (x, np.full(5, 2.0)), "frozen_label": "frusen 14:03:12", "help": "s spara · q stopp",
                 "yscale": "zoom", "paused": True, "warn": "MÄTTAD - sänk exponeringen"}
-        plot.draw(win, x, np.array([10.0, 20, 30, 20, 10]), "pixel", "signal (counts)", info)
+        win.update(info)
+        plot.draw(win, x, np.array([10.0, 20, 30, 20, 10]), "pixel", "signal (counts)")
         ax = win["ax"]
         assert win["frozen_line"].get_visible()
         assert [t.get_text() for t in ax.get_legend().get_texts()] == ["senaste mätningen", "frusen 14:03:12"]
@@ -168,7 +173,8 @@ def test_draw_frusen_kurva_hjalp_paus_och_zoom():
         assert ax.get_ylim() == (8.0, 32.0)
         assert ax.get_title(loc="right") == "PAUS · p fortsätter"
         assert ax.get_title(loc="left").endswith(" · y zoom")
-        plot.draw(win, x, np.ones(5), "pixel", "signal (counts)", {"frozen": None, "help": None, "paused": False})
+        win.update({"frozen": None, "help": None, "paused": False})
+        plot.draw(win, x, np.ones(5), "pixel", "signal (counts)")
         assert not win["frozen_line"].get_visible()
         assert not win["help_text"].get_visible()
     finally:
@@ -260,7 +266,8 @@ def test_draw_panel_jamforelse_och_granser():
         panel = {"title": "peaks: toppar i kurvan", "x_label": "pixel", "lines": [(x, x, "kurvan")],
                  "points": ([2.0], [2.0]), "text": "x värde"}
         info = {"view": view, "panel": panel, "compare": [(x, np.full(5, 3.0), "jämförelse 1 (12:00:00)")]}
-        plot.draw(win, x, np.ones(5), "pixel", "signal (counts)", info)
+        win.update(info)
+        plot.draw(win, x, np.ones(5), "pixel", "signal (counts)")
         assert win["panel_ax"].get_title(loc="left") == "peaks: toppar i kurvan"
         assert len(win["panel_ax"].lines) == 2
         assert win["panel_ax"].texts[0].get_text() == "x värde"

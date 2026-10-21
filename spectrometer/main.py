@@ -23,12 +23,12 @@ from spectrometer import (
 log = logging.getLogger("spektro")
 
 
-def open_log(folder="logs"):
+def open_log():
     """Loggfilen logs/spektro.log (1 MB, tre gamla sparas); skapas först när något loggas."""
     if log.handlers:
         return
-    Path(folder).mkdir(exist_ok=True)
-    handler = RotatingFileHandler(Path(folder) / "spektro.log", maxBytes=1_000_000, backupCount=3, encoding="utf-8", delay=True)
+    Path("logs").mkdir(exist_ok=True)
+    handler = RotatingFileHandler(Path("logs") / "spektro.log", maxBytes=1_000_000, backupCount=3, encoding="utf-8", delay=True)
     handler.setFormatter(logging.Formatter("%(asctime)s spektro " + __version__ + " %(message)s"))
     log.addHandler(handler)
     log.setLevel(logging.INFO)
