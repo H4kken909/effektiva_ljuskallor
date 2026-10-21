@@ -33,7 +33,7 @@ Mappnamnet står i raden `Sparad i data/...`, `settings_id` i mätmappens `setti
 
 ## Efter passet
 
-- [ ] Kopiera mätdata: `.\dev\verktyg\kopiera-data.ps1 D:\matdata` (Windows) eller `bash dev/verktyg/kopiera-data.sh /run/media/$USER/USB/matdata` (Arch). En kopia på USB-minnet och en i gruppens delade mapp.
+- [ ] Kopiera mätdata (skripten ligger på grenen `dev`): `.\dev\verktyg\kopiera-data.ps1 D:\matdata` (Windows) eller `bash dev/verktyg/kopiera-data.sh /run/media/$USER/USB/matdata` (Arch). En kopia på USB-minnet och en i gruppens delade mapp.
 - [ ] Antal nya mätmappar som skriptet skrev stämmer med raderna ovan.
 
 Förslag: mätmapparna (`spectrum.csv`, `settings.json`, `raw.png`) kan också committas till ett eget privat repo,
