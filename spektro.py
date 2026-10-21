@@ -16,7 +16,6 @@ import argparse
 import builtins
 import hashlib
 import importlib
-import importlib.util
 import io
 import runpy
 import shutil
@@ -78,14 +77,6 @@ def skriv(text):
 def skriv_rad(text="", farg=""):
     """Skriv en rad i färgen farg (koderna ovan) och återställ färgen efter."""
     skriv(f"{farg}{text}{NOLL}\n" if farg else f"{text}\n")
-
-
-def finns(namn):
-    """Sant om modulen namn går att importera."""
-    try:
-        return importlib.util.find_spec(namn) is not None
-    except ModuleNotFoundError:
-        return False
 
 
 def las_flaggor():
@@ -189,8 +180,6 @@ def rensa():
 
 def rita_prisma():
     """Rita färgprismat centrerat, med plats för prompten under."""
-    if not finns("startskarm.prisma"):
-        return
     from startskarm import prisma
 
     kolumner, rader = shutil.get_terminal_size((120, 40))
@@ -244,8 +233,7 @@ def startskarm(paus_rad):
             skriv_rad(f"  {rad}", GUL)
             time.sleep(paus_rad)
         for namn in MODULER:
-            if finns(namn):
-                importlib.import_module(namn)
+            importlib.import_module(namn)
         time.sleep(PAUS_SLUT)
         skriv_info()
         skriv("\x1b[?25h")
