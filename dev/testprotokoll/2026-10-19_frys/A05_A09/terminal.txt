@@ -1,8 +1,0 @@
-frames 5 och 30 med rand_x12.png i frysrundan, v1.0.0, 2026-10-19, körd av Elias:
-Skriv help för kommandona. quit eller Ctrl+D avslutar.
-spektro> source: ('file', 'tests/data/bilder/rand_x12.png')
-spektro> frames: 5
-spektro> Topp 200 vid pixel 12 (5 bilder)
-spektro> frames: 30
-spektro> Topp 200 vid pixel 12 (30 bilder)
-spektro> Avslutar.
