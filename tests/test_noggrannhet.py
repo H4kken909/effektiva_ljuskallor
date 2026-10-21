@@ -104,7 +104,8 @@ def test_calibrate_save(tmp_path, capsys):
     assert saved["points_file"]["path"] == points.as_posix()
     state["spectrum"] = None
     rows = lines(capsys, state, f"calibrate save {(tmp_path / 'utan.json').as_posix()}")
-    assert rows[2] == "upplösning: okänd (mät en smal linje med step efter calibrate)"
+    assert rows[2] == ("Varning: upplösning okänd, resolution_nm blir null: mät en smal linje med step efter "
+                       "calibrate och spara igen med ett nytt namn")
 
 
 def test_calibrate_save_refuses(tmp_path, capsys):

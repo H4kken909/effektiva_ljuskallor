@@ -123,3 +123,20 @@ def say_all(lines):
             warn(line.removeprefix("Varning: "))
         else:
             say(line)
+
+
+def pm(value, uncertainty, unit=""):
+    """value ± uncertainty med 1–2 värdesiffror i osäkerheten och värdet avrundat till samma decimal (RAP-14). 1.2.14.
+
+    Två värdesiffror när osäkerheten börjar på 1 eller 2 (0.012, 0.25), annars en (0.3, 0.008). Saknas osäkerheten
+    (NaN, oändlig eller 0) blir det bara värdet, som fmt. Exempel: pm(2.25376, 0.00274, "eV") ger "2.2538 ± 0.0027 eV",
+    pm(546.07, 0.4, "nm") ger "546.1 ± 0.4 nm" och pm(1234.5, 37) ger "1230 ± 40".
+    """
+    tail = f" {unit}" if unit else ""
+    if not 0 < uncertainty < float("inf") or not abs(value) < float("inf"):
+        return f"{fmt(value)}{tail}"
+    mantissa, exponent = f"{uncertainty:e}".split("e")
+    decimals = (2 if mantissa[0] in "12" else 1) - 1 - int(exponent)
+    if decimals > 0:
+        return f"{value:.{decimals}f} ± {uncertainty:.{decimals}f}{tail}"
+    return f"{round(value, decimals):.0f} ± {round(uncertainty, decimals):.0f}{tail}"

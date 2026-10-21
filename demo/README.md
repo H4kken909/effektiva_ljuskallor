@@ -63,6 +63,6 @@ Lägg `demo/bilder/kamera.txt` bredvid med exponering, gain och avståndet mella
 
 ## En fil för hela mätningen: mät.txt
 
-`run demo/mät.txt` kör mätningen i ordning: `dark`, `calibrate demo/punkter.csv`, `response build demo/kand.csv`, `response on`, `step`, `save`, `color` och `guide`. Källan och ROI:n ställs först (`1_forbered.txt`). I en terminal ber `dark` om kartongen, och `pause` väntar på Enter medan lampan byts; skriv `avbryt` för att stoppa filen. Efteråt visar `guide` vad som är gjort och nästa steg, och `help limits` vad talen inte säger.
+`run demo/mät.txt` kör mätningen i ordning: `dark`, `calibrate demo/punkter.csv`, `response build demo/kand.csv`, `response on`, `step`, `save`, `color`, `figure data/figur.png` (rapportfiguren, skrivs över varje gång) och `guide`. Källan och ROI:n ställs först (`1_forbered.txt`). I en terminal ber `dark` om kartongen, och `pause` väntar på Enter medan lampan byts; skriv `avbryt` för att stoppa filen. Efteråt visar `guide` vad som är gjort och nästa steg, och `help limits` vad talen inte säger.
 
-Provat: hela filen på påhittade bilder med låtsaskamera (`tests/test_demoflode.py`). Inte provat: med riktig kamera och lampbyte. `figure` (rapportfiguren) skrivs in sist i filen när kommandot finns.
+Provat: hela filen på påhittade bilder med låtsaskamera (`tests/test_demoflode.py`). Inte provat: med riktig kamera och lampbyte. `figure` står i filen sedan 1.2.16.

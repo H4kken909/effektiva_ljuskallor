@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
-from spectrometer import out
+from spectrometer import files, out
 
 
 def read(path):
@@ -18,7 +18,8 @@ def read(path):
     Fel: ValueError med input.invalid_argument om x_px/x_nm, value eller valid saknas; OSError om spectrum.csv saknas.
     """
     path = Path(path)
-    csv_path = path / "spectrum.csv" if path.is_dir() else path
+    # 1.2.13: en mapp utan spectrum.csv, eller en sökväg som inte finns, ger en Fel-rad i stället för [Errno 2]
+    csv_path = files.measurement_folder(path) if path.is_dir() or not path.exists() else path
     with open(csv_path, newline="", encoding="utf-8-sig") as f:  # newline="": både CRLF och LF går
         rows = [row for row in csv.reader(f) if row]
     header, body = (rows[0], rows[1:]) if rows else ([], [])

@@ -226,7 +226,7 @@ def test_elias_vertical_and_folder(tmp_path, capsys):
     assert settings["axis"] == "vertical"
     rows = (folders[0] / "spectrum.csv").read_text(encoding="utf-8").splitlines()
     assert len(rows) == 11
-    assert rows[5] == "4,100,true,100"  # 1.2.2: raw_counts sist
+    assert rows[5] == "4,100,true,100,"  # 1.2.2: raw_counts; 1.2.14: tom stddev vid en bild
 
 
 def test_elias_frames_reads_new_images(monkeypatch):

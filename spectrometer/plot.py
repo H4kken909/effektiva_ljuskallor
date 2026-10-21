@@ -290,11 +290,19 @@ def _panel(win):
     theme.apply(win["fig"], ax, win["themed"])
     ax.tick_params(labelsize=7)
     ax.set_title(panel["title"], loc="left", fontsize=8, color=colors["fg"])
-    for (x, y, label), color in zip(panel["lines"], (colors["line"], colors["ref"], colors["fg"])):
-        ax.plot(x, y, color=color, linewidth=1.0, label=label)
+    palette = (colors["line"], colors["ref"], colors["fg"], colors["warn"])  # 1.2.16: fler kurvor (droop)
+    for k, (x, y, label) in enumerate(panel["lines"]):
+        ax.plot(x, y, color=palette[k % len(palette)], linewidth=1.0, label=label)
     if panel["points"] is not None:
-        ax.plot(*panel["points"], "v", color=colors["warn"])
+        ax.plot(*panel["points"], panel.get("marker", "v"), color=colors["warn"], linestyle="none")
     ax.set_xlabel(panel["x_label"], fontsize=7, color=colors["fg"])
+    ax.set_ylabel(panel.get("y_label", ""), fontsize=7, color=colors["fg"])
+    if panel.get("equal"):
+        ax.set_aspect("equal", adjustable="datalim")  # xy-diagrammen utan förvrängning
+    if panel.get("legend"):
+        legend = ax.legend(loc="best", fontsize=6, facecolor=colors["axes"], edgecolor=colors["grid"])
+        for text in legend.get_texts():
+            text.set_color(colors["fg"])
     ax.text(0.02, 0.97, panel["text"], transform=ax.transAxes, va="top", fontsize=7, family="monospace",
             color=colors["fg"])
 
@@ -362,4 +370,41 @@ def save_figure(path, curves, x_label, y_label, xlim=None, log=False):
         ax.set_xlim(*xlim)
     if log:
         ax.set_yscale("log")
+    fig.savefig(path, dpi=200)
+
+
+CIE_NM = (460, 480, 500, 520, 540, 560, 580, 600, 620)  # våglängderna som får en etikett på hästskon
+
+
+def save_cie(path, locus, planck, marks, points):
+    """figure --cie: kromaticitetsdiagram (CIE 1931 xy) utan fönster, ljust tema, 12 x 12 cm, 200 dpi. 1.2.16.
+
+    locus: (nm, x, y) för spektralkurvan ur tabellen; planck: (T, x, y) för Planck-kurvan; marks: (T, x, y) för
+    temperaturerna som får en etikett; points: [(x, y, namn)], en punkt per mätning. Tre punkter får triangeln de
+    spänner (vad tre LED kan blanda). Egen bild ur programmets tabell, inga upphovsrättsproblem (W27).
+    """
+    fig = Figure(figsize=(12 / 2.54, 12 / 2.54), layout="constrained")
+    FigureCanvasAgg(fig)
+    ax = fig.add_subplot()
+    colors = theme.apply(fig, ax, "light")
+    nm, lx, ly = locus
+    ax.plot(np.append(lx, lx[0]), np.append(ly, ly[0]), color=colors["fg"], linewidth=1.0, label="spektralkurvan")
+    for wave, x, y in zip(nm, lx, ly):
+        if wave in CIE_NM:
+            ax.annotate(f"{wave:g}", (x, y), textcoords="offset points", xytext=(4, 2), fontsize=6, color=colors["fg"])
+    ax.plot(planck[1], planck[2], color=colors["ref"], linewidth=1.0, label="Planck-kurvan")
+    for kelvin, x, y in zip(*marks):
+        ax.plot([x], [y], "|", color=colors["ref"])
+        ax.annotate(f"{kelvin:g} K", (x, y), textcoords="offset points", xytext=(-6, -10), fontsize=6, color=colors["ref"])
+    if len(points) == 3:
+        corners = [p[0] for p in points] + [points[0][0]], [p[1] for p in points] + [points[0][1]]
+        ax.plot(*corners, "--", color=colors["grid"], linewidth=1.0, label="triangeln de tre spänner")
+    for k, (x, y, name) in enumerate(points):
+        ax.plot([x], [y], "o", color=PALETTE[k % len(PALETTE)], markersize=5, label=name)
+    ax.set_xlim(0, 0.8)
+    ax.set_ylim(0, 0.9)
+    ax.set_aspect("equal")
+    ax.set_xlabel("x (CIE 1931 2°)")
+    ax.set_ylabel("y (CIE 1931 2°)")
+    ax.legend(fontsize=7)
     fig.savefig(path, dpi=200)

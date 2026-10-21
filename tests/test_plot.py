@@ -214,12 +214,12 @@ def test_view_granser_normering_jamforelse_och_panel(tmp_path, capsys):
     assert state["view"]["xlim"] == (400.0, 700.0)
     assert state["view"]["ylim"] is None
     assert state["view"]["normalize"] is True
-    assert state["view"]["analysis"] == "peaks"
+    assert state["view"]["analysis"] == "colour"  # 1.2.16: colour finns
     assert errors == [
         "input.invalid_argument: view xlim: MIN ska vara mindre än MAX och båda ändliga",
         "input.invalid_argument: view ylim: MIN och MAX ska vara tal",
-        "input.invalid_argument: view analysis colour är otillgängligt än (kommer med 1.2.x)",
-        "input.invalid_argument: okänd panel foo, välj peaks, calibration, transmission, response eller off",
+        "input.invalid_argument: okänd panel foo, välj peaks, calibration, transmission, response, colour, rgb, "
+        "droop, edge, performance eller off",
         "input.missing_data: Ingen mätning än. Kör step först.",
         "input.invalid_argument: view zoom finns inte. Välj camera, roi, spectrum, normalize, xlim, ylim, compare "
         "eller analysis",
@@ -242,7 +242,7 @@ def test_paneler_ur_state():
     peaks = display.panel(state, "peaks", spectrum, values)
     assert list(peaks["points"][0]) == [9.0, 2.0]
     for name, why in (("calibration", "ingen kalibrering. Kör calibrate."), ("transmission", "ingen referens. Kör reference."),
-                      ("response", "ingen respons. Kör response build."), ("droop", "kommer med 1.2.x")):
+                      ("response", "ingen respons. Kör response build."), ("droop", "inget resultat än. Kör series plot NAMN.")):
         empty = display.panel(state, name, spectrum, values)
         assert (empty["lines"], empty["text"]) == ([], f"otillgängligt: {why}")
     state["coefficients"] = np.array([400.0, 10.0])

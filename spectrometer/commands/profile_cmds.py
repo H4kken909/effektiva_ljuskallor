@@ -1,4 +1,4 @@
-"""response save och response load: responsen som en .npz-fil, med det den gjordes med (roi, kanal, axis, kalibrering)."""
+"""response save och load: responsen som .npz med roi, kanal, axis och kalibrering; dark save och load: mörkret som .npy."""
 
 import zipfile
 from datetime import datetime
@@ -101,3 +101,79 @@ def cmd_response_load(state, args):
     session.mark_taken(state, "response", datetime.fromisoformat(taken) if taken else None)
     state["spectrum"] = None
     out.say(f"respons: laddad ur {args[0]}, {np.count_nonzero(np.isfinite(values))} av {len(values)} positioner giltiga")
+
+
+@registry.command("dark save", "FIL.npy: spara mörkret (hela bilden) som .npy (skriver aldrig över)", "dark save FIL.npy")
+def cmd_dark_save(state, args):
+    """Kommandot dark save FIL.npy: mörkret, (H, W, 3) i counts, med np.save som float32 (halva filen). 1.2.14.
+
+    Fel: ValueError med input.missing_data utan mörker, input.invalid_argument om FIL redan finns; OSError om den inte
+    går att skriva.
+    """
+    registry.need(args, ("FIL",), "dark save")
+    if state["dark"] is None:
+        raise ValueError("input.missing_data: inget mörker, kör dark först")
+    try:
+        f = open(args[0], "xb")  # "x": bara en ny fil; en öppen fil gör att np.save inte lägger till .npy själv
+    except FileExistsError as error:
+        raise ValueError(f"input.invalid_argument: {args[0]} finns redan, dark save skriver inte över") from error
+    with f:
+        np.save(f, state["dark"].astype(np.float32))
+    height, width = state["dark"].shape[:2]
+    out.say(f"mörker: sparat i {args[0]} ({width} x {height} pixlar)")
+
+
+def _load_dark(path):
+    """Mörkret i en .npy från dark save som float64, läst utan pickle (allow_pickle=False: filen kan inte köra kod).
+
+    Fel: ValueError med input.invalid_argument om filen saknas eller inte är ett mörker (H, W, 3) med ändliga tal;
+    OSError om den inte går att läsa.
+    """
+    if not Path(path).is_file():
+        raise ValueError(f"input.invalid_argument: {Path(path).as_posix()} finns inte")
+    wrong = f"input.invalid_argument: {Path(path).name} är inget mörker från dark save"
+    try:
+        dark = np.load(path, allow_pickle=False)
+    except (ValueError, EOFError) as error:
+        raise ValueError(wrong) from error
+    if not isinstance(dark, np.ndarray):  # en .npz ger flera arrayer, inte ett mörker
+        dark.close()
+        raise ValueError(wrong)
+    if dark.ndim != 3 or dark.shape[2] != 3 or dark.dtype.kind not in "fiu" or not np.all(np.isfinite(dark)):
+        raise ValueError(wrong)
+    return dark.astype(np.float64)
+
+
+@registry.command("dark load", "FIL.npy: läs ett sparat mörker (samma bildstorlek, samma exponering och gain som då)",
+                  "dark load FIL.npy")
+def cmd_dark_load(state, args):
+    """Kommandot dark load FIL.npy: som dark, men mörkret läses ur filen. 1.2.14.
+
+    Formen prövas mot senaste bilden ur källan och mot ROI:n; finns ingen bild än prövas den vid nästa mätning.
+    Exponering och gain står inte i filen, så programmet varnar alltid. Tiden för mörkret är filens ändringstid.
+    Referensen tas bort, som efter dark. Fel: ValueError med input.invalid_argument om filen saknas, inte är ett
+    mörker eller inte passar bilden eller ROI:n.
+    """
+    registry.need(args, ("FIL",), "dark load")
+    dark = _load_dark(args[0])
+    height, width = dark.shape[:2]
+    image = state["image"]
+    if image is not None and image.shape != dark.shape:
+        raise ValueError(f"input.invalid_argument: mörkret är {width} x {height} pixlar men bilden ur källan är "
+                         f"{image.shape[1]} x {image.shape[0]}")
+    roi = state["settings"]["roi"]
+    if roi is not None and (roi[0] + roi[2] > width or roi[1] + roi[3] > height):
+        raise ValueError(f"input.invalid_argument: roi {' '.join(str(v) for v in roi)} ligger utanför mörkret "
+                         f"({width} x {height} pixlar)")
+    state["dark"], state["dark_frames"], state["dark_camera"] = dark, None, None
+    session.mark_taken(state, "dark", datetime.fromtimestamp(Path(args[0]).stat().st_mtime).astimezone())
+    state["spectrum"] = None
+    out.say(f"mörker: laddat ur {args[0]}, {width} x {height} pixlar, medel {out.fmt(np.mean(dark))}")
+    if image is None:
+        out.say("Bildstorleken prövas mot källan vid nästa mätning.")
+    out.warn("mörkret gäller bara med samma exponering och gain som när det mättes (filen säger inte vilka)")
+    if state["reference"] is not None:
+        state["reference"] = None  # mätt med det gamla mörkret, som efter dark
+        out.say("referensen togs bort: kör reference igen")
+    if state["response"] is not None:
+        out.warn("responsen byggdes med det gamla mörkret")

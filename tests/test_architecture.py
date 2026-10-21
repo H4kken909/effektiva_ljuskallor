@@ -78,7 +78,7 @@ def test_help_ordningen():
     assert list(registry.COMMANDS) == [
         "help", "quit", "show", "status", "version", "source", "roi", "channel", "axis", "frames", "info", "cameras", "snap", "image",
         "step", "save", "start", "stability", "perf", "calibrate", "toppar", "dark", "response", "reference", "mode",
-        "run", "wait", "reset", "undo", "history", "history save", "clear", "set", "rows", "background", "response save", "response load", "rigg",
+        "run", "wait", "reset", "undo", "history", "history save", "clear", "set", "rows", "background", "response save", "response load", "dark save", "dark load", "rigg",
         "theme",
         "view", "graf", "roi show", "roi auto", "roi profile", "roi band", "roi move", "axis detect",
         "exposure", "gain", "auto",

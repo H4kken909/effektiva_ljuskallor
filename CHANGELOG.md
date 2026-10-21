@@ -2,6 +2,38 @@
 
 Formatet följer Keep a Changelog, och versionsnumren följer semantisk versionering.
 
+## [1.2.16] - 2026-10-20
+
+### Tillagt
+- `figure UT.png --cie [MAPP...]`: kromaticitetsdiagram med hästskon, Planck-kurvan och en punkt per mätning.
+- `demo/mät.txt` skriver rapportfiguren (`figure data/figur.png`).
+- Analyspanelerna `view analysis colour|rgb|droop|edge|performance` visar det `color`, `mix`, `series plot`, `bandgap` och `perf` senast räknade (förut: otillgängligt).
+
+## [1.2.15] - 2026-10-20
+
+### Ändrat
+- FWHM räknas över en rak baslinje mellan toppens baspunkter (rev7) och är ogiltig för en mättad topp, vid kanten och när en topp intill har dalen över halva höjden.
+- Färgtemperaturen är närmaste punkten på svartkroppskurvan i CIE 1960 uv, med Duv; ingen CCT när |Duv| är över 0,01 (rev7). McCamy står inom parentes.
+
+### Tillagt
+- `bandgap --anpassa`: två räta linjer med brytpunkt (rev7), minst åtta punkter, 3-standardfelsregeln och ändpunktskontroll. Standard är fortfarande brantaste lutningen.
+
+## [1.2.14] - 2026-10-20
+
+### Tillagt
+- `spectrum.csv`: kolumnen `stddev` efter `raw_counts`, spridningen mellan bilderna (tom vid en bild).
+- `out.pm`: `värde ± osäkerhet` med 1–2 värdesiffror i osäkerheten (RAP-14) i `bandgap`, `fwhm` (med minst två bilder) och `series plot` (upprepade mätningar vid samma ström).
+- `dark save FIL.npy` och `dark load FIL.npy` med formkontroll.
+
+## [1.2.13] - 2026-10-20
+
+### Rättat
+- `bandgap`: ingen kant (Fel-rad) när absorbansen stiger mindre än 0,1 från låg till hög energi; brus kring T ≈ 1 gav förut ett värde.
+- `calibrate save` utan uppmätt upplösning sparar som förut men varnar (`resolution_nm` blir null).
+- `load`, `compare`, `figure`, `mix` och `bandgap` på en mapp som inte är en mätmapp: en Fel-rad i stället för `[Errno 2]`.
+- `mix` varnar inte för olika roi när en mätning har `roi full` och ytan är densamma.
+- `__version__` följer utgåvan igen (stod på 1.0.32).
+
 ## [Unreleased]
 - Startskärm: `py -m spektro` (Windows) eller `python3 -m spektro` (Linux) bygger `.venv` vid behov och startar programmet med prisma och gul text (`--windowed`, `--no-splash`, `--delay SEK`). Färgerna är ANSI-koder, inget nytt bibliotek i requirements.txt. Konsten ligger i `startskarm/prisma.py`, utanför `spectrometer/`; koden i `spectrometer/` är oförändrad sedan v1.0.0.
 
