@@ -7,4 +7,5 @@ pause Sätt lysdioden eller lampan som ska mätas framför spalten
 step
 save
 color
+figure data/figur.png
 guide

@@ -364,6 +364,7 @@ Kolumnerna i spectrum.csv
   valid            true där värdet går att använda, annars false
   absorbance       bara i mode transmission: A = -log10(T), utan enhet
   raw_counts       signalen i counts efter mörkeravdrag, före respons och transmission (för att räkna om)
+  stddev           spridningen mellan bilderna i counts (stickprov), tom vid en bild; inte total osäkerhet
   x_px             bara efter calibrate: pixeln i hela bilden för raden
 
 Alla tal är relativa tal från kameran, inte watt.
@@ -420,10 +421,12 @@ def save_roi_image(parent, image, roi):
 
 
 def _extra_columns(spectrum, x_col):
-    """Kolumnerna sist i spectrum.csv (1.2.2): raw_counts (före respons och transmission) och x_px efter calibrate."""
+    """Kolumnerna sist i spectrum.csv (1.2.2): raw_counts, stddev (1.2.14) och x_px efter calibrate."""
     extra = {}
     if "raw" in spectrum:
         extra["raw_counts"] = spectrum["raw"]
+        if "stddev" in spectrum:  # 1.2.14: spridningen mellan bilderna i counts, tom vid en bild (DAT-02, LOG-14)
+            extra["stddev"] = np.where(np.isfinite(spectrum["raw"]), spectrum["stddev"], np.nan)
     if "px" in spectrum and x_col == "x_nm":
         extra["x_px"] = spectrum["px"]
     return extra
@@ -461,8 +464,10 @@ def load_measurement(folder):
     Fel: ValueError med input.invalid_argument om rubriken saknar x_nm eller x_px, value eller valid; OSError om filen saknas.
     """
     folder = Path(folder)
-    with open(folder / "spectrum.csv", newline="", encoding="utf-8-sig") as f:
+    with open(measurement_folder(folder), newline="", encoding="utf-8-sig") as f:  # 1.2.13: Fel-rad, inte [Errno 2]
         rows = [row for row in csv.reader(f) if row]
+    if not rows:
+        raise ValueError(f"input.invalid_argument: {folder.as_posix()}/spectrum.csv är tom")
     header, body = rows[0], rows[1:]
     x_col = "x_nm" if "x_nm" in header else "x_px"
     if x_col not in header or "value" not in header or "valid" not in header:
@@ -487,9 +492,10 @@ def load_measurement(folder):
         "settings": settings,
         "folder": folder.as_posix(),
     }
-    for key, name in (("raw", "raw_counts"), ("px", "x_px")):
+    for key, name in (("raw", "raw_counts"), ("stddev", "stddev"), ("px", "x_px")):  # 1.2.14: stddev om den finns
         if name in header and name != x_col:
             spectrum[key] = column(name)
+    spectrum["frames"] = settings.get("frames")  # 1.2.14: antalet bilder bakom medlet, till slumpfelet i fwhm
     return spectrum
 
 
@@ -509,3 +515,18 @@ def save_json(path, data):
     """Skriver data som JSON med indrag och åäö som de är. Skriver aldrig över; fel: OSError som save_columns."""
     with open(path, "x", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+def measurement_folder(folder):
+    """spectrum.csv i mätmappen folder, som Path, efter en kontroll att mappen finns och har filen. 1.2.13.
+
+    load, compare, figure, mix och bandgap läser genom den, så att en fel mapp ger en Fel-rad i stället för rått
+    [Errno 2] ... spectrum.csv.
+    Fel: ValueError med input.invalid_argument om folder inte finns eller inte har någon spectrum.csv.
+    """
+    folder = Path(folder)
+    if not folder.exists():
+        raise ValueError(f"input.invalid_argument: {folder.as_posix()} finns inte")
+    if not (folder / "spectrum.csv").is_file():
+        raise ValueError(f"input.invalid_argument: {folder.as_posix()} är ingen mätmapp (spectrum.csv saknas)")
+    return folder / "spectrum.csv"

@@ -28,11 +28,11 @@ def test_csv_has_raw_counts_and_pixel_last(tmp_path, capsys):
     _, folder = saved_folder(tmp_path, capsys)
     with open(folder / "spectrum.csv", newline="", encoding="utf-8") as f:
         rows = list(csv.reader(f))
-    assert rows[0] == ["x_nm", "value", "valid", "raw_counts", "x_px"]
-    assert rows[13] == ["520.5", "200", "true", "200", "12"]
+    assert rows[0] == ["x_nm", "value", "valid", "raw_counts", "stddev", "x_px"]  # 1.2.14: stddev
+    assert rows[13] == ["520.5", "200", "true", "200", "", "12"]
     text = (folder / "spectrum_sv.csv").read_text(encoding="utf-8-sig").splitlines()
-    assert text[0] == "x_nm;value;valid;raw_counts;x_px"
-    assert text[13] == "520,5;200;true;200;12"
+    assert text[0] == "x_nm;value;valid;raw_counts;stddev;x_px"
+    assert text[13] == "520,5;200;true;200;;12"
 
 
 def test_load_gives_back_the_measurement(tmp_path, capsys):

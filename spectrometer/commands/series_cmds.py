@@ -7,7 +7,7 @@ series start NAMN, series note current_mA=20 voltage_V=2.9, step, save, nästa s
 import re
 from pathlib import Path
 
-from spectrometer import out, plot, registry, session
+from spectrometer import display, out, plot, registry, session
 from spectrometer.analysis import series
 
 NUMBERS = ("current_mA", "voltage_V")  # tal, ändliga och större än 0
@@ -115,21 +115,27 @@ def cmd_series_plot(state, args):
     """
     names, axis, droop, target = _plot_words(args)
     column, unit, x_label = AXES[axis]
-    curves = []
+    curves, found = [], []  # found: till droop-panelen (1.2.16)
     for name in names:
         path = Path(state["settings"]["output_dir"]) / name / "serie.csv"
         if not path.is_file():
             raise ValueError(f"input.missing_data: {path.as_posix()} finns inte. Kör series start {name} och save")
         xs, areas, _per_x = series.table(series.load(path), column)
+        xs, areas, spreads, counts = series.repeats(xs, areas)  # 1.2.14: samma ström flera gånger: medel ± spridning
         out.say(f"serie {name}: {xs.size} punkter ur {path.as_posix()}")
         eff = series.droop(xs, areas) if axis == "current" else None
         for k, (x, area) in enumerate(zip(xs, areas)):
             more = f", relativ effektivitet {out.fmt(eff[k])}" if eff is not None else ""
-            out.say(f"  {out.fmt(x)} {unit}: relativ uteffekt {out.fmt(area)}{more}")
+            times = f" ({counts[k]} mätningar)" if counts[k] > 1 else ""
+            out.say(f"  {out.fmt(x)} {unit}: relativ uteffekt {out.pm(area, spreads[k])}{times}{more}")
         if eff is not None and xs.size >= 2:
             out.say(f"  droop: {100 * (1 - eff[-1]):.0f} % lägre area/I vid {out.fmt(xs[-1])} mA än vid max "
                     "(relativt, inte verkningsgrad)")
+        if counts.max(initial=0) > 1:
+            out.say("  ± är spridningen mellan upprepade mätningar vid samma ström; total osäkerhet ej kvantifierad")
         curves.append((xs, eff if droop else areas, name))
+        found.append((name, xs, areas, eff))
+    display.remember(state, "droop", {"curves": found, "x_label": x_label})  # 1.2.16: view analysis droop
     y_label = DROOP_LABEL if droop else POWER_LABEL
     if target is not None:
         plot.save_figure(target, curves, x_label, y_label)

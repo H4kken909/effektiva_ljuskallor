@@ -36,6 +36,8 @@ rows mean|median: medel eller median över ROI:ns rader (rows ensam visar valet)
 background N|off: dra av bakgrunden ur N rader ovanför och under ROI:n (background ensam visar läget)
 response save FIL.npz: spara responsen med roi, kanal, axis och kalibrering (skriver aldrig över)
 response load FIL.npz: läs en sparad respons (samma roi, kanal och axis som nu)
+dark save FIL.npy: spara mörkret (hela bilden) som .npy (skriver aldrig över)
+dark load FIL.npy: läs ett sparat mörker (samma bildstorlek, samma exponering och gain som då)
 rigg PATH|off: läs uppställningens data ur en JSON-fil, save skriver den (rigg ensam visar den)
 theme light|dark: fönstrets färger
 view camera|roi|spectrum|normalize on|off, xlim|ylim MIN MAX|auto, compare add|clear, analysis NAMN|off (view ensam visar läget)
@@ -57,10 +59,10 @@ series plot NAMN... [--x current|voltage] [--droop] [UT.png]: relativ uteffekt m
 load MAPP: läs en sparad mätmapp till senaste mätningen (graf och view compare add visar den)
 fwhm [N]: läge, höjd och linjebredd (FWHM) för de N högsta topparna (5), och arean
 compare MAPP... [--norm]: mätmappar i samma figur, med topp, FWHM och area (--norm: formen)
-figure UT.png|UT.svg [MAPP...] [--norm] [--xlim MIN MAX] [--log] [--ev]: rapportfigur och UT.txt till bildtexten
+figure UT.png|UT.svg [MAPP...] [--norm] [--xlim MIN MAX] [--log] [--ev] [--cie]: rapportfigur och UT.txt till bildtexten
 color färgen i senaste mätningen: x, y, färgtemperatur och avstånd till varmt och kallt vitt
 mix R G B --target X Y | --cct K | --sweep | --fwhm W: blanda tre sparade LED-mätningar till en färg
-bandgap [MAPP]: bandgap i eV ur absorptionskanten i senaste transmissionsmätningen eller i MAPP
+bandgap [MAPP] [--anpassa]: bandgap i eV ur absorptionskanten i senaste transmissionsmätningen eller i MAPP (--anpassa: två räta linjer)
 repeat N [UT.csv]: mät N gånger; medel och spridning för topp, toppläge och area, per position i UT.csv
 linearity E1 E2 E3 ...: arean vid varje exponering och avvikelsen från en rät linje
 calibrate save FIL.json: spara kalibreringen med residualer, kontrollfel och upplösning (resolution_nm)

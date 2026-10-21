@@ -218,6 +218,7 @@ def cmd_perf(state, args):
     frames = state["settings"]["frames"]
     rate = n * frames / (reads.sum() + computes.sum())
     out.say(f"{n} mätningar med {frames} {'bild' if frames == 1 else 'bilder'}: {rate:.1f} bilder/s utan fönster")
+    display.remember(state, "performance", {"read_ms": reads * 1000, "compute_ms": computes * 1000, "rate": rate})
 
 
 def _live_frame(state, win, spectrum, masked):

@@ -67,7 +67,7 @@ def test_color_command_on_a_glow_lamp(capsys):
     registry.run_command(measured(planck / planck.max()), "color")
     assert capsys.readouterr().out.splitlines() == [
         "färg: x 0.4475  y 0.4075  (CIE 1931 2°)",
-        "färgtemperatur: 2858 K (McCamy; avstånd till svartkroppskurvan 0.0001 i uv)",
+        "färgtemperatur: 2856 K, Duv +0.0000 (närmast på svartkroppskurvan i uv; McCamy 2858 K)",
         "avstånd till varmt vitt (0.45, 0.41): 0.0035",
         "avstånd till kallt vitt (0.31, 0.32): 0.1630",
         "täckning: 100.0 % av x̄, ȳ och z̄ inom det mätta intervallet",

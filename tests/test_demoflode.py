@@ -50,10 +50,12 @@ def test_demo_file_runs_the_whole_measurement(monkeypatch, tmp_path, capsys):
     registry.run_command(state, f"run {(ROT / 'demo' / 'mät.txt').as_posix()}")
     out = capsys.readouterr().out
     for text in ("mörker: 16 bilder", "respons: 20 av 20 positioner giltiga", "Sparad i data/", "färg: x ",
-                 "Sätt lysdioden eller lampan som ska mätas framför spalten", "[x] sparad"):
+                 "Sätt lysdioden eller lampan som ska mätas framför spalten", "[x] sparad",
+                 "Sparad: data/figur.png och data/figur.txt (villkoren till bildtexten)"):
         assert text in out, text
     assert out.splitlines()[-1] == "Allt gjort. Nästa mätning: step och save; color för färgen."
-    assert len(list((tmp_path / "data").iterdir())) == 1
+    assert len([p for p in (tmp_path / "data").iterdir() if p.is_dir()]) == 1  # 1.2.16: plus figur.png och .txt
+    assert (tmp_path / "data" / "figur.png").is_file()
 
 
 def test_pause_needs_text():

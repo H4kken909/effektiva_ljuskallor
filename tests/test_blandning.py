@@ -60,7 +60,7 @@ def test_mix_target_white(tmp_path, capsys):
         "B: x 0.1431  y 0.0338",
         "vikter (relativa, största 1): R 1.000  G 0.842  B 0.732",
         "blandningen: x 0.3100  y 0.3200",
-        "färgtemperatur: 6736 K (McCamy; avstånd till svartkroppskurvan 0.0002 i uv)",
+        "färgtemperatur: 6746 K, Duv -0.0001 (närmast på svartkroppskurvan i uv; McCamy 6736 K)",
     ]
 
 

@@ -65,3 +65,17 @@ def add_row(series_csv, folder, saved, spectrum):
     row.update(exposure=camera.get("exposure"), gain=camera.get("gain"))
     append(series_csv, row)
     return len(load(series_csv))
+
+
+def repeats(xs, areas):
+    """Mätningar vid samma x slås ihop: (x, medel, spridning, antal), x stigande. 1.2.14.
+
+    Spridningen är stickprovets (ddof=1) mellan de upprepade mätningarna, NaN där x bara mättes en gång (RAP-14:
+    osäkerheten är spridningen mellan upprepade mätningar; total osäkerhet är inte kvantifierad).
+    """
+    xs, areas = np.asarray(xs, dtype=np.float64), np.asarray(areas, dtype=np.float64)
+    unique = np.unique(xs)
+    groups = [areas[xs == value] for value in unique]
+    means = np.array([group.mean() for group in groups])
+    spreads = np.array([group.std(ddof=1) if group.size > 1 else np.nan for group in groups])
+    return unique, means, spreads, np.array([group.size for group in groups])

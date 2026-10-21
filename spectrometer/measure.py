@@ -128,6 +128,7 @@ def measure(state, src=None, timing=None):
     spectrum = {"x": x, "values": values, "mask": mask, "x_label": x_label, "y_label": "signal (counts)"}
     spectrum["saturated_px"], spectrum["saturated"] = saturated_px, saturated
     spectrum["stddev"] = stddev  # slumpbrus mellan bilderna i counts (stickprov, ddof=1); ingen osäkerhet för instrumentet
+    spectrum["frames"] = n  # 1.2.14: antalet bilder bakom medlet, till slumpfelet i fwhm
     spectrum["px"] = px
     spectrum["raw"] = np.where(mask, values, np.nan)  # 1.2.2: före respons och transmission, i counts
     spectrum["camera"] = camera  # kamerans reglage under mätningen (source.describe)

@@ -78,15 +78,43 @@ def uv(x, y):
     return 4 * x / d, 6 * y / d
 
 
+CCT_K = (1000.0, 20000.0)  # 1.2.15: sökområdet längs svartkroppskurvan (Ohno 2014 räknar 1000–20000 K)
+DUV_MAX = 0.01  # 1.2.15: projektets regel (rev7): |Duv| över 0,01 ger ingen CCT
+
+
+def cct_duv(x, y):
+    """CCT och Duv: närmaste punkten på svartkroppskurvan i CIE 1960 (u, v), sökt längs temperaturen. 1.2.15.
+
+    Samma idé som Ohno (2014) i rev7: avståndet i uv till Planck-kurvan minimeras över T. Sökningen går i 200 jämna
+    steg i 1/T (mired) över CCT_K och förfinas tre gånger runt bästa steget. Duv är avståndet, positivt ovanför
+    kurvan (mot grönt) och negativt under (mot rosa). Ger (CCT i K, Duv, gräns): gräns är sant när närmaste punkten
+    är sökområdets ände, och då säger CCT inget.
+    """
+    u, v = uv(x, y)
+    grid = np.linspace(1e6 / CCT_K[1], 1e6 / CCT_K[0], 200)  # mired: 1e6 / T
+    for turn in range(4):
+        points = np.array([uv(*planck_xy(1e6 / mired)) for mired in grid])
+        k = int(np.argmin(np.hypot(points[:, 0] - u, points[:, 1] - v)))
+        if turn == 0:
+            limit = k in (0, grid.size - 1)
+        best = grid[k], points[k]
+        grid = np.linspace(grid[max(k - 1, 0)], grid[min(k + 1, grid.size - 1)], 21)
+    mired, (u_t, v_t) = best
+    return 1e6 / mired, float(np.copysign(np.hypot(u - u_t, v - v_t), v - v_t)), limit
+
+
 def cct_line(x, y):
-    """Raden om färgtemperaturen: McCamy när punkten ligger nära svartkroppskurvan, annars ingen (en färgad LED)."""
-    cct = cct_mccamy(x, y)
-    if not MCCAMY_K[0] <= cct <= MCCAMY_K[1]:
-        return f"färgtemperatur: ingen (McCamy gäller bara {MCCAMY_K[0]}–{MCCAMY_K[1]} K)"
-    gap = distance(uv(x, y), uv(*planck_xy(cct)))  # ungefär |Duv|, inte Ohnos metod
-    if gap > UV_MAX:
-        return f"färgtemperatur: ingen (avståndet till svartkroppskurvan är {gap:.3f} i uv, gränsen {UV_MAX})"
-    return f"färgtemperatur: {cct:.0f} K (McCamy; avstånd till svartkroppskurvan {gap:.4f} i uv)"
+    """Raden om färgtemperaturen: CCT och Duv ur cct_duv, eller ingen när |Duv| > DUV_MAX eller vid sökgränsen.
+
+    1.2.15: som rev7 (närmaste punkt med Duv) i stället för bara McCamy; McCamy står inom parentes för jämförelsen.
+    """
+    cct, duv, limit = cct_duv(x, y)
+    duv = round(duv, 4) + 0.0  # -0.0 blir 0.0
+    if limit:
+        return f"färgtemperatur: ingen (närmast svartkroppskurvan utanför {CCT_K[0]:.0f}–{CCT_K[1]:.0f} K)"
+    if abs(duv) > DUV_MAX:
+        return f"färgtemperatur: ingen (Duv {duv:+.4f}: längre än {DUV_MAX:g} från svartkroppskurvan, CCT saknar mening)"
+    return f"färgtemperatur: {cct:.0f} K, Duv {duv:+.4f} (närmast på svartkroppskurvan i uv; McCamy {cct_mccamy(x, y):.0f} K)"
 
 
 def coverage(x_nm, mask):
@@ -146,3 +174,20 @@ def triangle_area(points):
     """Arean av triangeln med hörnen points, tre (x, y), i xy-planet (skosnöreformeln)."""
     (x1, y1), (x2, y2), (x3, y3) = points
     return abs((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1)) / 2
+
+
+def locus():
+    """Spektralkurvan (hästskon) ur tabellen: (nm, x, y) 380–700 nm i steg om 10 nm. 1.2.16.
+
+    Över 700 nm står punkten nästan still, och tabellens fyra decimaler gör den bara brusig; därför slutar kurvan där.
+    """
+    total = _X + _Y + _Z
+    keep = (total > 0) & (_NM <= 700)
+    return _NM[keep], _X[keep] / total[keep], _Y[keep] / total[keep]
+
+
+def planck_locus(kelvins=None):
+    """Planck-kurvan i xy: (T, x, y) för temperaturerna kelvins, utan dem 40 st jämnt i log mellan CCT_K. 1.2.16."""
+    kelvins = np.geomspace(*CCT_K, 40) if kelvins is None else np.asarray(kelvins, dtype=np.float64)
+    points = np.array([planck_xy(kelvin) for kelvin in kelvins])
+    return kelvins, points[:, 0], points[:, 1]

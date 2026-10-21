@@ -1,7 +1,8 @@
 """Vad fönstret ska visa, räknat ur state: rubrik, varningar, referens, jämförelser, kamerabild, analyspanel, tangenter.
 
 Ritar inget själv: resultatet läggs i fönstrets ordbok (win) och plot.py ritar. Allt här är bara visning;
-sparade värden ändras aldrig (normering och frusen kurva finns bara i fönstret).
+sparade värden ändras aldrig (normering och frusen kurva finns bara i fönstret). Analyspanelerna colour, rgb, droop,
+edge och performance (1.2.16) visar det kommandona senast räknade (remember), aldrig en ny beräkning.
 """
 
 import time
@@ -13,8 +14,10 @@ from spectrometer import calc, plot, quality, session
 COUNTS_TOP = {"sum": 800.0}  # fast y-skala för counts: 0-270 (255 plus marginal), summan av tre kanaler 0-800
 YSCALES = ("fast", "auto", "zoom")  # tangenten y växlar i den här ordningen
 KEYS_HELP = "s spara · p paus · f frys · c rensa · y skala · n normera · h hjälp · q stopp"
-PANELS = ("peaks", "calibration", "transmission", "response")  # analyspanelerna som går att visa nu
-LATER = ("colour", "rgb", "droop", "edge", "performance")  # kommer med 1.2.x; view analysis svarar otillgängligt
+PANELS = ("peaks", "calibration", "transmission", "response", "colour", "rgb", "droop", "edge", "performance")
+LATER = ()  # 1.2.16: alla paneler finns; view analysis svarade förut otillgängligt för colour, rgb, droop, edge, performance
+# Panelen och kommandot vars senaste resultat den visar (remember); panelen räknar inget själv (rev7 4E).
+RESULTS = {"colour": "color", "rgb": "mix", "droop": "series plot NAMN", "edge": "bandgap", "performance": "perf"}
 
 
 def window_info(state):
@@ -153,7 +156,8 @@ def save_png(state, folder):
 def panel(state, name, spectrum, values):
     """Analyspanelen name ur det som redan finns i state; räknar ingen ny analys. Ordboken ritas av plot.
 
-    Nycklar: title, x_label, lines [(x, y, namn)], points (x, y) eller None, text (kort tabell).
+    Nycklar: title, x_label, lines [(x, y, namn)], points (x, y) eller None, text (kort tabell); valfritt y_label,
+    marker (punkternas markör), equal (lika skala på axlarna, för xy-diagrammen) och legend (kurvornas namn).
     """
     if name == "peaks":
         x = spectrum["x"]
@@ -192,7 +196,90 @@ def panel(state, name, spectrum, values):
         return {"title": "response: relativ respons", "x_label": "våglängd (nm)", "points": None,
                 "lines": [(response["x"], response["values"], "respons")],
                 "text": f"{valid} av {len(response['values'])} giltiga\nrespons {'på' if state['use_response'] else 'av'}"}
-    return _unavailable(name, "kommer med 1.2.x")
+    if name in RESULTS:
+        found = state["view"].get("results", {}).get(name)
+        if found is None:
+            return _unavailable(name, f"inget resultat än. Kör {RESULTS[name]}.")
+        return PANEL_BUILDERS[name](found)
+    return _unavailable(name, "okänd panel")
+
+
+def remember(state, name, result):
+    """Sparar ett analysresultat för panelen name (en nyckel i RESULTS) i state["view"]. 1.2.16.
+
+    Kommandot (color, mix, series plot, bandgap, perf) räknar och lämnar resultatet här; panelen visar det senaste
+    utan att räkna om. Bara visning: undo och mätningarna rör det inte, reset tar bort det.
+    """
+    state["view"].setdefault("results", {})[name] = result
+
+
+def _closed(x, y):
+    """Kurvan med första punkten sist också: hästskon sluten med purpurlinjen."""
+    return np.append(x, x[0]), np.append(y, y[0])
+
+
+def _colour(found):
+    """colour: punkten i CIE 1931 xy med hästskon och Planck-kurvan; CCT och Duv i tabellen."""
+    x, y = found["xy"]
+    cct = "ingen CCT (|Duv| över 0,01)" if found["cct"] is None else f"CCT {found['cct']:.0f} K"
+    return {"title": "colour: CIE 1931 xy", "x_label": "x", "y_label": "y", "equal": True, "marker": "o",
+            "lines": [(*_closed(*found["locus"]), "spektralkurvan"), (*found["planck"], "Planck")],
+            "points": ([x], [y]), "text": f"x {x:.4f}  y {y:.4f}\n{cct}\nDuv {found['duv']:+.4f}"}
+
+
+def _rgb(found):
+    """rgb: de tre LED:erna, triangeln de spänner och blandningen (eller målfärgerna i --sweep), vikterna i tabellen."""
+    corners = found["corners"]
+    tx, ty = _closed([c[0] for c in corners], [c[1] for c in corners])
+    xs, ys = [c[0] for c in corners], [c[1] for c in corners]
+    if found.get("blend") is not None:
+        xs, ys = xs + [found["blend"][0]], ys + [found["blend"][1]]
+    rows = [f"{name}: x {x:.3f} y {y:.3f}" for name, (x, y) in zip("RGB", corners)]
+    if found.get("weights") is not None:
+        w = found["weights"]
+        rows.append(f"vikter R {w[0]:.3f} G {w[1]:.3f} B {w[2]:.3f}")
+    for name, x, y, enough in found.get("targets", []):
+        xs, ys = xs + [x], ys + [y]
+        rows.append(f"{name}: {'räcker' if enough else 'räcker inte'}")
+    return {"title": "rgb: blandning av tre LED", "x_label": "x", "y_label": "y", "equal": True, "marker": "o",
+            "lines": [(*_closed(*found["locus"]), "spektralkurvan"), (tx, ty, "triangeln")], "points": (xs, ys),
+            "text": "\n".join(rows)}
+
+
+def _droop(found):
+    """droop: relativ uteffekt (delad med sitt max) och area/I (droop) mot strömmen, per serie."""
+    lines, rows = [], []
+    for name, xs, areas, eff in found["curves"]:
+        top = np.nanmax(areas) if np.any(np.isfinite(areas)) else 1.0
+        lines.append((xs, areas / top, f"{name} uteffekt"))
+        if eff is not None:
+            lines.append((xs, eff, f"{name} area/I"))
+            if xs.size >= 2:
+                rows.append(f"{name}: droop {100 * (1 - eff[-1]):.0f} %")
+        rows.append(f"{name}: {xs.size} punkter")
+    return {"title": "droop: relativt, inte verkningsgrad", "x_label": found["x_label"], "y_label": "relativ",
+            "lines": lines, "points": None, "text": "\n".join(rows), "legend": True}
+
+
+def _edge(found):
+    """edge: absorbansen mot fotonenergin och den anpassade kanten; E_g i tabellen."""
+    E, A = found["E"], found["A"]
+    return {"title": f"edge: {found['method']}", "x_label": "fotonenergi (eV)", "y_label": "absorbans",
+            "lines": [(E, A, "absorbans"), (*found["line"], "kanten")], "points": ([found["point"][0]], [found["point"][1]]),
+            "marker": "o", "legend": True, "text": f"E_g {found['eg']:.3f} eV\n{found['nm']:.1f} nm"}
+
+
+def _performance(found):
+    """performance: tiden för läs och räkna per mätning ur perf, median och bilder/s i tabellen."""
+    reads, computes = found["read_ms"], found["compute_ms"]
+    k = np.arange(1, reads.size + 1)
+    return {"title": "performance: perf", "x_label": "mätning", "y_label": "ms", "points": None,
+            "lines": [(k, reads, "läs"), (k, computes, "räkna")], "legend": True,
+            "text": f"läs median {np.median(reads):.2f} ms\nräkna median {np.median(computes):.2f} ms\n"
+                    f"{found['rate']:.1f} bilder/s"}
+
+
+PANEL_BUILDERS = {"colour": _colour, "rgb": _rgb, "droop": _droop, "edge": _edge, "performance": _performance}
 
 
 def _unavailable(name, why):
