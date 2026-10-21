@@ -63,11 +63,7 @@ def cmd_calibrate(state, args):
             out.warn(f"kontrollfelet {out.fmt(error)} nm är större än steget {out.fmt(step)} nm.")
     if check_pixels.size == 0:
         out.say("inte kontrollerad: inga kontrollpunkter i filen")
-    if state["response"] is not None and not np.array_equal(state["coefficients"], coefficients):
-        # Responsen gjordes mot x i nm från den gamla kalibreringen. LOG-21.
-        state["response"] = None
-        state["use_response"] = False
-        out.say("Responsen glömd. Kör response build igen.")
+    _forget_response_if_changed(state, coefficients)
     state["coefficients"] = coefficients
     state["pixel_range"] = valid_range
     state["fit_range"] = (np.min(fit_pixels), np.max(fit_pixels))
@@ -187,6 +183,14 @@ def turning_point(coefficients):
     return -coefficients[1] / (2 * coefficients[2])
 
 
+def _forget_response_if_changed(state, coefficients):
+    """Glömmer responsen när koefficienterna ändras: den gjordes mot x i nm från den gamla kalibreringen. LOG-21."""
+    if state["response"] is not None and not np.array_equal(state["coefficients"], coefficients):
+        state["response"] = None
+        state["use_response"] = False
+        out.say("Responsen glömd. Kör response build igen.")
+
+
 def load_settings_calibration(state, args):
     """calibrate MAPP/settings.json: koefficienterna och pixel_range ur en sparad mätning, utan residual.
 
@@ -214,6 +218,7 @@ def load_settings_calibration(state, args):
         if list(saved["image_size"]) != now:
             width, height = saved["image_size"]
             out.warn(f"bilden var {width}x{height} pixlar men är {now[0]}x{now[1]} nu. Pixlarna betyder olika saker.")
+    _forget_response_if_changed(state, coefficients)
     state["coefficients"] = coefficients
     state["pixel_range"] = (low, high)
     state["fit_range"] = None  # okänt: punkterna finns inte

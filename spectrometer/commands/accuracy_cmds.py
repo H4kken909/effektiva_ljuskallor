@@ -110,13 +110,19 @@ def cmd_linearity(state, args):
 
 
 def _resolution(state):
-    """FWHM i nm för högsta toppen i senaste mätningen (en smal linje ger upplösningen), eller None om den saknas."""
+    """(FWHM i nm, orsak) för högsta toppen i senaste mätningen: en smal linje ger upplösningen.
+
+    Orsaken är "saturated" när toppen är mättad (bredden av en avklippt topp säger inget), annars None. Bredden är
+    None när den saknas: ingen mätning, ingen giltig position eller en topp som inte går att mäta.
+    """
     spectrum = state["spectrum"]
     if spectrum is None or not spectrum["mask"].any():
-        return None
+        return None, None
     values = np.where(spectrum["mask"], spectrum["values"], np.nan)
-    width = peaks.fwhm(spectrum["x"], values, int(np.nanargmax(values)))
-    return float(width) if np.isfinite(width) else None
+    width, why = peaks.width(spectrum["x"], values, int(np.nanargmax(values)), spectrum.get("saturated"))
+    if not np.isfinite(width):
+        return None, "saturated" if why.startswith("ogiltig") else None
+    return float(width), None
 
 
 @registry.command("calibrate save", "FIL.json: spara kalibreringen med residualer, kontrollfel och upplösning (resolution_nm)",
@@ -148,7 +154,10 @@ def cmd_calibrate_save(state, args):
     rms = float(np.sqrt(np.mean(fit**2)))
     middle = float(np.mean(state["pixel_range"]))
     nm_per_pixel = float(np.abs(np.diff(calc.evaluate_wavelength(np.array([middle, middle + 1]), coefficients)))[0])
-    resolution = _resolution(state)
+    nm_per_pixel = round(nm_per_pixel, 6)  # som error_nm: en ulp-skillnad mellan datorer ska inte synas i filen
+    resolution, why = _resolution(state)
+    if resolution is not None:
+        resolution = round(resolution, 6)
     files.save_json(args[0], {
         "saved_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "points_file": points_file,
@@ -169,7 +178,9 @@ def cmd_calibrate_save(state, args):
         out.say(f"kontrollfel: största {out.fmt(np.max(np.abs(check)))} nm ({check.size} {word})")
     else:
         out.say("kontrollfel: inga kontrollpunkter i filen")
-    if resolution is None:
+    if why == "saturated":
+        out.warn("upplösning okänd, högsta toppen är mättad")
+    elif resolution is None:
         out.warn("upplösning okänd, resolution_nm blir null: mät en smal linje med step efter calibrate och spara igen "
                  "med ett nytt namn")  # 1.2.13: filen sparas ändå, kalibreringen gäller
     else:

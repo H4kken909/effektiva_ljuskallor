@@ -27,6 +27,10 @@ def cmd_step(state, args):
     """Kommandot step: mäter, skriver toppen och antalet bilder, varnar vid mättnad och transmission över 1,05."""
     registry.need(args, (), "step")
     spectrum = measure.measure(state)
+    if not spectrum["mask"].any():
+        state["spectrum"] = None  # save ska inte spara en mätning som step vägrade
+        raise ValueError("input.missing_data: ingen giltig position i spektrumet "
+                         "(alla under tröskeln eller utanför kalibreringen)")
     i = int(np.nanargmax(np.where(spectrum["mask"], spectrum["values"], np.nan)))
     frames = state["settings"]["frames"]
     word = "bild" if frames == 1 else "bilder"
@@ -95,6 +99,9 @@ def cmd_save(state, args):
     saved = meta.put_before(saved, "note", state["note"])  # 1.2.1
     saved = meta.put_before(saved, "annotations", state["annotations"])  # 1.2.1: ström, spänning, LED, prov
     saved = meta.put_before(saved, "series", None if state["series"] is None else state["series"]["name"])
+    # Id sist, när rigg, reglage och serie finns med; note och annotations undantas av meta.NOT_IN_ID, taken är en tid.
+    counted = {key: value for key, value in saved.items() if key not in ("settings_id", "taken")}
+    saved["settings_id"] = meta.settings_id(counted)
     folder = files.save_measurement(parent, state["spectrum"], state["image"], saved)
     state["spectrum"]["saved_in"] = folder.as_posix()  # quit frågar inte om en sparad mätning
     try:

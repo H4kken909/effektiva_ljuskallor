@@ -4,6 +4,7 @@ import json
 
 import cv2
 import numpy as np
+import pytest
 from test_elias import error_text, new_state
 
 from spectrometer import registry
@@ -99,7 +100,9 @@ def test_calibrate_save(tmp_path, capsys):
         f"Sparad i {path.as_posix()}",
     ]
     saved = json.loads(path.read_text(encoding="utf-8"))
-    assert saved["resolution_nm"] == 20 and saved["nm_per_pixel"] == 10 and saved["max_check_error_nm"] == 1
+    assert saved["resolution_nm"] == pytest.approx(20, abs=1e-9)
+    assert saved["nm_per_pixel"] == pytest.approx(10, abs=1e-9)
+    assert saved["max_check_error_nm"] == 1
     assert [p["error_nm"] for p in saved["points"]] == [0, 0, 0, 1]
     assert saved["points_file"]["path"] == points.as_posix()
     state["spectrum"] = None

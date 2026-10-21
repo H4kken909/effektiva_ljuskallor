@@ -172,6 +172,8 @@ def cmd_reference(state, args):
         f"Referens: {n} {word}, x från {spectrum['x'][0]:g} till {spectrum['x'][-1]:g}, "
         f"topp {peak:g}, {np.count_nonzero(~valid)} av {len(valid)} under min_reference"
     )
+    if not np.any(valid):
+        out.warn("alla positioner under min_reference, referensen är oanvändbar")
     quality.warn_saturated(spectrum["saturated_px"])
 
 
