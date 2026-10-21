@@ -1,0 +1,17 @@
+$ {python} -W error -m spectrometer.main --output {tmp}/data < tests/kommandon/testa_05.txt
+[returkod 1]
+Skriv help för kommandona. quit eller Ctrl+D avslutar.
+spektro> source file tests/data/bilder/rand_x12.png
+spektro> Fel: input.missing_data: Ingen mätning än. Kör step först.
+spektro> Topp 200 vid pixel 12 (1 bild)
+spektro> frames: 3
+spektro> Topp 200 vid pixel 12 (3 bilder)
+spektro> roi 10 0 5 10
+spektro> Topp 200 vid pixel 12 (3 bilder)
+spektro> axis: vertical
+spektro> Topp 40 vid pixel 0 (3 bilder)
+spektro> axis: horizontal
+spektro> Topp 200 vid pixel 12 (3 bilder)
+spektro> Sparad i <TMP>/data/MAPP
+spektro> Sparad i <TMP>/data/MAPP
+spektro> Avslutar.

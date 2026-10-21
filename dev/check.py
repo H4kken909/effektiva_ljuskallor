@@ -3,8 +3,11 @@
 Kör:  .venv/Scripts/python.exe dev/check.py [--rot MAPP] [--spara-baslinje]
 I terminalen skrivs en rad per steg (OK/FEL). Hela loggen hamnar i dev/check-logg/ (git-ignorerad).
 Pytest körs utan PYTEST_ADDOPTS, med --basetemp under systemets tempmapp (töms först) och utan cache.
-Baslinjen: dev/baslinje/kommandon.json listar kommandon; varje kommandos utskrift sparas i
-dev/baslinje/utdata/<namn>.txt och jämförs vid varje körning. --spara-baslinje skriver om dem.
+Baslinjen: dev/baslinje/kommandon.json listar kommandon (namn, cmd, ev. stdin-fil); varje kommandos utskrift
+sparas i dev/baslinje/utdata/<namn>.txt och jämförs vid varje körning. --spara-baslinje skriver om dem.
+Före jämförelsen byts mätmappsnamn (data/ÅÅÅÅMMDD-HHMMSS) mot data/MAPP, tempmappens sökväg mot <TMP> och
+residualer nära noll mot 0, som i tests/test_facit.py. Kommandona körs med --output i tempmappen så att
+inga mätmappar skrivs i repot.
 """
 import argparse
 import json
@@ -20,9 +23,22 @@ from pathlib import Path
 HAR = Path(__file__).resolve().parent  # dev/
 
 
-def kor(cmd: list[str], cwd: Path, env: dict | None = None) -> subprocess.CompletedProcess:
-    """Kör ett kommando och fånga utskriften."""
-    return subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace")
+def kor(cmd: list[str], cwd: Path, env: dict, stdin: bytes | None = None) -> subprocess.CompletedProcess:
+    """Kör ett kommando och fånga utskriften (som byte)."""
+    return subprocess.run(cmd, cwd=cwd, env=env, input=stdin, capture_output=True, timeout=300)
+
+
+def text(b: bytes) -> str:
+    """Byte till text, alltid med LF som radslut."""
+    return b.decode("utf-8", errors="replace").replace("\r\n", "\n")
+
+
+def normalisera(s: str, tmp: Path) -> str:
+    """Ta bort det som får skilja mellan körningar (samma regler som tests/test_facit.py)."""
+    s = s.replace(str(tmp), "<TMP>").replace(tmp.as_posix(), "<TMP>")
+    s = re.sub(r"(data[/\x5c]|<TMP>[/\x5c])(\d{8}|ÅÅÅÅMMDD)-(\d{6}|HHMMSS)(-\d+)?", r"\1MAPP", s)
+    s = re.sub(r"residual: -?[0-9.]+e-1\d", "residual: 0", s)
+    return "\n".join(rad.rstrip() for rad in s.splitlines()).rstrip() + "\n"
 
 
 def main() -> int:
@@ -50,26 +66,28 @@ def main() -> int:
 
     # 1. ruff (som i CI)
     r = kor([python, "-m", "ruff", "check", "."], rot, env)
-    rapport("ruff", r.returncode == 0, (r.stdout.strip().splitlines() or ["0 fel"])[-1], r.stdout + r.stderr)
+    ut = text(r.stdout) + text(r.stderr)
+    rapport("ruff", r.returncode == 0, (text(r.stdout).strip().splitlines() or ["0 fel"])[-1], ut)
 
     # 2. pytest (som i CI, men med tempmapp utanför projektet)
     tmp = Path(tempfile.gettempdir()) / "ljuskallor-pytest"
     try:
-        shutil.rmtree(tmp, ignore_errors=False) if tmp.exists() else None
+        if tmp.exists():
+            shutil.rmtree(tmp)
     except OSError as e:
         rapport("pytest", False, f"kunde inte tömma {tmp}: {e} (miljöfel, starta om datorn)", str(e))
-        r = None
     else:
         r = kor([python, "-m", "pytest", "-q", "-p", "no:cacheprovider", "--basetemp", str(tmp)], rot, env)
-    if r is not None:
-        sammanfattning = next((rad for rad in reversed(r.stdout.splitlines()) if re.search(r"\d+ (passed|failed|error)", rad)), "ingen sammanfattning")
-        miljofel = re.findall(r"(WinError 5|PermissionError|Access is denied)", r.stdout + r.stderr)
+        ut = text(r.stdout) + text(r.stderr)
+        sammanfattning = next((rad for rad in reversed(ut.splitlines()) if re.search(r"\d+ (passed|failed|error)", rad)), "ingen sammanfattning")
+        miljofel = re.findall(r"(WinError 5|PermissionError|Access is denied)", ut)
         info = sammanfattning.strip("= ") + (f"  [MILJÖFEL: {len(miljofel)} träffar på WinError 5/PermissionError]" if miljofel else "")
-        rapport("pytest", r.returncode == 0, info, r.stdout + r.stderr)
+        rapport("pytest", r.returncode == 0, info, ut)
 
     # 3. import av huvudpaketet
     r = kor([python, "-c", "import spectrometer; print(spectrometer.__file__)"], rot, env)
-    rapport("import", r.returncode == 0, r.stdout.strip() or r.stderr.strip().splitlines()[-1:][0] if (r.stdout or r.stderr) else "", r.stdout + r.stderr)
+    ut = text(r.stdout) + text(r.stderr)
+    rapport("import", r.returncode == 0, ut.strip().splitlines()[-1] if ut.strip() else "", ut)
 
     # 4. baslinjens kommandon
     kfil = HAR / "baslinje" / "kommandon.json"
@@ -79,21 +97,26 @@ def main() -> int:
     else:
         kommandon = json.loads(kfil.read_text(encoding="utf-8"))
         utmapp.mkdir(exist_ok=True)
-        avvik, text = [], []
+        btmp = Path(tempfile.gettempdir()) / "ljuskallor-baslinje"
+        shutil.rmtree(btmp, ignore_errors=True)
+        btmp.mkdir()
+        avvik, loggtext = [], []
         for k in kommandon:
-            cmd = [python if c == "{python}" else c for c in k["cmd"]]
-            r = kor(cmd, rot / k.get("cwd", "."), env)
-            ut = f"$ {' '.join(k['cmd'])}\n[returkod {r.returncode}]\n{r.stdout}{r.stderr}"
+            cmd = [c.replace("{python}", python).replace("{tmp}", str(btmp)) for c in k["cmd"]]
+            stdin = (rot / k["stdin"]).read_bytes() if k.get("stdin") else None
+            r = kor(cmd, rot / k.get("cwd", "."), env, stdin)
+            ut = f"$ {' '.join(k['cmd'])}" + (f" < {k['stdin']}" if k.get("stdin") else "") + f"\n[returkod {r.returncode}]\n"
+            ut += normalisera(text(r.stdout) + ("--- stderr ---\n" + text(r.stderr) if r.stderr else ""), btmp)
             fil = utmapp / f"{k['namn']}.txt"
             if a.spara_baslinje:
                 fil.write_text(ut, encoding="utf-8", newline="\n")
             elif not fil.exists() or fil.read_text(encoding="utf-8") != ut:
                 avvik.append(k["namn"])
-                text.append(f"--- {k['namn']}: AVVIKER från {fil.name}\n{ut}")
+                loggtext.append(f"--- {k['namn']}: AVVIKER från {fil.name}\n{ut}")
         if a.spara_baslinje:
             rapport("baslinje", True, f"{len(kommandon)} kommandon sparade till {utmapp.as_posix()}", "")
         else:
-            rapport("baslinje", not avvik, f"{len(kommandon) - len(avvik)} av {len(kommandon)} kommandon ger samma utdata" + (f", avviker: {', '.join(avvik)}" if avvik else ""), "\n".join(text))
+            rapport("baslinje", not avvik, f"{len(kommandon) - len(avvik)} av {len(kommandon)} kommandon ger samma utdata" + (f", avviker: {', '.join(avvik)}" if avvik else ""), "\n".join(loggtext))
 
     logg.write_text("".join(delar), encoding="utf-8", newline="\n")
     print(("ALLT GRÖNT" if fel == 0 else f"{fel} STEG RÖDA") + f"  logg: {logg.as_posix()}")

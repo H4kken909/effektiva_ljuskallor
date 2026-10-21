@@ -1,0 +1,13 @@
+$ {python} spektro.py --help
+[returkod 0]
+usage: spektro [-h] [--windowed] [--no-splash] [--delay SEK]
+
+Startar spektrometern med startskärm i maximerat fönster.
+
+options:
+  -h, --help   show this help message and exit
+  --windowed   maximera inte fönstret
+  --no-splash  ingen startskärm, direkt till prompten
+  --delay SEK  paus mellan raderna i sekunder (standard 0.0)
+
+Andra flaggor skickas vidare till spectrometer.main.
