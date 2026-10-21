@@ -25,7 +25,10 @@ background, response save/load, dark save/load, rigg, theme, view, graf, roi sho
 exposure, gain, auto, note, series start/note/stop/plot, load, fwhm, compare, figure, color, mix, bandgap, repeat,
 linearity, calibrate save, guide, pause, help limits.
 
-Hela help-texten med argument står ordagrant i `dev/baslinje/utdata/testa_04.txt` (rad 3–71). Ordningen låses av
+Hela help-texten med argument står ordagrant i `dev/baslinje/utdata/testa_04.txt` (rad 3–71; fyra rader ändrade med
+Elias ja i BESLUT 15A: image, start, theme, roi show). Beteende ändrat med samma ja: när referensen glöms i mode
+transmission blir mode direct (`mode: direct (ingen referens)`, facit_09), och `clear all` tar bara mörker,
+kalibrering, respons, referens och mode (BESLUT 9). Ordningen låses av
 `tests/test_architecture.py` och av `FEATURES` i `spectrometer/commands/__init__.py`. Felmeddelandenas text
 (`Fel: <kod>: <text>`) är en del av gränssnittet: facit-filerna och många tester jämför dem ordagrant.
 
@@ -46,10 +49,13 @@ Hela help-texten med argument står ordagrant i `dev/baslinje/utdata/testa_04.tx
   `spectrum.csv`, `raw.png`, `settings.json`, `README.txt` (listan `SAVED_FILES` i `files.py`), därefter
   `spectrum.png`; `save --excel` ger även `spectrum_sv.csv`. Skrivs först som `.partial` och byter namn när allt är klart.
 - `serie.csv` i `output_dir/NAMN/` vid mätserier.
-- `snap-ÅÅÅÅMMDD-HHMMSS[-001].png`, `roi-ÅÅÅÅMMDD-HHMMSS.png` i output_dir; `image [FIL]` ger `bild.png` i cwd.
-- `response export PATH` (skriver över), `response save FIL.npz`, `dark save FIL.npy`, `calibrate save FIL.json`,
+- `snap-ÅÅÅÅMMDD-HHMMSS[-001].png`, `roi-ÅÅÅÅMMDD-HHMMSS.png` i output_dir; `image [FIL]` ger FIL (vägrar om den
+  finns) eller `bild-ÅÅÅÅMMDD-HHMMSS.png` i output_dir (ändrat med Elias ja, BESLUT 10 och 15A; förut `bild.png` i cwd,
+  som skrevs över).
+- `response export PATH` (vägrar om filen finns sedan BESLUT 15A), `response save FIL.npz`, `dark save FIL.npy`,
+  `calibrate save FIL.json`,
   `repeat N UT.csv`, `toppar LINJEFIL UT.csv`, `figure UT.png|UT.svg` (+ `UT.txt`), `series plot ... UT.png`,
-  `history save FIL` (skriver aldrig över utom `response export`).
+  `history save FIL` (skriver aldrig över).
 - `logs/spektro.log` (1 MB, 3 gamla) i cwd vid oväntade fel.
 - `tools/gen_kommandon.py` skriver `docs/kommandon.md` och tabellen i README mellan `<!-- KOMMANDON START -->`
   och `<!-- SLUT -->`; `tools/felkatalog.py` skriver `docs/felkatalog.md`.
