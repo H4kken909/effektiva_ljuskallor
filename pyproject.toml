@@ -1,7 +1,6 @@
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-addopts = "--basetemp=.pytest-tmp"
 
 [tool.ruff]
 extend-exclude = [".pytest-tmp"]

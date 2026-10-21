@@ -7,3 +7,4 @@ __pycache__/
 todo.txt
 logs/
 .pytest-tmp/
+dev/check-logg/

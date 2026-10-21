@@ -28,6 +28,7 @@ def git_status(rot: Path) -> dict[str, str]:
 
 
 def main() -> None:
+    """Gå igenom repot och skriv tabellen."""
     p = argparse.ArgumentParser()
     p.add_argument("--rot", default=".")
     p.add_argument("--ut", default="-")
