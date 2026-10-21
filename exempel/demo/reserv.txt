@@ -1,0 +1,18 @@
+source file exempel/demo/bilder/mork.png
+roi full
+channel gray
+frames 1
+dark 1
+source file exempel/demo/bilder/lysror.png
+calibrate exempel/demo/punkter.csv
+step
+source file exempel/demo/bilder/lampa_kand.png
+response build exempel/demo/kand.csv
+response on
+step
+source file exempel/demo/bilder/referens.png
+reference 1
+source file exempel/demo/bilder/prov.png
+mode transmission
+step
+save

@@ -9,17 +9,17 @@ import pytest
 from spectrometer import registry, session, source
 
 ROT = Path(__file__).resolve().parents[1]
-FILER = sorted((ROT / "demo").glob("*.txt"))
+FILER = sorted((ROT / "exempel" / "demo").glob("*.txt"))
 
 
 def rader(namn):
-    """Raderna i demo/NAMN utan tomma rader."""
-    text = (ROT / "demo" / namn).read_text(encoding="utf-8")
+    """Raderna i exempel/demo/NAMN utan tomma rader."""
+    text = (ROT / "exempel" / "demo" / namn).read_text(encoding="utf-8")
     return [rad for rad in text.splitlines() if rad.strip()]
 
 
 def kor(state, namn):
-    """Kör varje rad i demo/NAMN; ett fel kastas vidare så att testet faller."""
+    """Kör varje rad i exempel/demo/NAMN; ett fel kastas vidare så att testet faller."""
     for rad in rader(namn):
         registry.run_command(state, rad)
 
@@ -31,8 +31,8 @@ def gradient(low, high):
 
 
 def make_rig_files(folder):
-    """Skapar demo/bilder/*.png, punkter.csv och kand.csv av påhittade tal i folder."""
-    (folder / "demo" / "bilder").mkdir(parents=True)
+    """Skapar exempel/demo/bilder/*.png, punkter.csv och kand.csv av påhittade tal i folder."""
+    (folder / "exempel" / "demo" / "bilder").mkdir(parents=True)
     lines = np.full((10, 20, 3), 2, dtype="uint8")
     lines[:, [3, 8, 14]] = 200
     images = {
@@ -43,9 +43,9 @@ def make_rig_files(folder):
         "prov": np.full((10, 20, 3), 60, dtype="uint8"),
     }
     for name, image in images.items():
-        cv2.imwrite(str(folder / "demo" / "bilder" / f"{name}.png"), image)
-    (folder / "demo" / "punkter.csv").write_text("pixel,wavelength_nm,check\n0,400,0\n10,500,0\n5,450,1\n", encoding="utf-8")
-    (folder / "demo" / "kand.csv").write_text("wavelength_nm,relative_power_per_nm\n390,1\n500,2\n600,1\n", encoding="utf-8")
+        cv2.imwrite(str(folder / "exempel" / "demo" / "bilder" / f"{name}.png"), image)
+    (folder / "exempel" / "demo" / "punkter.csv").write_text("pixel,wavelength_nm,check\n0,400,0\n10,500,0\n5,450,1\n", encoding="utf-8")
+    (folder / "exempel" / "demo" / "kand.csv").write_text("wavelength_nm,relative_power_per_nm\n390,1\n500,2\n600,1\n", encoding="utf-8")
 
 
 class FakeCap:
@@ -66,7 +66,7 @@ class FakeCap:
 
 @pytest.mark.parametrize("fil", FILER, ids=[f.name for f in FILER])
 def test_every_line_is_a_command(fil):
-    assert FILER, "demo/ saknar kommandofiler"
+    assert FILER, "exempel/demo/ saknar kommandofiler"
     for rad in rader(fil.name):
         assert rad.split()[0] in registry.COMMANDS, f"{fil.name}: {rad}"
 

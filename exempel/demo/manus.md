@@ -11,7 +11,7 @@ Utskrifterna visar `…` där talet beror på riggen. Fyll i talen från riktiga
 | Skriver | Elias | alla kommandon, utom i delen där Jawad mäter |
 | Riggen | Adrian | blockerar ljusvägen, byter prov, håller kameran |
 | Pratar | Alan | förklarar vad som händer, håller tråden |
-| Tar tid och noterar frågor | Isak | säger till vid varje tidsgräns och noterar frågor som inte står i `demo/fragor.md` |
+| Tar tid och noterar frågor | Isak | säger till vid varje tidsgräns och noterar frågor som inte står i `exempel/demo/fragor.md` |
 | Uppställningen | Oscar | berättar om konstruktionen i första delen |
 
 I delen där Jawad mäter skriver Jawad. Elias eller Adrian coachar.
@@ -21,21 +21,21 @@ I delen där Jawad mäter skriver Jawad. Elias eller Adrian coachar.
 | Tid | Min | Moment | Pratar | Skriver | Skärmen ska visa |
 |---|---|---|---|---|---|
 | 0:00 | 5 | Översikt: vad programmet gör och inte | Alan, Oscar | inget | bilden Begränsningar (nedan) |
-| 0:05 | 10 | Kalibrering och mörker | Adrian förklarar | `run demo/1_forbered.txt`, `dark`, `run demo/2_kalibrera.txt` | `källa: kamera 0`, `mörker: 16 bilder, medel …`, `kontrollfel vid pixel …: … ` |
-| 0:15 | 10 | Direkt mätning och transmission | Alan | `run demo/3_mata.txt`, `reference`, `mode transmission`, `run demo/3_mata.txt` | `Topp … vid våglängd (nm) … (16 bilder)`, `Referens: 16 bilder, x från … till …`, `mode: transmission` |
+| 0:05 | 10 | Kalibrering och mörker | Adrian förklarar | `run exempel/demo/1_forbered.txt`, `dark`, `run exempel/demo/2_kalibrera.txt` | `källa: kamera 0`, `mörker: 16 bilder, medel …`, `kontrollfel vid pixel …: … ` |
+| 0:15 | 10 | Direkt mätning och transmission | Alan | `run exempel/demo/3_mata.txt`, `reference`, `mode transmission`, `run exempel/demo/3_mata.txt` | `Topp … vid våglängd (nm) … (16 bilder)`, `Referens: 16 bilder, x från … till …`, `mode: transmission` |
 | 0:25 | 5 | Lagring och Excel | Elias | `save` (om inte redan gjort) | `Sparad i data/ÅÅÅÅMMDD-HHMMSS`, sedan `spectrum.csv` importerad i Excel |
 | 0:30 | 15 | Jawad mäter själv | Jawad, med coachning | `dark`, `reference`, `mode transmission`, `step`, `save` | samma rader som ovan |
 | 0:45 | 5 | Begränsningar och felkällor | Oscar, Alan | inget | bilden Begränsningar |
-| 0:50 | 10 | Frågor | alla | efter behov | `demo/fragor.md` finns till hands |
+| 0:50 | 10 | Frågor | alla | efter behov | `exempel/demo/fragor.md` finns till hands |
 
-`run` stannar vid första raden som ger `Fel:` och skriver fil och radnummer sist på raden: se `demo/README.md`, Så körs en fil.
+`run` stannar vid första raden som ger `Fel:` och skriver fil och radnummer sist på raden: se `exempel/demo/README.md`, Så körs en fil.
 
 ## Före passet
 
 - Lampan har varit på i 10 minuter. Kameran är låst: exponering och gain noterade.
 - Kartongen för `dark` ligger framme. Skärmens ljus är riktat bort från uppställningen.
 - `show` visar `källa: kamera 0` och `frames: 16`.
-- Går något fel: `demo/README.md`, Reservplan. Efter tre minuter utan bild går vi till nästa nivå.
+- Går något fel: `exempel/demo/README.md`, Reservplan. Efter tre minuter utan bild går vi till nästa nivå.
 
 ## Begränsningar och felkällor (en bild)
 

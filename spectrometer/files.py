@@ -147,7 +147,7 @@ def load_known(path):
 def load_lines(path):
     """Läser en linjefil: rubriken wavelength_nm och en våglängd i nm per rad; rader som börjar med # hoppas över.
 
-    Ger våglängderna i stigande nm (float64), t.ex. ur kalibrering/hg_linjer.csv.
+    Ger våglängderna i stigande nm (float64), t.ex. ur exempel/kalibrering/hg_linjer.csv.
     """
     name = Path(path).name
     wavelengths = []

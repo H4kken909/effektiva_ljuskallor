@@ -11,9 +11,7 @@ grupp GRYb1. Allt är relativt: kameran ger counts, inte watt eller lumen.
 | `spectrometer/` | programmet (Python-paketet) | ja, det är programmet |
 | `spektro.py` | startar programmet med startskärm (`python spektro.py`) | ja |
 | `docs/` | bruksanvisning, snabbkort, kommandoreferens, riggfält, mätpass-mall | när du mäter |
-| `exempel/` | färdiga kommandofiler att köra med `run`, och mallen `rigg.json` | när du mäter |
-| `kalibrering/` | kända spektrallinjer och lampa (csv) för `calibrate` och `response build` | när du kalibrerar |
-| `demo/` | kommandofiler och manus för demon | bara vid demon |
+| `exempel/` | färdiga kommandofiler att köra med `run` och mallen `rigg.json`; `exempel/kalibrering/` har kända spektrallinjer och lampa (csv) för `calibrate` och `response build`; `exempel/demo/` har demons filer | när du mäter |
 | `tests/` | testerna; `tests/kommandon/` är Adrians kommandofiler med facit | bara när du ändrar kod |
 | `tools/` | två skript som skriver `docs/kommandon.md` och `docs/felkatalog.md` ur koden | bara när du ändrar kod |
 | `startskarm/` | bilden på startskärmen | nej, används av `spektro.py` |
@@ -157,8 +155,8 @@ Tabellen fylls av `python tools/gen_kommandon.py` ur koden (`--check` säger om 
   ett A4. `docs/kommandon.md`: kommandoreferensen. `docs/rigg.md`: fälten i riggfilen. `docs/matpass-mall.md`: mall
   för ett mätpass.
 - `exempel/`: kommandofiler för direkt mätning, kalibrering och transmission, och mallen `rigg.json`.
-- `kalibrering/`: kända linjer (`hg_linjer.csv`), en känd lampa (`lampa_A.csv`) och mallen för punktfilen.
-- `demo/`: kommandofilerna och dokumenten för demon; läs `demo/README.md` först.
+- `exempel/kalibrering/`: kända linjer (`hg_linjer.csv`), en känd lampa (`lampa_A.csv`) och mallen för punktfilen.
+- `exempel/demo/`: kommandofilerna och dokumenten för demon; läs `exempel/demo/README.md` först.
 - `tests/`: testerna (`python -m pytest -q -p no:cacheprovider`), Adrians kommandofiler med facit i `tests/kommandon/`.
 - `dev/` (finns bara på grenen `dev`): allt som bara utvecklingen behöver (kontrollskript, baslinje, protokoll,
   verktyg, gamla skript). Se `dev/README.md` där. Den gamla, långa README:n ligger i `dev/README-gammal.md`.

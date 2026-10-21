@@ -22,7 +22,7 @@ Utan prompt, till exempel i ett skript: `python -m spectrometer.main --kor exemp
 | `rigg.json` | Mall för uppställningens data (`rigg rigg.json`, se `docs/rigg.md`) | – |
 
 De tre första går på testbilderna i `tests/`, så de fungerar utan rigg. De två sista kräver kameran och
-`kalibrering/punkter.csv` (se `kalibrering/README.md`).
+`exempel/kalibrering/punkter.csv` (se `exempel/kalibrering/README.md`).
 
 Provat: `tests/test_kommandofiler.py` kör de tre första och kontrollerar toppen. Talen är relativa tal från kameran;
 att filerna går igenom visar att räkningen stämmer, inte att instrumentet mäter rätt.

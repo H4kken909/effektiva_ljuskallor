@@ -1,7 +1,7 @@
 dark
-calibrate demo/punkter.csv
+calibrate exempel/demo/punkter.csv
 pause Ta bort kartongen och sätt lampan med känd fördelning framför spalten
-response build demo/kand.csv
+response build exempel/demo/kand.csv
 response on
 pause Sätt lysdioden eller lampan som ska mätas framför spalten
 step

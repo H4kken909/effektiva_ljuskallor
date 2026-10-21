@@ -15,8 +15,8 @@ Slutleverans fredag 2026-11-27, 15:15, P326 Pascal. Bocka av i ordning.
 - [ ] `python -m pytest -q` är grön.
 - [ ] A01 (README-stegen) gjorda på demodatorn.
 - [ ] Batterier, laddare, USB-kabel.
-- [ ] Utskrivna: manus (`demo/manus.md`), snabbkortet (`docs/snabbkort.md`), reservplanen (`demo/README.md`) och frågorna (`demo/fragor.md`).
-- [ ] Reservbilderna, `demo/punkter.csv` och `demo/kand.csv` finns i `demo/` och på USB-minne.
+- [ ] Utskrivna: manus (`exempel/demo/manus.md`), snabbkortet (`docs/snabbkort.md`), reservplanen (`exempel/demo/README.md`) och frågorna (`exempel/demo/fragor.md`).
+- [ ] Reservbilderna, `exempel/demo/punkter.csv` och `exempel/demo/kand.csv` finns i `exempel/demo/` och på USB-minne.
 
 ## En timme före
 
@@ -31,4 +31,4 @@ Slutleverans fredag 2026-11-27, 15:15, P326 Pascal. Bocka av i ordning.
 - [ ] Miljön aktiv (`.\.venv\Scripts\Activate.ps1` eller `source .venv/bin/activate`).
 - [ ] Fönstret testat med Alt+Tab.
 - [ ] `python -m spectrometer.main`, sedan `show`.
-- [ ] Alla vet sin roll (`demo/manus.md`). Isak har klockan.
+- [ ] Alla vet sin roll (`exempel/demo/manus.md`). Isak har klockan.
