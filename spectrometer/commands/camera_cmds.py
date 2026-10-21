@@ -8,6 +8,8 @@ import math
 
 from spectrometer import measure, out, registry, session, source
 
+GROUP = "kalla"  # help.kalla visar modulens kommandon
+
 
 def _number(name, text):
     """Ett ändligt tal; får vara negativt (DirectShow har exponering som -6)."""

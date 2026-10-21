@@ -8,6 +8,8 @@ import time
 
 from spectrometer import calc, display, out, plot, registry, theme
 
+GROUP = "mata"  # help.mata visar modulens kommandon
+
 PANES = ("camera", "roi", "spectrum")  # kamerabilden med ROI-rutan, ROI-remsan och spektrumet
 
 

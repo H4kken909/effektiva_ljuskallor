@@ -10,6 +10,8 @@ import numpy as np
 from spectrometer import __version__, calc, files, out, plot, registry
 from spectrometer.analysis import bandgap, color, mapp, peaks
 
+GROUP = "analys"  # help.analys visar modulens kommandon
+
 
 @registry.command("load", "MAPP: läs en sparad mätmapp till senaste mätningen (graf och view compare add visar den)",
                   "load MAPP")

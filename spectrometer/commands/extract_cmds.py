@@ -2,6 +2,8 @@
 
 from spectrometer import calc, out, registry, session
 
+GROUP = "kalla"  # help.kalla visar modulens kommandon
+
 
 def _set(state, key, value):
     """Sätter rows eller background och glömmer mätningen, responsen och referensen (de gjordes på det gamla sättet)."""

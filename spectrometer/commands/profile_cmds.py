@@ -8,6 +8,8 @@ import numpy as np
 
 from spectrometer import out, registry, session
 
+GROUP = "kalibrera"  # help.kalibrera visar modulens kommandon
+
 NEEDED = ("x", "values", "roi", "channel", "axis")  # det en responsfil måste ha
 
 

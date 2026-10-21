@@ -4,6 +4,8 @@ import sys
 
 from spectrometer import out, registry
 
+GROUP = "grund"  # help.grund visar modulens kommandon
+
 STEPS = (  # stegen för en mätning i ordning: namnet och kommandot som gör det
     ("källa", "source camera N eller source file BILD"),
     ("ROI", "roi X Y W H (roi auto föreslår)"),

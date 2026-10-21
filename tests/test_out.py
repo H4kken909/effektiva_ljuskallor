@@ -51,15 +51,15 @@ def test_i_terminal_farg(monkeypatch):
 
 def test_help_som_tabell_i_terminal(monkeypatch):
     buffer = rich_terminal(monkeypatch)
-    registry.run_command(session.new_state(session.DEFAULTS), "help")
+    registry.run_command(session.new_state(session.DEFAULTS), "help alla")
     rows = [line for line in buffer.getvalue().splitlines() if line.strip()]
     assert len(rows) == len(registry.COMMANDS)
-    assert "Visa kommandona" in rows[0]
+    assert "Visa grupperna" in rows[0]
 
 
 def test_hakparenteser_star_kvar_i_terminal(monkeypatch):
     buffer = rich_terminal(monkeypatch)
-    registry.run_command(session.new_state(session.DEFAULTS), "help")
+    registry.run_command(session.new_state(session.DEFAULTS), "help alla")
     assert any("reset" in row and "[ja]: nollställ" in row for row in buffer.getvalue().splitlines())
     out.table([("x", "[bold]text[/bold]")], " ")
     assert "[bold]text[/bold]" in buffer.getvalue()

@@ -8,6 +8,8 @@ import numpy as np
 from spectrometer import calc, files, measure, out, registry
 from spectrometer.analysis import peaks
 
+GROUP = "analys"  # help.analys visar modulens kommandon
+
 
 def _peak_and_area(spectrum):
     """(toppvärde, toppläge, area) för en mätning: högsta giltiga värdet, dess x och trapetsarean över de giltiga."""

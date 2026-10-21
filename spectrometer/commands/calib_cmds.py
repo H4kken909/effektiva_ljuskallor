@@ -4,6 +4,8 @@ import numpy as np
 
 from spectrometer import calc, files, measure, out, peaks, registry, session
 
+GROUP = "kalibrera"  # help.kalibrera visar modulens kommandon
+
 
 @registry.command("calibrate", "PATH [DEGREE [MARGIN]]: anpassa våglängd till en punktfil",
                   "calibrate PATH [DEGREE [MARGIN]]")

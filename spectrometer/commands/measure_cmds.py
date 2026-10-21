@@ -20,6 +20,8 @@ from spectrometer import (
 )
 from spectrometer.analysis import series
 
+GROUP = "mata"  # help.mata visar modulens kommandon
+
 LIVE_INTERVAL = 0.05  # sekunder per varv i live (mål 20 bilder/s); pausen är det som blir över
 
 

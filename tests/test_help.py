@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from spectrometer import commands, registry, session
+from spectrometer.commands import basic, demo_cmds
 
 ROT = Path(__file__).resolve().parents[1]
 
@@ -50,10 +51,47 @@ def test_help_texts_are_one_clean_line():
         assert "\n" not in cmd.usage, cmd.name
 
 
-def test_help_prints_one_line_per_command(capsys):
-    lines = run_help(capsys, "help")
+def test_help_alla_prints_one_line_per_command(capsys):
+    lines = run_help(capsys, "help alla")
     assert len(lines) == len(registry.COMMANDS)
     assert all(line.startswith(name + " ") for line, name in zip(lines, registry.COMMANDS, strict=True))
+
+
+def test_help_shows_quickstart_and_every_group(capsys):
+    text = "\n".join(run_help(capsys, "help"))
+    assert "help.snabbstart" in text
+    for key in basic.GROUP_TEXT:
+        assert f"help.{key} " in text
+
+
+def test_every_module_has_a_known_group():
+    assert 3 <= len(basic.GROUP_TEXT) <= 5
+    for module in commands.modules():
+        assert getattr(module, "GROUP", None) in basic.GROUP_TEXT, module.__name__
+
+
+def test_groups_hold_every_command_once():
+    names = [name for key in basic.GROUP_TEXT for name in registry.GROUPS.get(key, [])]
+    assert len(names) == len(set(names))
+    assert sorted(names) == sorted(registry.COMMANDS)
+
+
+def test_help_dot_group_is_help_group(capsys):
+    dotted = run_help(capsys, "help.mata")
+    assert dotted == run_help(capsys, "help mata") == run_help(capsys, "HELP.MÄTA")
+    assert len(dotted) == len(registry.GROUPS["mata"]) + 2  # rubriken, en rad per kommando, raden om help KOMMANDO
+    assert any(line.startswith("step ") for line in dotted)
+    assert registry.canonical(["?.kalla", "x"]) == ["help", "kalla", "x"]
+
+
+def test_help_snabbstart_follows_the_guide(capsys):
+    text = "\n".join(run_help(capsys, "help.snabbstart"))
+    for _name, command in demo_cmds.STEPS:
+        assert command.split()[0] in text
+
+
+def test_help_limits_still_works_with_a_dot(capsys):
+    assert run_help(capsys, "help.limits") == run_help(capsys, "help limits")
 
 
 def test_help_command_shows_usage(capsys):

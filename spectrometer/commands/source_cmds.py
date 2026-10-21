@@ -4,6 +4,8 @@ from pathlib import Path
 
 from spectrometer import calc, files, measure, out, registry, session, source
 
+GROUP = "kalla"  # help.kalla visar modulens kommandon
+
 
 @registry.command("source", "file PATH eller camera N", "source file PATH eller source camera N")
 def cmd_source(state, args):

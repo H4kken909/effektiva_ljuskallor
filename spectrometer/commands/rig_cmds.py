@@ -5,6 +5,8 @@ from pathlib import Path
 
 from spectrometer import out, registry
 
+GROUP = "mata"  # help.mata visar modulens kommandon
+
 
 @registry.command("rigg", "PATH|off: läs uppställningens data ur en JSON-fil, save skriver den (rigg ensam visar den)",
                   "rigg, rigg PATH eller rigg off")

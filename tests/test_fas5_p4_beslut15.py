@@ -65,7 +65,7 @@ def test_clearing_something_else_keeps_transmission(tmp_path, capsys):
 def test_help_texts_say_what_the_commands_do(capsys):
     """D3, D6, B21: roi show sparar i output_dir, start nämner tangenterna, theme har en syntaxrad och visar valet."""
     state = new_state()
-    registry.run_command(state, "help")
+    registry.run_command(state, "help alla")
     text = capsys.readouterr().out
     assert "roi show spara senaste bilden med ROI-rutan som roi-ÅÅÅÅMMDD-HHMMSS.png i output_dir" in text
     assert "s spara, p paus, f frys, c rensa, y skala, n normera, h hjälp" in text
