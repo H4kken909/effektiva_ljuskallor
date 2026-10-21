@@ -17,7 +17,7 @@ step mät och skriv toppen
 save [DIR] [--excel]: spara senaste mätningen (--excel: också spectrum_sv.csv för svensk Excel)
 start [SEKUNDER]: live med kameran tills Ctrl+C, q eller SEKUNDER; i fönstret: s spara, p paus, f frys, c rensa, y skala, n normera, h hjälp
 stability [N]: mät toppvärdet N gånger (30) och skriv variation och drift
-perf [N]: tidta N mätningar (20) utan fönster: median, 95:e percentil, bilder/s
+perf [N]: tidta N mätningar (20) utan fönster, läsning och räkning utan ritning: median, 95:e percentil, bilder/s
 calibrate PATH [DEGREE [MARGIN]]: anpassa våglängd till en punktfil
 toppar [N] eller LINJEFIL [UT.csv]: toppar ur senaste step, med LINJEFIL ett förslag till punktfil
 dark [N]: mät mörker med blockerad ljusväg
