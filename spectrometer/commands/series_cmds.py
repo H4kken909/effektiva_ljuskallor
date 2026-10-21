@@ -10,6 +10,8 @@ from pathlib import Path
 from spectrometer import display, out, plot, registry, session
 from spectrometer.analysis import series
 
+GROUP = "mata"  # help.mata visar modulens kommandon
+
 NUMBERS = ("current_mA", "voltage_V")  # tal, ändliga och större än 0
 TEXTS = ("led", "sample", "lamp")  # ett ord, till exempel led=röd sample=ny
 

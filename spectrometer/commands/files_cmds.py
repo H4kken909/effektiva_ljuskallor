@@ -4,6 +4,8 @@ import time
 
 from spectrometer import out, registry
 
+GROUP = "grund"  # help.grund visar modulens kommandon
+
 MAX_DEPTH = 5  # run i en fil som körs med run ...: högst fem nivåer (en fil som kör sig själv stannar här)
 MAX_WAIT = 600  # wait väntar högst så många sekunder (10 min)
 

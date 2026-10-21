@@ -6,6 +6,8 @@ from datetime import datetime
 
 from spectrometer import out, registry, session
 
+GROUP = "grund"  # help.grund visar modulens kommandon
+
 PARTS = {  # clear NAMN: nycklarna i state som töms, och raden som skrivs
     "dark": (("dark", "dark_frames", "dark_camera"), "mörker: borttaget"),
     "calibration": (("coefficients", "pixel_range", "fit_range", "calibration_points_file"),
@@ -84,7 +86,7 @@ def cmd_history(state, args):
 def _name(line):
     """Kommandots namn i en rad: första ordet med gemener, kortformer som q blir quit."""
     words = line.removeprefix("spektro>").split()
-    return registry.ALIASES.get(words[0].lower(), words[0].lower()) if words else ""
+    return registry.canonical(words)[0] if words else ""
 
 
 @registry.command("history save", "FIL: spara raderna som lyckades som en kommandofil (för run FIL)",

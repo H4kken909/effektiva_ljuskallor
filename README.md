@@ -72,7 +72,7 @@ Tabellen fylls av `python tools/gen_kommandon.py` ur koden (`--check` säger om 
 <!-- KOMMANDON START -->
 | kommando | syntax | vad |
 |---|---|---|
-| help | help [KOMMANDO] | Kommandot help [KOMMANDO]: en rad per kommando i registret, eller raden och syntaxen för ett kommando. |
+| help | help [GRUPP\|snabbstart\|alla\|KOMMANDO], eller help.GRUPP | Kommandot help [GRUPP\|snabbstart\|alla\|KOMMANDO]: grupperna, en grupp, snabbstarten, alla kommandon eller ett. |
 | quit | quit | Kommandot quit: skriver Avslutar. och ber main att avsluta (svarar True); frågar först om en osparad mätning. |
 | show | show | Kommandot show: inställningarna, kalibrering, mörker, respons, referens, mode och om en mätning finns. |
 | status | status | Kommandot status: mörker, kalibrering, respons, referens och läge på en rad, sedan nästa steg i kedjan. |

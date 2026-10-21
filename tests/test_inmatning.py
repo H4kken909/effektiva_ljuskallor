@@ -13,7 +13,7 @@ def run(line):
 
 def test_versaler_och_alias(capsys):
     assert run("HELP") == (None, None)
-    assert capsys.readouterr().out.startswith("help Visa kommandona\n")
+    assert capsys.readouterr().out.startswith("Kommandona står i grupper.")
     assert run("?") == (None, None)
     capsys.readouterr()
     for line in ("q", "exit", "Quit"):

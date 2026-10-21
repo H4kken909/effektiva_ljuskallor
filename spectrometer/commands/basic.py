@@ -4,15 +4,85 @@ import sys
 
 from spectrometer import meta, out, registry, session
 
+GROUP = "grund"  # help.grund visar modulens kommandon
 
-@registry.command("help", "Visa kommandona", "help [KOMMANDO]")
+
+GROUP_TEXT = {  # help.NAMN: rubriken och vad gruppen har, i den ordning help visar grupperna
+    "grund": ("Grunden", "läget, ångra, historik, kommandofiler, guide och avsluta"),
+    "kalla": ("Källa och bild", "källa, ROI, kanal, kameran och hur raderna blir ett spektrum"),
+    "kalibrera": ("Kalibrering", "våglängd, mörker, respons, referens och transmission"),
+    "mata": ("Mäta och spara", "step, save, live, fönstret, serier och uppställningen"),
+    "analys": ("Analys", "läsa mätningar, toppar, färg, bandgap, figurer och noggrannhet"),
+}
+
+QUICKSTART = (  # help.snabbstart: samma steg som guide (STEPS i demo_cmds), med exempel
+    "Snabbstart: en mätning från start till sparad mapp.",
+    "",
+    "Prova först utan kamera (i projektmappen):",
+    "  source file tests/data/bilder/rand_x12.png",
+    "  step                        ska ge Topp 200 vid pixel 12 (1 bild)",
+    "  save                        sparar i data/ÅÅÅÅMMDD-HHMMSS",
+    "",
+    "En riktig mätning, i den här ordningen:",
+    "  1. source camera 0          välj kameran (cameras visar vilka som ger bild)",
+    "  2. roi X Y W H              delen av bilden som mäts (roi auto föreslår en)",
+    "  3. dark                     mörker med blockerad ljusväg",
+    "  4. calibrate PUNKTFIL.csv   pixel till nm (se exempel/kalibrering/README.md)",
+    "  5. response build KÄND.csv  responsen ur en känd lampa, sedan response on",
+    "  6. step                     mät och skriv toppen (graf visar mätningen)",
+    "  7. save                     spara mätningen",
+    "",
+    "guide visar stegen med x för det som är gjort; status visar nästa steg.",
+    "Transmission: reference utan prov, mode transmission, sedan step med provet.",
+    "Programmet minns inget mellan två starter: kör dark, calibrate och response build igen.",
+    "Talen är relativa (counts, inte watt eller lumen); help limits säger vad de inte betyder.",
+)
+
+
+def _plain(text):
+    """Gemener utan å, ä och ö, så att help.Mäta och help.mata är samma grupp."""
+    return text.lower().translate(str.maketrans("åäö", "aao"))
+
+
+def _overview():
+    """help ensam: snabbstarten och grupperna, en rad var, och hur man går vidare."""
+    rows = [("help.snabbstart", "Ny här? En mätning steg för steg")]
+    rows += [(f"help.{key}", f"{title}: {what} ({len(registry.GROUPS[key])})")
+             for key, (title, what) in GROUP_TEXT.items() if registry.GROUPS.get(key)]
+    width = max(len(left) for left, _ in rows)
+    out.say("Kommandona står i grupper. Skriv help.GRUPP för att se en grupp, till exempel help.mata:")
+    out.table([(left.ljust(width), right) for left, right in rows], "  ")
+    out.say("help KOMMANDO visar ett kommando och hur det skrivs; help alla visar alla kommandon.")
+
+
+def _group(key):
+    """help.GRUPP: rubriken och en rad per kommando i gruppen."""
+    title, what = GROUP_TEXT[key]
+    rows = [(name, registry.COMMANDS[name].text) for name in registry.GROUPS.get(key, [])]
+    width = max((len(name) for name, _ in rows), default=0)
+    out.say(f"{title}: {what}")
+    out.table([(name.ljust(width), text) for name, text in rows], "  ")
+    out.say("help KOMMANDO visar hur ett kommando skrivs.")
+
+
+@registry.command("help", "Visa grupperna; help.GRUPP visar en grupp, help.snabbstart hur man mäter",
+                  "help [GRUPP|snabbstart|alla|KOMMANDO], eller help.GRUPP")
 def cmd_help(state, args):
-    """Kommandot help [KOMMANDO]: en rad per kommando i registret, eller raden och syntaxen för ett kommando."""
-    if not args:
-        lines = registry.help_lines()
+    """Kommandot help [GRUPP|snabbstart|alla|KOMMANDO]: grupperna, en grupp, snabbstarten, alla kommandon eller ett.
+
+    help.mata är samma sak som help mata (registry.canonical gör om punkten).
+    """
+    what = _plain(" ".join(args))
+    if not what:
+        _overview()
+    elif what == "snabbstart":
+        for line in QUICKSTART:
+            out.say(line)
+    elif what in GROUP_TEXT:
+        _group(what)
     else:
-        lines = registry.help_for(" ".join(args))  # två ord för tvåordskommandon: help history save
-    out.table([line.split(" ", 1) for line in lines], " ")
+        lines = registry.help_lines() if what == "alla" else registry.help_for(" ".join(args))
+        out.table([line.split(" ", 1) for line in lines], " ")  # help history save: två ord, ett kommando
 
 
 def _really_quit(state):

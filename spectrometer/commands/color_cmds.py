@@ -8,6 +8,8 @@ import numpy as np
 from spectrometer import calc, display, out, registry
 from spectrometer.analysis import color, mapp
 
+GROUP = "analys"  # help.analys visar modulens kommandon
+
 
 @registry.command("color", "färgen i senaste mätningen: x, y, färgtemperatur och avstånd till varmt och kallt vitt")
 def cmd_color(state, args):

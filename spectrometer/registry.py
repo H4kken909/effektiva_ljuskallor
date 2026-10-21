@@ -25,6 +25,7 @@ class Command:
 
 
 COMMANDS: dict[str, Command] = {}
+GROUPS: dict[str, list[str]] = {}  # GROUP i modulen -> kommandona i den, i samma ordning som i COMMANDS
 ALIASES = {"h": "help", "?": "help", "q": "quit", "exit": "quit"}  # kortformer, slås upp före COMMANDS
 
 
@@ -41,7 +42,9 @@ def command(name, text, usage=""):
 def load(modules):
     """Bygg registret ur modulerna i given ordning. Samma namn två gånger är ett fel."""
     COMMANDS.clear()
+    GROUPS.clear()
     for module in modules:
+        group = GROUPS.setdefault(getattr(module, "GROUP", ""), [])
         for obj in vars(module).values():
             cmd = getattr(obj, "spektro_command", None)
             if cmd is None:
@@ -49,6 +52,7 @@ def load(modules):
             if cmd.name in COMMANDS:
                 raise ValueError(f"kommandot {cmd.name} finns två gånger")
             COMMANDS[cmd.name] = cmd
+            group.append(cmd.name)
 
 
 def help_lines():
@@ -74,6 +78,15 @@ def help_for(name):
     return lines
 
 
+def canonical(words):
+    """Orden med kommandonamnet i gemener och kortformer utskrivna; help.mata blir help mata."""
+    first = ALIASES.get(words[0].lower(), words[0].lower())
+    head, dot, rest = first.partition(".")
+    if dot and ALIASES.get(head, head) == "help":
+        return ["help", rest, *words[1:]]
+    return [first, *words[1:]]
+
+
 def run_command(state, line):
     """Delar en rad i ord och kör kommandot. Ger True från quit, annars None (också för en tom rad)."""
     if os.name == "nt":
@@ -85,7 +98,7 @@ def run_command(state, line):
         raise ValueError("input.invalid_argument: citattecken saknar slut") from error
     if not words:
         return None  # tom rad: bara en ny prompt
-    words[0] = ALIASES.get(words[0].lower(), words[0].lower())
+    words = canonical(words)
     pair = " ".join(words[:2])
     if pair in COMMANDS:  # tvåordskommando, till exempel history save
         return COMMANDS[pair].run(state, words[2:])

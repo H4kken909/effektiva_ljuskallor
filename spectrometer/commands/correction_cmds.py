@@ -4,6 +4,8 @@ import numpy as np
 
 from spectrometer import calc, files, measure, out, quality, registry, session, source
 
+GROUP = "kalibrera"  # help.kalibrera visar modulens kommandon
+
 
 def _roi_mean(state, image):
     """Medlet i ROI:n och den valda kanalen (hela bilden utan ROI), i counts."""

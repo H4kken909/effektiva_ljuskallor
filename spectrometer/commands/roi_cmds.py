@@ -2,6 +2,8 @@
 
 from spectrometer import calc, files, out, registry, roi
 
+GROUP = "kalla"  # help.kalla visar modulens kommandon
+
 
 def _image(state):
     """Senaste råbilden; fel om ingen bild finns än."""

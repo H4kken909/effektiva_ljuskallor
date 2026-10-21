@@ -3,6 +3,8 @@
 from spectrometer import display, out, registry
 from spectrometer.analysis import bandgap, mapp
 
+GROUP = "analys"  # help.analys visar modulens kommandon
+
 
 def _transmission(state, args):
     """(x i nm, transmission, mask) ur mätmappen args[0], eller ur senaste mätningen i mode transmission."""
