@@ -82,19 +82,17 @@ def spectrum_peaks(state, n):
     Pixeln räknas i hela bilden (inte plats i ROI:n), med delpixel från peaks.refine_peak avrundad till 0.1 pixel.
     Fel: ValueError med input.missing_data om ingen mätning finns.
     """
-    spectrum = state["spectrum"]
-    if spectrum is None:
-        raise ValueError("input.missing_data: Ingen mätning än. Kör step först.")
+    spectrum = registry.need_spectrum(state)
     if "loaded_from" in spectrum:  # 1.2.2
         raise ValueError("input.invalid_argument: toppar fungerar efter step, inte efter load (pixlarna räknas ur nuvarande roi)")
     image = state["image"]
-    roi = state["settings"]["roi"] if state["settings"]["roi"] is not None else (0, 0, image.shape[1], image.shape[0])
+    roi = calc.roi_or_whole(state["settings"]["roi"], image)
     pixels = measure.pixel_axis(roi, state["settings"]["axis"])
     # Samma vändning som spektrumet fick i measure, så att pixels[k] hör till values[k].
     _x, pixels, _mask, _label = measure.calibrate_axis(state, pixels, pixels, np.ones(pixels.size, dtype=bool))
     if not spectrum["mask"].any():
         return []
-    values = np.where(spectrum["mask"], spectrum["values"], np.nan)
+    values = calc.masked_values(spectrum)
     min_height = PEAK_MIN_FRACTION * np.max(spectrum["values"][spectrum["mask"]])
     found = []
     for i in peaks.find_peaks(spectrum["values"], spectrum["mask"], min_height, PEAK_MIN_DISTANCE)[:n]:

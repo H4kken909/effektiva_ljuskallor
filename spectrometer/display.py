@@ -15,8 +15,6 @@ COUNTS_TOP = {"sum": 800.0}  # fast y-skala för counts: 0-270 (255 plus margina
 YSCALES = ("fast", "auto", "zoom")  # tangenten y växlar i den här ordningen
 KEYS_HELP = "s spara · p paus · f frys · c rensa · y skala · n normera · h hjälp · q stopp"
 PANELS = ("peaks", "calibration", "transmission", "response", "colour", "rgb", "droop", "edge", "performance")
-# Panelen och kommandot vars senaste resultat den visar (remember); panelen räknar inget själv (rev7 4E).
-RESULTS = {"colour": "color", "rgb": "mix", "droop": "series plot NAMN", "edge": "bandgap", "performance": "perf"}
 
 
 def window_info(state):
@@ -49,7 +47,7 @@ def reference_curve(state):
     ref = state["reference"]
     if ref is None or units(state) != (ref["x_label"], "signal (counts)"):
         return None
-    return ref["x"], np.where(ref["mask"], ref["values"], np.nan)
+    return ref["x"], calc.masked_values(ref)
 
 
 def frame_info(state, win, spectrum, values):
@@ -101,11 +99,10 @@ def fixed_y(state, y_label):
 def shown(win, values, y_label):
     """Kurvan som fönstret visar: delad med största giltiga värdet när normalize är på (inte i transmission)."""
     finite = values[np.isfinite(values)]
-    if not win.get("view", {}).get("normalize") or y_label == "transmission (kvot)" or finite.size == 0:
+    top = finite.max() if finite.size else 0.0
+    if not win["view"]["normalize"] or y_label == "transmission (kvot)" or top <= 0:
         return values, y_label
-    if finite.max() <= 0:
-        return values, y_label
-    return values / finite.max(), "normerad (relativ)"
+    return values / top, "normerad (relativ)"
 
 
 def draw_spectrum(state, win, spectrum, values):
@@ -129,8 +126,7 @@ def view_key(win, key, spectrum, values):
     elif key == "y":
         win["yscale"] = YSCALES[(YSCALES.index(win.get("yscale", "fast")) + 1) % len(YSCALES)]
     elif key == "n":
-        view = win.setdefault("view", {})
-        view["normalize"] = not view.get("normalize", False)
+        win["view"]["normalize"] = not win["view"]["normalize"]
     elif key == "h":
         win["help"] = None if win.get("help") else KEYS_HELP
 
@@ -138,7 +134,7 @@ def view_key(win, key, spectrum, values):
 def save_png(state, folder):
     """Rapportfiguren folder/spectrum.png ur senaste mätningen: ljust tema, mätmappen och inställningarna i rubriken."""
     spectrum = state["spectrum"]
-    values = np.where(spectrum["mask"], spectrum["values"], np.nan)
+    values = calc.masked_values(spectrum)
     title = f"{folder.name} · {session.describe(state)} · frames {state['settings']['frames']}"
     plot.save_png(folder / "spectrum.png", spectrum["x"], values, spectrum["x_label"], spectrum["y_label"], title)
 
@@ -173,7 +169,7 @@ def panel(state, name, spectrum, values):
         ref = state["reference"]
         if ref is None:
             return _unavailable(name, "ingen referens. Kör reference.")
-        lines = [(ref["x"], np.where(ref["mask"], ref["values"], np.nan), "referens")]
+        lines = [(ref["x"], calc.masked_values(ref), "referens")]
         if spectrum["y_label"] == "signal (counts)" and np.array_equal(spectrum["x"], ref["x"]):
             lines.append((spectrum["x"], values, "prov"))
         return {"title": "transmission: referensen (counts)", "x_label": ref["x_label"], "lines": lines, "points": None,
@@ -186,16 +182,17 @@ def panel(state, name, spectrum, values):
         return {"title": "response: relativ respons", "x_label": "våglängd (nm)", "points": None,
                 "lines": [(response["x"], response["values"], "respons")],
                 "text": f"{valid} av {len(response['values'])} giltiga\nrespons {'på' if state['use_response'] else 'av'}"}
-    found = state["view"].get("results", {}).get(name)  # övriga paneler är nycklarna i RESULTS (view_cmds kollar namnet)
+    found = state["view"].get("results", {}).get(name)  # övriga paneler är nycklarna i RESULT_PANELS (view_cmds kollar)
+    build, command = RESULT_PANELS[name]
     if found is None:
-        return _unavailable(name, f"inget resultat än. Kör {RESULTS[name]}.")
-    return PANEL_BUILDERS[name](found)
+        return _unavailable(name, f"inget resultat än. Kör {command}.")
+    return build(found)
 
 
 def remember(state, name, result):
-    """Sparar ett analysresultat för panelen name (en nyckel i RESULTS) i state["view"]. 1.2.16.
+    """Sparar ett analysresultat för panelen name (en nyckel i RESULT_PANELS) i state["view"]. 1.2.16.
 
-    Kommandot (color, mix, series plot, bandgap, perf) räknar och lämnar resultatet här; panelen visar det senaste
+    Kommandot (RESULT_PANELS) räknar och lämnar resultatet här; panelen visar det senaste
     utan att räkna om. Bara visning: undo och mätningarna rör det inte, reset tar bort det.
     """
     state["view"].setdefault("results", {})[name] = result
@@ -218,16 +215,18 @@ def _colour(found):
 def _rgb(found):
     """rgb: de tre LED:erna, triangeln de spänner och blandningen (eller målfärgerna i --sweep), vikterna i tabellen."""
     corners = found["corners"]
-    tx, ty = _closed([c[0] for c in corners], [c[1] for c in corners])
     xs, ys = [c[0] for c in corners], [c[1] for c in corners]
+    tx, ty = _closed(xs, ys)
     if found.get("blend") is not None:
-        xs, ys = xs + [found["blend"][0]], ys + [found["blend"][1]]
+        xs.append(found["blend"][0])
+        ys.append(found["blend"][1])
     rows = [f"{name}: x {x:.3f} y {y:.3f}" for name, (x, y) in zip("RGB", corners)]
     if found.get("weights") is not None:
         w = found["weights"]
         rows.append(f"vikter R {w[0]:.3f} G {w[1]:.3f} B {w[2]:.3f}")
     for name, x, y, enough in found.get("targets", []):
-        xs, ys = xs + [x], ys + [y]
+        xs.append(x)
+        ys.append(y)
         rows.append(f"{name}: {'räcker' if enough else 'räcker inte'}")
     return {"title": "rgb: blandning av tre LED", "x_label": "x", "y_label": "y", "equal": True, "marker": "o",
             "lines": [(*_closed(*found["locus"]), "spektralkurvan"), (tx, ty, "triangeln")], "points": (xs, ys),
@@ -267,7 +266,9 @@ def _performance(found):
                     f"{found['rate']:.1f} bilder/s"}
 
 
-PANEL_BUILDERS = {"colour": _colour, "rgb": _rgb, "droop": _droop, "edge": _edge, "performance": _performance}
+# Panel -> (byggaren, kommandot vars senaste resultat den visar, se remember); panelen räknar inget själv.
+RESULT_PANELS = {"colour": (_colour, "color"), "rgb": (_rgb, "mix"), "droop": (_droop, "series plot NAMN"),
+                 "edge": (_edge, "bandgap"), "performance": (_performance, "perf")}
 
 
 def _unavailable(name, why):

@@ -1,6 +1,5 @@
 """repeat, linearity och calibrate save: repeterbarhet, linjäritet och kalibreringens osäkerhet till rapporten (M12)."""
 
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -15,7 +14,7 @@ def _peak_and_area(spectrum):
     x, values, mask = spectrum["x"], spectrum["values"], spectrum["mask"]
     if not mask.any():
         raise ValueError("input.missing_data: ingen giltig position i spektrumet")
-    i = int(np.nanargmax(np.where(mask, values, np.nan)))
+    i = int(np.nanargmax(calc.masked_values(spectrum)))
     return values[i], x[i], float(np.trapezoid(values[mask], x[mask]))
 
 
@@ -49,7 +48,7 @@ def cmd_repeat(state, args):
     numbers = np.array([_peak_and_area(spectrum) for spectrum in spectra])
     calibrated = state["coefficients"] is not None
     frames = state["settings"]["frames"]
-    out.say(f"repeat: {n} mätningar med {frames} {'bild' if frames == 1 else 'bilder'} var")
+    out.say(f"repeat: {n} mätningar med {registry.plural(frames, 'bild', 'bilder')} var")
     out.say(_spread("topp", numbers[:, 0]))
     out.say(_spread("toppläge", numbers[:, 1], " nm" if calibrated else " pixel", percent=False))
     out.say(_spread("area", numbers[:, 2]))
@@ -59,16 +58,6 @@ def cmd_repeat(state, args):
     files.save_columns(path, [("x_nm" if calibrated else "x_px", spectra[0]["x"]), ("mean", mean), ("stddev", stddev),
                               ("valid", ["true" if ok else "false" for ok in valid])])
     out.say(f"Sparad i {path.as_posix()}")
-
-
-def _asked(state, prompt):
-    """Kamera i en terminal: väntar på Enter efter prompten; False om svaret är avbryt. Fil eller pipad: True."""
-    if state["settings"]["source"][0] != "camera" or not sys.stdin.isatty():
-        return True
-    try:
-        return out.ask(prompt).strip().lower() != "avbryt"
-    except EOFError:
-        return False
 
 
 @registry.command("linearity", "E1 E2 E3 ...: arean vid varje exponering och avvikelsen från en rät linje",
@@ -90,7 +79,7 @@ def cmd_linearity(state, args):
     def series(src):
         found = []
         for exposure in exposures:
-            if not _asked(state, f"Ställ exponeringen på {exposure:g} och tryck Enter (avbryt stoppar): "):
+            if not registry.ready(state, f"Ställ exponeringen på {exposure:g} och tryck Enter (avbryt stoppar): "):
                 raise ValueError("input.invalid_argument: linearity avbruten")
             found.append(measure.measure(copy, src))
         return found
@@ -118,7 +107,7 @@ def _resolution(state):
     spectrum = state["spectrum"]
     if spectrum is None or not spectrum["mask"].any():
         return None, None
-    values = np.where(spectrum["mask"], spectrum["values"], np.nan)
+    values = calc.masked_values(spectrum)
     width, why = peaks.width(spectrum["x"], values, int(np.nanargmax(values)), spectrum.get("saturated"))
     if not np.isfinite(width):
         return None, "saturated" if why.startswith("ogiltig") else None
@@ -174,8 +163,8 @@ def cmd_calibrate_save(state, args):
     if fit.size <= coefficients.size:
         out.warn("lika många punkter som koefficienter: residualerna är 0 per definition, lägg till punkter")
     if check.size:
-        word = "kontrollpunkt" if check.size == 1 else "kontrollpunkter"
-        out.say(f"kontrollfel: största {out.fmt(np.max(np.abs(check)))} nm ({check.size} {word})")
+        out.say(f"kontrollfel: största {out.fmt(np.max(np.abs(check)))} nm "
+                f"({registry.plural(check.size, 'kontrollpunkt', 'kontrollpunkter')})")
     else:
         out.say("kontrollfel: inga kontrollpunkter i filen")
     if why == "saturated":

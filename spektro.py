@@ -146,6 +146,7 @@ def maximera_windows():
     from ctypes import wintypes
 
     k32, u32 = ctypes.windll.kernel32, ctypes.windll.user32
+    # ctypes antar annars att fönstermarkörerna är heltal av fel storlek
     k32.GetConsoleWindow.restype = wintypes.HWND
     u32.GetForegroundWindow.restype = wintypes.HWND
     for f in (u32.GetWindow, u32.GetAncestor):
@@ -156,7 +157,9 @@ def maximera_windows():
     fram = u32.GetForegroundWindow()
     if not konsol or not fram:
         return
-    if fram not in (konsol, u32.GetWindow(konsol, 4), u32.GetAncestor(konsol, 3)):
+    # Konsolen kan ligga i ett annat fönster (till exempel Windows Terminal): 4 = GW_OWNER, 3 = GA_ROOTOWNER
+    egna_fonster = (konsol, u32.GetWindow(konsol, 4), u32.GetAncestor(konsol, 3))
+    if fram not in egna_fonster:
         return  # fönstret i fokus är inte vårt: rör det inte
     u32.ShowWindow(fram, 3)  # 3 = SW_MAXIMIZE
     time.sleep(0.2)
@@ -190,11 +193,12 @@ def rita_prisma():
 
 
 def gom_hjalpen():
-    """Svälj det main skriver före första prompten (hjälpen); prismat står där."""
+    """Svälj det main skriver före första prompten (hjälpen); prismat och tipset står redan på skärmen."""
     ekta_input, ekta_ut = builtins.input, sys.stdout
     sys.stdout = io.StringIO()
 
     def forsta_input(prompt=""):
+        """Släpp tillbaka utskriften och vanliga input när prompten visas första gången."""
         sys.stdout = ekta_ut
         builtins.input = ekta_input
         return ekta_input(prompt)
@@ -236,7 +240,7 @@ def startskarm(paus_rad):
         time.sleep(PAUS_SLUT)
         skriv_info()
         skriv("\x1b[?25h")
-        gom_hjalpen() # main skriver alltid sin rad före första prompten = prismat och tipset står där
+        gom_hjalpen()
         kor_main()
     finally:
         if isinstance(sys.stdout, io.StringIO):

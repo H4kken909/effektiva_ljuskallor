@@ -86,7 +86,8 @@ def kolla_python(rot):
         rader.append(("INFO", f"Python {nu} (ingen .python-version att jämföra med)"))
     else:
         onskad = fil.read_text(encoding="utf-8-sig").strip()
-        if nu.split(".")[: len(onskad.split("."))] == onskad.split("."):
+        delar_onskad = onskad.split(".")
+        if nu.split(".")[: len(delar_onskad)] == delar_onskad:
             rader.append(("OK", f"Python {nu}"))
         else:
             rader.append(("FEL", f"Python är {nu} men .python-version säger {onskad}. Kör: uv python install {onskad}"))
@@ -131,17 +132,23 @@ def kolla_bibliotek(rot):
     return rader
 
 
+def kamerabackend(cv2):
+    """Ger (backend, namn): V4L2 på Linux, DirectShow (DSHOW) på Windows, annars (CAP_ANY, None)."""
+    if sys.platform.startswith("linux"):
+        return cv2.CAP_V4L2, "V4L2"
+    if sys.platform == "win32":
+        return cv2.CAP_DSHOW, "DirectShow"
+    return cv2.CAP_ANY, None
+
+
 def kolla_opencv():
-    """Ser att OpenCV har kamerastöd för systemet: V4L2 på Linux, DirectShow (DSHOW) på Windows."""
+    """Ser att OpenCV har kamerastöd för systemet: V4L2 på Linux, DirectShow på Windows."""
     try:
         import cv2
     except ImportError as error:
         return [("FEL", f"cv2 går inte att importera ({error}). {INSTALLERA}")]
-    if sys.platform.startswith("linux"):
-        backend, namn = cv2.CAP_V4L2, "V4L2"
-    elif sys.platform == "win32":
-        backend, namn = cv2.CAP_DSHOW, "DirectShow"
-    else:
+    backend, namn = kamerabackend(cv2)
+    if namn is None:
         return [("INFO", f"OpenCV {cv2.__version__}; kamerastödet kontrolleras bara på Linux och Windows")]
     if backend in cv2.videoio_registry.getBackends():
         return [("OK", f"OpenCV {cv2.__version__} har {namn}")]
@@ -187,13 +194,7 @@ def kolla_kamera(index, antal):
         import cv2
     except ImportError as error:
         return [("FEL", f"cv2 går inte att importera ({error}). {INSTALLERA}")]
-    if sys.platform.startswith("linux"):
-        backend = cv2.CAP_V4L2
-    elif sys.platform == "win32":
-        backend = cv2.CAP_DSHOW
-    else:
-        backend = cv2.CAP_ANY
-    cap = cv2.VideoCapture(index, backend)
+    cap = cv2.VideoCapture(index, kamerabackend(cv2)[0])
     if not cap.isOpened():
         cap.release()
         text = f"camera.open_failed: kunde inte öppna kamera {index}. Stäng program som håller kameran eller prova ett annat index."

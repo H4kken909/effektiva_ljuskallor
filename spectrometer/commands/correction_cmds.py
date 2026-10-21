@@ -1,37 +1,23 @@
 """dark, response, reference och mode: korrektionerna och transmission."""
 
-import sys
-
 import numpy as np
 
 from spectrometer import calc, files, measure, out, quality, registry, session, source
 
 
-def _ready(state, prompt):
-    """Kamera i en terminal: väntar på Enter efter prompten. Ger False om svaret är avbryt (fil eller pipad: True)."""
-    if state["settings"]["source"][0] != "camera" or not sys.stdin.isatty():
-        return True
-    try:
-        answer = out.ask(prompt)
-    except EOFError:
-        return False
-    return answer.strip().lower() != "avbryt"
-
-
 def _roi_mean(state, image):
     """Medlet i ROI:n och den valda kanalen (hela bilden utan ROI), i counts."""
     cfg = state["settings"]
-    roi = cfg["roi"] if cfg["roi"] is not None else (0, 0, image.shape[1], image.shape[0])
+    roi = calc.roi_or_whole(cfg["roi"], image)
     return float(np.mean(calc.prepare(image, roi, cfg["axis"], cfg["channel"])))
 
 
 @registry.command("dark", "[N]: mät mörker med blockerad ljusväg", "dark [N]")
 def cmd_dark(state, args):
     """Kommandot dark [N]: mörkret som medel av N bilder (CAPTURE_FRAMES utan N). Det gamla står kvar vid fel."""
-    if len(args) > 1:
-        raise ValueError("input.invalid_argument: dark tar högst ett ord (N)")
+    registry.at_most_one(args, "dark", "N")
     n = registry.to_frames(args[0]) if args else measure.CAPTURE_FRAMES
-    if not _ready(state, "Blockera ljusvägen och tryck Enter (skriv avbryt för att hoppa över): "):
+    if not registry.ready(state, "Blockera ljusvägen och tryck Enter (skriv avbryt för att hoppa över): "):
         out.say("Avbrutet.")
         return
 
@@ -49,8 +35,7 @@ def cmd_dark(state, args):
     session.mark_taken(state, "dark")
     state["dark_camera"] = camera
     state["spectrum"] = None
-    word = "bild" if n == 1 else "bilder"
-    out.say(f"mörker: {n} {word}, medel {out.fmt(np.mean(state['dark']))}")
+    out.say(f"mörker: {registry.plural(n, 'bild', 'bilder')}, medel {out.fmt(np.mean(state['dark']))}")
     # Jämför i ROI:n och kanalen: bandet är en liten del av bilden, så hela bildens medel märker lite ljus. PRO-04.
     image = state["image"]
     if image is not None and image.shape == state["dark"].shape and (
@@ -84,8 +69,7 @@ def cmd_response(state, args):
             raise ValueError("input.missing_data: ingen kalibrering, kör calibrate först")
         known_wavelengths, known_values = files.load_known(rest[0])
         lamp = measure.measure_direct(state, n)
-        lamp_values = np.where(lamp["mask"], lamp["values"], np.nan)
-        values = calc.build_response(lamp["x"], lamp_values, known_wavelengths, known_values)
+        values = calc.build_response(lamp["x"], calc.masked_values(lamp), known_wavelengths, known_values)
         state["response"] = {"x": lamp["x"].copy(), "values": values, "frames": n, "known_file": rest[0]}
         session.mark_taken(state, "response")
         state["spectrum"] = None
@@ -93,8 +77,8 @@ def cmd_response(state, args):
         # Under 0,1 förstärks bruset mer än 10 gånger; min_response (0,01) släpper igenom 100 gånger. PRO-31.
         weak = np.count_nonzero((values > state["settings"]["min_response"]) & (values < 0.1))
         if weak:
-            unit = "position har" if weak == 1 else "positioner har"
-            out.warn(f"{weak} {unit} respons under 0.1 (bruset förstärks mer än 10 gånger)")
+            out.warn(f"{registry.plural(weak, 'position har', 'positioner har')} respons under 0.1 "
+                     "(bruset förstärks mer än 10 gånger)")
         quality.warn_saturated(lamp["saturated_px"])
     elif args[0] == "export":
         registry.need(args[1:], ("PATH",), "response export")
@@ -122,10 +106,9 @@ def _check_reference(state, args):
     reference = state["reference"]
     if reference is None:
         raise ValueError("input.missing_data: ingen referens, kör reference först")
-    if len(args) > 1:
-        raise ValueError("input.invalid_argument: reference check tar högst ett ord (N)")
+    registry.at_most_one(args, "reference check", "N")
     n = registry.to_frames(args[0]) if args else measure.CAPTURE_FRAMES
-    if not _ready(state, "Ta bort provet och tryck Enter: "):
+    if not registry.ready(state, "Ta bort provet och tryck Enter: "):
         out.say("Avbrutet.")
         return
     again = measure.measure_direct(state, n)
@@ -137,9 +120,8 @@ def _check_reference(state, args):
     change = np.full(len(valid), -1.0)  # -1 där referensen är för svag, så att argmax hamnar på en giltig plats
     np.divide(np.abs(again["values"] - reference["values"]), reference["values"], out=change, where=valid)
     j = int(np.argmax(change))
-    word = "bild" if n == 1 else "bilder"
     where = f"{again['x_label']} {again['x'][j]:g}"
-    out.say(f"Referenskontroll: största skillnad {100 * change[j]:.1f} % vid {where} ({n} {word})")
+    out.say(f"Referenskontroll: största skillnad {100 * change[j]:.1f} % vid {where} ({registry.plural(n, 'bild', 'bilder')})")
 
 
 @registry.command("reference", "[N] | check [N]: mät referens utan prov, eller jämför med den sparade", "reference [N] eller reference check [N]")
@@ -153,23 +135,20 @@ def cmd_reference(state, args):
         return
     if state["dark"] is None:
         raise ValueError("input.missing_data: inget mörker, kör dark först")
-    if len(args) > 1:
-        raise ValueError("input.invalid_argument: reference tar högst ett ord (N)")
+    registry.at_most_one(args, "reference", "N")
     n = registry.to_frames(args[0]) if args else measure.CAPTURE_FRAMES
-    if not _ready(state, "Ta bort provet och tryck Enter: "):
+    if not registry.ready(state, "Ta bort provet och tryck Enter: "):
         out.say("Avbrutet.")
         return
     spectrum = measure.measure_direct(state, n)
     spectrum["channel"] = state["settings"]["channel"]
-    spectrum["frames"] = n  # till profiles i settings.json
     state["reference"] = spectrum
     session.mark_taken(state, "reference")
     state["spectrum"] = None
-    word = "bild" if n == 1 else "bilder"
     valid = spectrum["mask"] & (spectrum["values"] > state["settings"]["min_reference"])
     peak = np.max(spectrum["values"][spectrum["mask"]]) if np.any(spectrum["mask"]) else np.nan
     out.say(
-        f"Referens: {n} {word}, x från {spectrum['x'][0]:g} till {spectrum['x'][-1]:g}, "
+        f"Referens: {registry.plural(n, 'bild', 'bilder')}, x från {spectrum['x'][0]:g} till {spectrum['x'][-1]:g}, "
         f"topp {peak:g}, {np.count_nonzero(~valid)} av {len(valid)} under min_reference"
     )
     if not np.any(valid):

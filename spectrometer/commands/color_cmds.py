@@ -5,7 +5,7 @@
 
 import numpy as np
 
-from spectrometer import display, out, registry
+from spectrometer import calc, display, out, registry
 from spectrometer.analysis import color, mapp
 
 
@@ -18,9 +18,7 @@ def cmd_color(state, args):
     Fel: ValueError med input.missing_data utan mätning, kalibrering eller respons, eller utan ljus 380–780 nm.
     """
     registry.need(args, (), "color")
-    spectrum = state["spectrum"]
-    if spectrum is None:
-        raise ValueError("input.missing_data: Ingen mätning än. Kör step först.")
+    spectrum = registry.need_spectrum(state)
     if state["coefficients"] is None:
         raise ValueError("input.missing_data: ingen kalibrering, kör calibrate först")
     if not state["use_response"] or state["mode"] != "direct":
@@ -48,16 +46,6 @@ def _setting(led, key):
         width, height = led["settings"]["image_size"]
         value = [0, 0, width, height]
     return str(value)
-
-
-def _led(folder):
-    """En sparad LED-mätning ur mapp.read, kontrollerad: kalibrerad och responskorrigerad i mode direct.
-
-    Fel: ValueError med input.missing_data om mätningen saknar kalibrering eller inte är responskorrigerad.
-    """
-    saved = mapp.read(folder)
-    mapp.require(saved, "direct")  # samma kontroll som analysskriptet
-    return saved
 
 
 def _target(words):
@@ -107,7 +95,7 @@ def _sweep(primaries):
 def _widths(leds, corners, fwhm):
     """--fwhm W: triangeln i xy för de mätta LED:erna och för gaussiska LED med samma toppar och bredden W nm."""
     lam = np.arange(380.0, 781.0)
-    tops = [float(led["x"][np.nanargmax(np.where(led["mask"], led["values"], np.nan))]) for led in leds]
+    tops = [float(led["x"][np.nanargmax(calc.masked_values(led))]) for led in leds]
     model = [color.xy(*color.xyz(lam, color.gaussian(lam, top, fwhm), np.ones(lam.size, dtype=bool))) for top in tops]
     out.say("toppar: " + ", ".join(f"{name} {top:.1f} nm" for name, top in zip("RGB", tops)))
     out.say(f"täckt område i xy: mätta {color.triangle_area(corners):.4f}, "
@@ -129,7 +117,7 @@ def cmd_mix(state, args):
     if len(args) < 4:
         raise ValueError("input.invalid_argument: mix: tre mätmappar och --target X Y, --cct K, --sweep eller --fwhm W")
     folders, option, rest = args[:3], args[3], args[4:]
-    leds = [_led(folder) for folder in folders]
+    leds = [mapp.read_required(folder, "direct") for folder in folders]  # kalibrerade och responskorrigerade
     differ = [key for key in SAME if len({_setting(led, key) for led in leds}) > 1]
     if differ:
         out.warn(f"mätningarna skiljer sig i {', '.join(differ)}; vikterna jämför då olika saker")

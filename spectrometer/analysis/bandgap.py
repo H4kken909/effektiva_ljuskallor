@@ -59,6 +59,35 @@ def rise(x_nm, absorb):
     return float(np.median(A[-k:]) - np.median(A[:k]))
 
 
+def _require_rise(x_nm, absorb):
+    """Fel (input.missing_data) när absorbansen inte stiger minst MIN_RISE från låg till hög energi (rise)."""
+    gain = rise(x_nm, absorb)
+    if gain < MIN_RISE:  # 1.2.13: brus kring T ≈ 1 gav förut ett värde (2,03 eV), nu ingen kant
+        raise ValueError(f"input.missing_data: ingen absorptionskant: absorbansen stiger bara {gain:.3f} från lägsta "
+                         f"till högsta energin, minst {MIN_RISE:g} behövs (T ska falla under ca 80 %)")
+
+
+def _find_edge(x_nm, transmission, mask):
+    """Absorbansen (bara där T är minst T_MIN) och kanten ur edge: (absorbansen, E_g i eV, osäkerhet i eV, index)."""
+    absorb = absorbance(transmission, mask & (transmission >= T_MIN))
+    step = float(np.median(np.abs(np.diff(x_nm))))
+    with np.errstate(divide="ignore", invalid="ignore"):  # platt absorbans: lutningen 0 ger oändligt E_g
+        eg, unc, i = edge(x_nm, absorb, step)
+    return absorb, eg, unc, i
+
+
+def _edge_notes(lam, x_nm, transmission, mask):
+    """Raderna om kantens läge som report och fit_report delar: fönstret, varning nära mätningens kant, T_MIN."""
+    low, high = WINDOW_NM
+    where = "inne" if low <= lam <= high else "utanför"
+    lines = [f"fönstret {low:g}–{high:g} nm ({HC / low:.2f}–{HC / high:.2f} eV): kanten ligger {where}"]
+    valid = x_nm[mask & np.isfinite(transmission)]
+    if min(lam - valid.min(), valid.max() - lam) < EDGE_MARGIN_NM:
+        lines.append("Varning: kanten ligger närmare än 30 nm från mätningens kant, bandgapet kan ligga utanför")
+    lines.append(f"punkter med T under {T_MIN:g} räknas inte: där är kvoten mest brus")
+    return lines
+
+
 def report(x_nm, transmission, mask):
     """Raderna som bandgap skriver ur ett transmissionsspektrum: E_g i eV och nm, fönstret och osäkerheten.
 
@@ -66,27 +95,14 @@ def report(x_nm, transmission, mask):
     bara där T är minst T_MIN.
     En rad som börjar med "Varning: " är en varning. Fel: ValueError med input.missing_data utan en kant.
     """
-    absorb = absorbance(transmission, mask & (transmission >= T_MIN))
-    step = float(np.median(np.abs(np.diff(x_nm))))
-    with np.errstate(divide="ignore", invalid="ignore"):  # platt absorbans: lutningen 0 ger oändligt E_g
-        eg, unc, _ = edge(x_nm, absorb, step)
+    absorb, eg, unc, _ = _find_edge(x_nm, transmission, mask)
     if not np.isfinite(eg) or eg <= 0:
         raise ValueError("input.missing_data: ingen absorptionskant (absorbansen stiger inte mot högre energi)")
-    gain = rise(x_nm, absorb)
-    if gain < MIN_RISE:  # 1.2.13: brus kring T ≈ 1 gav förut ett värde (2,03 eV), nu ingen kant
-        raise ValueError(f"input.missing_data: ingen absorptionskant: absorbansen stiger bara {gain:.3f} från lägsta "
-                         f"till högsta energin, minst {MIN_RISE:g} behövs (T ska falla under ca 80 %)")
+    _require_rise(x_nm, absorb)
     lam = HC / eg
-    low, high = WINDOW_NM
-    where = "inne" if low <= lam <= high else "utanför"
-    lines = [f"bandgap: {out.pm(eg, unc, 'eV')}, kanten vid {lam:.1f} nm",  # 1.2.14: avrundat efter osäkerheten
-             f"fönstret {low:g}–{high:g} nm ({HC / low:.2f}–{HC / high:.2f} eV): kanten ligger {where}"]
-    valid = x_nm[mask & np.isfinite(transmission)]
-    if min(lam - valid.min(), valid.max() - lam) < EDGE_MARGIN_NM:
-        lines.append("Varning: kanten ligger närmare än 30 nm från mätningens kant, bandgapet kan ligga utanför")
-    lines.append(f"punkter med T under {T_MIN:g} räknas inte: där är kvoten mest brus")
-    lines.append("osäkerheten är bara ±0,5 pixelsteg; kalibrering, reflektion och spridning ingår inte")
-    return lines
+    return [f"bandgap: {out.pm(eg, unc, 'eV')}, kanten vid {lam:.1f} nm",  # 1.2.14: avrundat efter osäkerheten
+            *_edge_notes(lam, x_nm, transmission, mask),
+            "osäkerheten är bara ±0,5 pixelsteg; kalibrering, reflektion och spridning ingår inte"]
 
 
 MIN_POINTS = 8  # 1.2.15, rev7: minst åtta punkter i anpassningen med två räta linjer
@@ -148,10 +164,7 @@ def fit_points(x_nm, transmission, mask):
     if run.size < MIN_POINTS:
         raise ValueError(f"input.missing_data: för få punkter för två räta linjer ({run.size}, minst {MIN_POINTS})")
     E, A = ev(x_nm[run]), -np.log10(transmission[run])
-    gain = rise(x_nm[run], A)
-    if gain < MIN_RISE:
-        raise ValueError(f"input.missing_data: ingen absorptionskant: absorbansen stiger bara {gain:.3f} från lägsta "
-                         f"till högsta energin, minst {MIN_RISE:g} behövs (T ska falla under ca 80 %)")
+    _require_rise(x_nm[run], A)
     order = np.argsort(E)
     return E[order], A[order]
 
@@ -178,19 +191,12 @@ def fit_report(x_nm, transmission, mask):
     except ValueError:
         check = "Varning: ändpunktskontrollen hittar ingen brytpunkt utan första eller sista punkten"
     lam = HC / fit["ec"]
-    low, high = WINDOW_NM
-    where = "inne" if low <= lam <= high else "utanför"
     noise = f"{ratio:.0f} standardfel" if np.isfinite(ratio) else "utan brus"
-    lines = [f"bandgap (två räta linjer): {out.pm(fit['ec'], fit['se_ec'], 'eV')}, brytpunkten vid {lam:.1f} nm",
-             f"lutningsökning d: {out.pm(fit['d'], fit['se_d'])} per eV ({noise}, minst {SE_RULE:g}), {E.size} punkter",
-             check,
-             f"fönstret {low:g}–{high:g} nm ({HC / low:.2f}–{HC / high:.2f} eV): kanten ligger {where}"]
-    valid = x_nm[mask & np.isfinite(transmission)]
-    if min(lam - valid.min(), valid.max() - lam) < EDGE_MARGIN_NM:
-        lines.append("Varning: kanten ligger närmare än 30 nm från mätningens kant, bandgapet kan ligga utanför")
-    lines.append(f"punkter med T under {T_MIN:g} räknas inte: där är kvoten mest brus")
-    lines.append("± är anpassningsfelet; empirisk uppskattning: reflektion, spridning och kalibreringsfel ingår inte")
-    return lines
+    return [f"bandgap (två räta linjer): {out.pm(fit['ec'], fit['se_ec'], 'eV')}, brytpunkten vid {lam:.1f} nm",
+            f"lutningsökning d: {out.pm(fit['d'], fit['se_d'])} per eV ({noise}, minst {SE_RULE:g}), {E.size} punkter",
+            check,
+            *_edge_notes(lam, x_nm, transmission, mask),
+            "± är anpassningsfelet; empirisk uppskattning: reflektion, spridning och kalibreringsfel ingår inte"]
 
 
 def edge_lines(x_nm, transmission, mask, fit=False):
@@ -205,10 +211,7 @@ def edge_lines(x_nm, transmission, mask, fit=False):
         line_E = np.array([E[0], lines["ec"], E[-1]])
         line_A = lines["a"] + lines["b"] * (line_E - lines["ec"]) + lines["d"] * np.maximum(0.0, line_E - lines["ec"])
         return E, A, (line_E, line_A), lines["ec"]
-    absorb = absorbance(transmission, mask & (transmission >= T_MIN))
-    step = float(np.median(np.abs(np.diff(x_nm))))
-    with np.errstate(divide="ignore", invalid="ignore"):
-        eg, _unc, i = edge(x_nm, absorb, step)
+    absorb, eg, _unc, i = _find_edge(x_nm, transmission, mask)
     ok = np.isfinite(absorb)
     order = np.argsort(ev(x_nm[ok]))
     E, A = ev(x_nm[ok])[order], absorb[ok][order]  # samma ordning som i edge, så i pekar på samma punkt

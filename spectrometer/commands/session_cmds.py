@@ -62,8 +62,7 @@ def cmd_undo(state, args):
 @registry.command("history", "[N]: de N senaste raderna vid prompten (20), fel och ångrade märkta", "history [N]")
 def cmd_history(state, args):
     """Kommandot history [N]: de N senaste raderna som skrevs vid prompten, numrerade från början av sessionen."""
-    if len(args) > 1:
-        raise ValueError("input.invalid_argument: history tar högst ett ord (N)")
+    registry.at_most_one(args, "history", "N")
     n = registry.to_int("N", args[0], 1) if args else 20
     history = state.get("history") or []
     if not history:
@@ -89,11 +88,7 @@ def cmd_history_save(state, args):
     """
     registry.need(args, ("FIL",), "history save")
     lines = [line for line, status in state.get("history") or [] if status == "ok" and _name(line) not in NOT_SAVED]
-    try:
-        f = open(args[0], "x", encoding="utf-8")  # "x": bara en ny fil, annars FileExistsError
-    except FileExistsError as error:
-        raise ValueError(f"input.invalid_argument: {args[0]} finns redan, history save skriver inte över") from error
-    with f:
+    with registry.open_new(args[0], "x", "history save", encoding="utf-8") as f:
         f.write(f"# history save {datetime.now():%Y-%m-%d %H:%M}: raderna som lyckades vid prompten\n")
         for line in lines:
             f.write(f"{line}\n")

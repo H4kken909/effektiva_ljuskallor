@@ -16,6 +16,11 @@ def background(values):
     return float(np.median(values))
 
 
+def _half_level(low, peak):
+    """Nivån halvvägs mellan bakgrunden low och toppen peak: över den räknas pixeln till bandet."""
+    return low + 0.5 * (peak - low)
+
+
 def find_band(profile):
     """Sammanhängande stycke runt största värdet där profilen är över bakgrund + halva (topp - bakgrund).
 
@@ -25,7 +30,7 @@ def find_band(profile):
     low = background(profile)
     if profile[i] <= low:
         return None
-    above = profile > low + 0.5 * (profile[i] - low)
+    above = profile > _half_level(low, profile[i])
     start, stop = i, i + 1
     while start > 0 and above[start - 1]:
         start -= 1
@@ -45,8 +50,9 @@ def detect_axis(image, channel):
     height, width = image.shape[:2]
     table = calc.prepare(image, (0, 0, width, height), "horizontal", channel)
     low = background(table)
-    if table.max() <= low:
+    peak = table.max()
+    if peak <= low:
         return None
-    rows, cols = np.nonzero(table > low + 0.5 * (table.max() - low))
+    rows, cols = np.nonzero(table > _half_level(low, peak))
     wide, high = int(cols.max() - cols.min() + 1), int(rows.max() - rows.min() + 1)
     return ("horizontal" if wide >= high else "vertical"), wide, high

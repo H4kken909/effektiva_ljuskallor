@@ -18,7 +18,7 @@ def frame_spectrum(state, image):
     corrected = image
     if state["dark"] is not None:
         corrected = calc.subtract_dark(image.astype(np.float64), state["dark"])
-    roi = cfg["roi"] if cfg["roi"] is not None else (0, 0, image.shape[1], image.shape[0])
+    roi = calc.roi_or_whole(cfg["roi"], image)
     table = calc.prepare(corrected, roi, cfg["axis"], cfg["channel"])
     if state["rows"] == "median":
         values = calc.extract_median(table)  # ROI-14
@@ -120,16 +120,16 @@ def measure(state, src=None, timing=None):
         saturated_px = max(saturated_px, quality.saturated_count(part, state["settings"]["channel"]))
         saturated = saturated | quality.saturated_positions(part, state["settings"]["axis"], state["settings"]["channel"])
     mean, stddev = calc.average_spectra(np.stack(spectra))
-    x = pixel_axis(roi, state["settings"]["axis"])
-    saturated = calibrate_axis(state, x, saturated, np.isfinite(mean))[1]  # samma ordning som values: vänds med x
-    stddev = calibrate_axis(state, x, stddev, np.isfinite(mean))[1]  # spridningen mellan bilderna, NaN för en bild
-    px = calibrate_axis(state, x, x, np.isfinite(mean))[1]  # 1.2.2: pixeln för varje position, också i nm-läge
-    x, values, mask, x_label = calibrate_axis(state, x, mean, np.isfinite(mean))
+    pixels = pixel_axis(roi, state["settings"]["axis"])
+    # Kalibrera axeln en gång. Positionsnumren 0..P-1 följer med och visar hur axeln eventuellt vändes (stigande x),
+    # så att alla serier längs spektrumet läggs i samma ordning som x.
+    x, order, mask, x_label = calibrate_axis(state, pixels, np.arange(pixels.size), np.isfinite(mean))
+    values = mean[order]
     spectrum = {"x": x, "values": values, "mask": mask, "x_label": x_label, "y_label": "signal (counts)"}
-    spectrum["saturated_px"], spectrum["saturated"] = saturated_px, saturated
-    spectrum["stddev"] = stddev  # slumpbrus mellan bilderna i counts (stickprov, ddof=1); ingen osäkerhet för instrumentet
+    spectrum["saturated_px"], spectrum["saturated"] = saturated_px, saturated[order]
+    spectrum["stddev"] = stddev[order]  # slumpbrus mellan bilderna i counts (stickprov, ddof=1); ingen osäkerhet för instrumentet
     spectrum["frames"] = n  # 1.2.14: antalet bilder bakom medlet, till slumpfelet i fwhm
-    spectrum["px"] = px
+    spectrum["px"] = pixels[order]  # 1.2.2: pixeln för varje position, också i nm-läge
     spectrum["raw"] = np.where(mask, values, np.nan)  # 1.2.2: före respons och transmission, i counts
     spectrum["camera"] = camera  # kamerans reglage under mätningen (source.describe)
     apply_response(state, spectrum)

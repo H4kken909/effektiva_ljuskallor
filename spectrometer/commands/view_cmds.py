@@ -6,9 +6,7 @@ Terminalen väljer, fönstret visar (rev7 4E). Allt här ändrar bara state["vie
 import math
 import time
 
-import numpy as np
-
-from spectrometer import display, out, plot, registry, theme
+from spectrometer import calc, display, out, plot, registry, theme
 
 PANES = ("camera", "roi", "spectrum")  # kamerabilden med ROI-rutan, ROI-remsan och spektrumet
 
@@ -79,11 +77,9 @@ def _compare(state, rest):
         return
     if rest != ["add"]:
         raise ValueError("input.invalid_argument: view compare tar add eller clear")
-    spectrum = state["spectrum"]
-    if spectrum is None:
-        raise ValueError("input.missing_data: Ingen mätning än. Kör step först.")
+    spectrum = registry.need_spectrum(state)
     label = f"jämförelse {len(curves) + 1} ({time.strftime('%H:%M:%S')})"
-    curves.append({"x": spectrum["x"].copy(), "values": np.where(spectrum["mask"], spectrum["values"], np.nan),
+    curves.append({"x": spectrum["x"].copy(), "values": calc.masked_values(spectrum),
                    "x_label": spectrum["x_label"], "y_label": spectrum["y_label"], "label": label})
     out.say(f"view compare: {len(curves)} kurvor, senast {label}")
 
@@ -102,10 +98,8 @@ def _analysis(state, rest):
 def cmd_graf(state, args):
     """Kommandot graf: senaste mätningen med samma rubrik och rutor som live, i ett fönster som väntar tills det stängs."""
     registry.need(args, (), "graf")
-    spectrum = state["spectrum"]
-    if spectrum is None:
-        raise ValueError("input.missing_data: Ingen mätning än. Kör step först.")
-    masked = np.where(spectrum["mask"], spectrum["values"], np.nan)
+    spectrum = registry.need_spectrum(state)
+    masked = calc.masked_values(spectrum)
     win = plot.open_plot()
     try:
         win.update(display.window_info(state))

@@ -27,15 +27,19 @@ def channels(channel):
     return [0, 1, 2]
 
 
+def _saturated_pixels(roi_image, channel):
+    """Mättnad per pixel i ROI-utsnittet: bool (rader, kolumner), sant där någon bidragande kanal är mättad."""
+    return (roi_image[:, :, channels(channel)] >= SATURATION).any(axis=2)
+
+
 def saturated_count(roi_image, channel):
     """Antalet pixlar i ROI-utsnittet där någon bidragande kanal är mättad, som int."""
-    hit = roi_image[:, :, channels(channel)] >= SATURATION
-    return int(np.count_nonzero(hit.any(axis=2)))
+    return int(np.count_nonzero(_saturated_pixels(roi_image, channel)))
 
 
 def saturated_positions(roi_image, axis, channel):
     """Mättnad per position längs spektrumet: bool (P,), sant där någon pixel i remsan tvärs spektrumet är mättad."""
-    hit = (roi_image[:, :, channels(channel)] >= SATURATION).any(axis=2)
+    hit = _saturated_pixels(roi_image, channel)
     return hit.any(axis=0) if axis == "horizontal" else hit.any(axis=1)
 
 

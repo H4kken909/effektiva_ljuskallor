@@ -35,7 +35,7 @@ def load(series_csv):
 
 
 def table(rows, x="current_mA"):
-    """(x, area) sorterat på x, utan rader som saknar x eller area."""
+    """(x, area) sorterat på x, utan rader där x inte är över 0 eller area saknas."""
     pts = [(r[x], r["area"]) for r in rows if np.isfinite(r[x]) and np.isfinite(r["area"]) and r[x] > 0]
     pts.sort()
     xs = np.array([p[0] for p in pts])

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from spectrometer import __version__, files, out, plot, registry
+from spectrometer import __version__, calc, files, out, plot, registry
 from spectrometer.analysis import bandgap, color, mapp, peaks
 
 
@@ -23,7 +23,7 @@ def cmd_load(state, args):
     state["spectrum"], state["image"] = spectrum, None
     raw = "med raw_counts" if "raw" in spectrum else "utan raw_counts (sparad före 1.2.2)"
     out.say(f"laddad: {spectrum['folder']} ({spectrum['x'].size} positioner, {raw})")
-    values = np.where(spectrum["mask"], spectrum["values"], np.nan)
+    values = calc.masked_values(spectrum)
     if not np.any(np.isfinite(values)):
         out.say("ingen giltig position")
         return
@@ -39,7 +39,7 @@ def latest(state):
     spectrum = state["spectrum"]
     if spectrum is None:
         raise ValueError("input.missing_data: Ingen mätning än. Kör step eller load först.")
-    return spectrum, np.where(spectrum["mask"], spectrum["values"], np.nan)
+    return spectrum, calc.masked_values(spectrum)
 
 
 def units(spectrum):
@@ -76,8 +76,7 @@ def cmd_fwhm(state, args):
     FWHM av en smal linje (laser, Hg 546 nm) är instrumentets
     upplösning, inte källans bredd (Krav 19b, 20). Arean är relativ uteffekt, aldrig watt.
     """
-    if len(args) > 1:
-        raise ValueError("input.invalid_argument: fwhm tar högst ett ord (N)")
+    registry.at_most_one(args, "fwhm", "N")
     n = registry.to_int("N", args[0], 1) if args else 5
     spectrum, values = latest(state)
     x_unit, area_unit = units(spectrum)
@@ -145,7 +144,7 @@ def cmd_compare(state, args):
     loaded = load_curves(folders)
     curves = []
     for spectrum, name in loaded:
-        values = np.where(spectrum["mask"], spectrum["values"], np.nan)
+        values = calc.masked_values(spectrum)
         out.say(f"{name}: {_row(spectrum, values)}")
         curves.append((spectrum["x"], normalized(values, name) if norm else values, name))
     out.say("normerade till sitt max: formen, inte nivån" if norm else "Relativa tal från kameran; inte watt, lumen eller verkningsgrad.")
@@ -203,8 +202,7 @@ def _figure_cie(state, path, folders, others):
         raise ValueError("input.invalid_argument: figure --cie går inte med --norm, --log, --ev eller --xlim")
     measured = []  # (mätningen, namnet)
     for folder in folders:
-        saved = mapp.read(folder)
-        mapp.require(saved, "direct")
+        saved = mapp.read_required(folder, "direct")
         measured.append((saved, saved["settings"].get("note") or Path(saved["folder"]).name))
     if not folders:
         spectrum = latest(state)[0]
@@ -248,7 +246,7 @@ def cmd_figure(state, args):
         raise ValueError("input.invalid_argument: figure --ev kräver våglängd i nm, kör calibrate först")
     curves, lines = [], []
     for spectrum, name in loaded:
-        values = np.where(spectrum["mask"], spectrum["values"], np.nan)
+        values = calc.masked_values(spectrum)
         x = bandgap.ev(spectrum["x"]) if "--ev" in flags else spectrum["x"]
         curves.append((x, normalized(values, name) if "--norm" in flags else values, name))
         lines.append(f"{name}: {_conditions(spectrum, state)}")

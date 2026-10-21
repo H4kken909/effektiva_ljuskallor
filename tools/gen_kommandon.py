@@ -22,17 +22,17 @@ def rows():
     result = []
     for cmd in registry.COMMANDS.values():
         paragraphs = (inspect.getdoc(cmd.run) or "").split("\n\n")
-        what = paragraphs[0].splitlines()[0] if paragraphs[0] else ""
+        what = paragraphs[0].partition("\n")[0]  # första raden
         errors = " ".join(" ".join(p.split()).removeprefix("Fel: ") for p in paragraphs if p.startswith("Fel:"))
         result.append((cmd.name, cmd.usage or cmd.name, what, errors))
     return result
 
 
-def table(rows_, headings, columns):
-    """En Markdown-tabell med de givna kolumnerna (index i varje rad); | i texten skrivs \\|, tom cell blir –."""
+def table(headings, rows_):
+    """En Markdown-tabell med en kolumn per rubrik; | i texten skrivs \\|, tom cell blir –."""
     lines = ["| " + " | ".join(headings) + " |", "|" + "---|" * len(headings)]
     for row in rows_:
-        cells = [row[i].replace("|", "\\|") or "–" for i in columns]
+        cells = [cell.replace("|", "\\|") or "–" for cell in row]
         lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
@@ -40,7 +40,7 @@ def table(rows_, headings, columns):
 def document(rows_):
     """Hela docs/kommandon.md."""
     intro = "Skapad av `python tools/gen_kommandon.py` ur kommandoregistret. Ändra texterna i koden, inte här."
-    return "# Kommandon\n\n" + intro + "\n\n" + table(rows_, ("kommando", "syntax", "vad", "fel"), (0, 1, 2, 3)) + "\n"
+    return "# Kommandon\n\n" + intro + "\n\n" + table(("kommando", "syntax", "vad", "fel"), rows_) + "\n"
 
 
 def fill(text, block):
@@ -57,7 +57,8 @@ def wanted(rows_):
     result = {ROT / "docs" / "kommandon.md": document(rows_)}
     readme = ROT / "README.md"
     if readme.exists():
-        filled = fill(readme.read_text(encoding="utf-8"), table(rows_, ("kommando", "syntax", "vad"), (0, 1, 2)))
+        utan_fel = [row[:3] for row in rows_]  # README-tabellen har inte kolumnen fel
+        filled = fill(readme.read_text(encoding="utf-8"), table(("kommando", "syntax", "vad"), utan_fel))
         if filled is not None:
             result[readme] = filled
     return result

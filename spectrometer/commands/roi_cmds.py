@@ -1,6 +1,6 @@
 """roi show, roi auto, roi profile, roi band, roi move och axis detect: hjälp att ställa ROI:n ur senaste bilden."""
 
-from spectrometer import files, out, registry, roi
+from spectrometer import calc, files, out, registry, roi
 
 
 def _image(state):
@@ -30,7 +30,7 @@ def cmd_roi_show(state, args):
     """Kommandot roi show: kopia av senaste bilden med ROI-rutan och mättade pixlar i magenta; sökvägen skrivs."""
     registry.need(args, (), "roi show")
     image = _image(state)
-    current = state["settings"]["roi"] or (0, 0, image.shape[1], image.shape[0])
+    current = calc.roi_or_whole(state["settings"]["roi"], image)
     path = files.save_roi_image(state["settings"]["output_dir"], image, current)
     out.say(f"Sparad i {path.as_posix()}", "ok")
 

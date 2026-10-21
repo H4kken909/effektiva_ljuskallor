@@ -75,3 +75,13 @@ def require(saved, mode):
         raise ValueError(f"input.missing_data: {folder}: inte en transmissionsmätning (mode transmission)")
     if mode == "direct" and (not settings.get("use_response") or settings.get("mode") != "direct"):
         raise ValueError(f"input.missing_data: {folder}: inte responskorrigerad (spara med response on i mode direct)")
+
+
+def read_required(folder, mode):
+    """En sparad mätmapp ur read, kontrollerad av require: kalibrerad och sparad i mode (transmission eller direct).
+
+    Fel: ValueError med input.missing_data om mätningen saknar kalibrering eller inte passar mode.
+    """
+    saved = read(folder)
+    require(saved, mode)  # kontrollen delas av prompten och analysskriptet
+    return saved

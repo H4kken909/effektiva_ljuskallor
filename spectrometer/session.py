@@ -62,13 +62,14 @@ def set_setting(state, key, value):
     """
     state["settings"][key] = value
     state["spectrum"] = None
-    if key in ("roi", "channel", "axis") and state["response"] is not None:
-        state["response"] = None
-        state["use_response"] = False
-        out.say("Responsen glömd. Kör response build igen.")
-    if key in ("roi", "channel", "axis") and state["reference"] is not None:
-        state["reference"] = None
-        out.say("Referensen glömd. Kör reference igen.")
+    if key in ("roi", "channel", "axis"):
+        if state["response"] is not None:
+            state["response"] = None
+            state["use_response"] = False
+            out.say("Responsen glömd. Kör response build igen.")
+        if state["reference"] is not None:
+            state["reference"] = None
+            out.say("Referensen glömd. Kör reference igen.")
     if key == "axis" and state["coefficients"] is not None:
         state["coefficients"] = None
         state["pixel_range"] = None
@@ -151,10 +152,10 @@ def describe(state):
 
 def chain(state):
     """Kedjan på en rad: kalibrering och mörker ja/nej, respons nej, på eller av."""
-    yes = {True: "ja", False: "nej"}
     response = "nej" if state["response"] is None else ("på" if state["use_response"] else "av")
-    return (f"kalibrering {yes[state['coefficients'] is not None]} · mörker {yes[state['dark'] is not None]} · "
-            f"respons {response}")
+    calibrated = out.YES[state["coefficients"] is not None]
+    dark = out.YES[state["dark"] is not None]
+    return f"kalibrering {calibrated} · mörker {dark} · respons {response}"
 
 
 def status_text(state):
@@ -166,16 +167,19 @@ def controls_text(controls):
     """Reglagen som du valt, på en rad: auto off, exposure -6, gain 0 (None hoppas över); tom text om inget är valt."""
     words = []
     for name, value in controls.items():
-        if value is not None:
-            words.append(f"{name} {('on' if value else 'off') if isinstance(value, bool) else f'{value:g}'}")
+        if isinstance(value, bool):
+            words.append(f"{name} {'on' if value else 'off'}")
+        elif value is not None:
+            words.append(f"{name} {out.fmt(value)}")
     return ", ".join(words)
 
 
 def extra_lines(state):
     """Raderna som show skriver sist, bara för det du valt (1.2.x): så är show som förut i facit."""
     lines = []
-    if controls_text(state["controls"]):
-        lines.append(f"kamera: {controls_text(state['controls'])}")
+    controls = controls_text(state["controls"])
+    if controls:
+        lines.append(f"kamera: {controls}")
     if state["series"] is not None:
         lines.append(f"serie: {state['series']['name']} ({state['series']['file']})")
     if state["annotations"]:
@@ -187,4 +191,4 @@ def extra_lines(state):
 
 def annotations_text(annotations):
     """series note på en rad: current_mA=20 voltage_V=2.9 led=röd (tal som out.fmt)."""
-    return " ".join(f"{key}={f'{value:g}' if isinstance(value, float) else value}" for key, value in annotations.items())
+    return " ".join(f"{key}={out.fmt(value) if isinstance(value, float) else value}" for key, value in annotations.items())

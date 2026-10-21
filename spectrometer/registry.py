@@ -2,15 +2,17 @@
 
 help byggs ur registret i FEATURES-ordning och sedan i den ordning funktionerna står i sina filer
 (facit_04 jämför help rad för rad). need() och to_int() är argumentkontrollerna som alla kommandon delar.
+Hjälparna masked_values och roi_or_whole, som kommandona delar, ligger i calc.py.
 """
 
 import difflib
 import os
 import shlex
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from spectrometer import session
+from spectrometer import out, session
 
 
 @dataclass(frozen=True)
@@ -176,3 +178,48 @@ def to_frames(text):
     if n > MAX_FRAMES:
         raise ValueError(f"input.invalid_argument: N ska vara högst {MAX_FRAMES}")
     return n
+
+
+def at_most_one(args, name, what):
+    """Fel om kommandot name fick fler än ett ord. what är ordets namn i felraden, till exempel N.
+
+    Fel: ValueError med input.invalid_argument.
+    """
+    if len(args) > 1:
+        raise ValueError(f"input.invalid_argument: {name} tar högst ett ord ({what})")
+
+
+def plural(n, one, many):
+    """Antalet med ordet i rätt form: plural(1, "bild", "bilder") är "1 bild", plural(5, "bild", "bilder") är "5 bilder"."""
+    return f"{n} {one if n == 1 else many}"
+
+
+def ready(state, prompt):
+    """Kamera i en terminal: väntar på Enter efter prompten. Ger False om svaret är avbryt (fil eller pipad: True)."""
+    if state["settings"]["source"][0] != "camera" or not sys.stdin.isatty():
+        return True
+    try:
+        answer = out.ask(prompt)
+    except EOFError:
+        return False
+    return answer.strip().lower() != "avbryt"
+
+
+def need_spectrum(state):
+    """Senaste mätningen. Fel: ValueError med input.missing_data om det inte finns någon."""
+    spectrum = state["spectrum"]
+    if spectrum is None:
+        raise ValueError("input.missing_data: Ingen mätning än. Kör step först.")
+    return spectrum
+
+
+def open_new(path, mode, name, **options):
+    """Öppnar path för skrivning, bara om filen inte finns. mode är "x" (text) eller "xb" (bytes).
+
+    "x" och en öppen fil gör också att np.save och np.savez inte lägger till .npy eller .npz själva.
+    Fel: ValueError med input.invalid_argument om filen redan finns; name säger vilket kommando som inte skriver över.
+    """
+    try:
+        return open(path, mode, **options)
+    except FileExistsError as error:
+        raise ValueError(f"input.invalid_argument: {path} finns redan, {name} skriver inte över") from error

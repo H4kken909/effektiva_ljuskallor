@@ -29,11 +29,8 @@ def _check(name, a):
 
     if not isinstance(a, np.ndarray) or a.dtype != np.float64:
         raise ValueError(f"input.invalid_argument: {name} måste vara en float64-array")
-
     if not np.all(np.isfinite(a)):
-        raise ValueError(
-            f"input.invalid_argument: {name} får bara innehålla ändliga tal"
-        )
+        raise ValueError(f"input.invalid_argument: {name} får bara innehålla ändliga tal")
 
 
 def prepare(image, roi, axis, channel):
@@ -62,8 +59,7 @@ def prepare(image, roi, axis, channel):
         raise ValueError(
             f"input.invalid_argument: roi {roi} ligger utanför bilden ({w} bred, {h} hög)"
         )
-    view = image[y : y + height, x : x + width]
-    cut = view.astype(np.float64)
+    cut = image[y : y + height, x : x + width].astype(np.float64)
     blue = cut[:, :, CHANNEL_INDEX["blue"]]
     green = cut[:, :, CHANNEL_INDEX["green"]]
     red = cut[:, :, CHANNEL_INDEX["red"]]
@@ -80,13 +76,11 @@ def prepare(image, roi, axis, channel):
 
 
 def extract_spectrum(table):
-    """
-    Takes the average of the rows in the table, one amount per column.
-    Parameters: Table: the table from prepare(), form (rows, columns), float64 (ndarray).
-    Returns: Average per column, form (columns,), float64 (ndarray).
-    """
+    """Medlet av raderna i tabellen, ett värde per kolumn.
 
-    # Spektrumet är medlet av raderna, ett värde per kolumn. Se rev7, RX05.
+    Parametrar: table: tabellen från prepare(), (rader, kolumner) float64.
+    Returnerar: medlet per kolumn, (kolumner,) float64. Se rev7, RX05.
+    """
     return np.mean(table, axis=0)
 
 
@@ -196,6 +190,28 @@ def build_response(wavelengths, measured, known_wavelengths, known_values):
     return ratio / peak
 
 
+def _divide_where_above(numerator, denominator, mask, minimum, names):
+    """Delar numerator med denominator där masken är True och denominator är strikt större än minimum.
+
+    Gemensam kärna i apply_response och transmission_ratio. Strikt >: exakt minimum är ogiltigt.
+    Parametrar: names: (tröskelns, täljarens, nämnarens) namn som text, för felmeddelandena.
+    Returnerar: (values, mask): kvoten (P,) float64, NaN där den inte går att räkna, och den nya masken (P,) bool.
+    Fel: ValueError med input.invalid_argument vid en tröskel som inte är ändlig och större än 0,
+    eller NaN och inf på en giltig plats.
+    """
+    minimum_name, numerator_name, denominator_name = names
+    if not np.isfinite(minimum) or minimum <= 0:
+        raise ValueError(
+            f"input.invalid_argument: {minimum_name} måste vara ändligt och större än 0, fick {minimum}"
+        )
+    _check(numerator_name, numerator[mask])
+    _check(denominator_name, denominator[mask])
+    new_mask = mask & (denominator > minimum)
+    values = np.full(numerator.shape[0], np.nan)
+    np.divide(numerator, denominator, out=values, where=new_mask)
+    return values, new_mask
+
+
 def apply_response(signal, response, mask, min_response):
     """Delar signalen med responsen där masken är True och responsen är strikt större än min_response.
 
@@ -205,18 +221,8 @@ def apply_response(signal, response, mask, min_response):
     Fel: ValueError med input.invalid_argument vid en tröskel som inte är ändlig och större än 0,
     eller NaN och inf på en giltig plats.
     """
-    if not np.isfinite(min_response) or min_response <= 0:
-        raise ValueError(
-            f"input.invalid_argument: min_response måste vara ändligt och större än 0, fick {min_response}"
-        )
-    _check("signal", signal[mask])
-    _check("response", response[mask])
-    # Strikt >: exakt min_response är ogiltig. Se rev7, RX16.
-    new_mask = mask & (response > min_response)
-    values = np.full(signal.shape[0], np.nan)
-    # Korrigerad signal = signal delad med responsen, bara där den nya masken är True.
-    np.divide(signal, response, out=values, where=new_mask)
-    return values, new_mask
+    # Korrigerad signal = signal delad med responsen. Se rev7, RX16.
+    return _divide_where_above(signal, response, mask, min_response, ("min_response", "signal", "response"))
 
 
 def transmission_ratio(sample, reference, mask, min_reference):
@@ -229,18 +235,8 @@ def transmission_ratio(sample, reference, mask, min_reference):
     Fel: ValueError med input.invalid_argument vid en tröskel som inte är ändlig och större än 0,
     eller NaN och inf på en giltig plats.
     """
-    if not np.isfinite(min_reference) or min_reference <= 0:
-        raise ValueError(
-            f"input.invalid_argument: min_reference måste vara ändligt och större än 0, fick {min_reference}"
-        )
-    _check("sample", sample[mask])
-    _check("reference", reference[mask])
-    # Strikt >: exakt min_reference är ogiltig. Se rev7, T06.
-    valid = mask & (reference > min_reference)
-    values = np.full(sample.shape[0], np.nan)
-    # Transmission T = I_prov / I_ref, bara där den nya masken är True. Se rev7, RX17.
-    np.divide(sample, reference, out=values, where=valid)
-    return values, valid
+    # Transmission T = I_prov / I_ref. Se rev7, T06 och RX17.
+    return _divide_where_above(sample, reference, mask, min_reference, ("min_reference", "sample", "reference"))
 
 
 def extract_median(table):
@@ -276,3 +272,13 @@ def side_background(image, roi, margin, channel, axis="horizontal"):
             raise ValueError(f"input.invalid_argument: bakgrunden behöver {margin} fria rader på båda sidor om roi {roi}")
     rows = np.vstack([prepare(image, side, axis, channel) for side in sides])
     return np.median(rows, axis=0)
+
+
+def masked_values(spectrum):
+    """values i en mätning med NaN där masken är falsk."""
+    return np.where(spectrum["mask"], spectrum["values"], np.nan)
+
+
+def roi_or_whole(roi, image):
+    """ROI:n (x, y, bredd, höjd), eller hela bilden när ROI:n är None."""
+    return roi if roi is not None else (0, 0, image.shape[1], image.shape[0])

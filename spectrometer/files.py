@@ -15,6 +15,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from spectrometer import out
+
 
 def save_measurement(parent, spectrum, image, settings):
     """Sparar en mätning som en mapp med spectrum.csv, raw.png, settings.json och README.txt.
@@ -30,11 +32,7 @@ def save_measurement(parent, spectrum, image, settings):
     # Mappnamnet är samma ögonblick som measured_at i settings.json, när den finns. DAT-07.
     moment = datetime.fromisoformat(settings["measured_at"]) if "measured_at" in settings else datetime.now()
     stamp = moment.strftime("%Y%m%d-%H%M%S")
-    folder = Path(parent) / stamp
-    counter = 2
-    while folder.exists():
-        folder = Path(parent) / f"{stamp}-{counter}"
-        counter += 1
+    folder = _unused_path(Path(parent), stamp)
     _check_free_space(parent)
     partial = folder.with_name(folder.name + ".partial")
     partial.mkdir(parents=True)
@@ -67,15 +65,7 @@ def _write_files(folder, spectrum, image, settings):
                 # Absorbans A = -log10(T), tom där T saknas eller är 0 eller mindre. Se rev7, Krav 22.
                 row.append(f"{-math.log10(value):.10g}" if ok and value > 0 else "")
             writer.writerow(row + [_cell(column[k]) for column in extra.values()])
-    raw_path = folder / "raw.png"
-    try:
-        written, encoded = cv2.imencode(".png", image)  # imencode och tofile, inte imwrite: klarar åäö i Windows
-        if written:
-            encoded.tofile(raw_path)
-    except OSError:
-        written = False
-    if not written:
-        raise OSError(f"files.write_failed: raw.png kunde inte sparas: {raw_path}")
+    save_png(folder / "raw.png", image)
     _write_readme(folder, settings)
     with open(folder / "settings.json", "w", encoding="utf-8") as f:
         json.dump(settings, f, indent=2, ensure_ascii=False)
@@ -192,9 +182,7 @@ def save_snaps(parent, images):
     paths = []
     for i, image in enumerate(images, start=1):
         stem = f"snap-{stamp}" if len(images) == 1 else f"snap-{stamp}-{i:03d}"
-        path, counter = folder / f"{stem}.png", 2
-        while path.exists():
-            path, counter = folder / f"{stem}-{counter}.png", counter + 1
+        path = _unused_path(folder, stem, ".png")
         save_png(path, image)
         paths.append(path)
     return paths
@@ -315,6 +303,16 @@ SAVED_FILES = ("spectrum.csv", "raw.png", "settings.json", "README.txt")  # file
 MIN_FREE_MB = 50  # en 1080p-PNG är några MB (antaget); under 50 MB ledigt sparas inget
 
 
+def _unused_path(folder, stem, suffix=""):
+    """folder/stem+suffix, eller med -2, -3 ... efter stem när namnet redan finns (en befintlig fil skrivs aldrig över)."""
+    path = folder / (stem + suffix)
+    counter = 2
+    while path.exists():
+        path = folder / f"{stem}-{counter}{suffix}"
+        counter += 1
+    return path
+
+
 def _check_free_space(parent):
     """Kräver MIN_FREE_MB ledigt på närmaste befintliga mapp ovanför parent. Fel: OSError med files.write_failed."""
     folder = Path(parent).resolve()
@@ -353,7 +351,6 @@ def opencv_version():
     return cv2.__version__
 
 
-YES = {True: "ja", False: "nej"}
 README_TEXT = """\
 Mätmapp från spektrometerprogrammet (Effektiva ljuskällor, TFYY51, grupp GRYb1).
 
@@ -391,10 +388,10 @@ def _write_readme(folder, settings):
         f"  roi: {settings.get('roi')}",
         f"  frames: {settings.get('frames')}",
         f"  läge: {settings.get('mode')}",
-        f"  kalibrerad: {YES[settings.get('coefficients') is not None]}",
-        f"  mörker: {YES[bool(settings.get('dark'))]}",
-        f"  respons: {YES[bool(settings.get('use_response')) and not transmission]}",
-        f"  referens: {YES[transmission]}",
+        f"  kalibrerad: {out.YES[settings.get('coefficients') is not None]}",
+        f"  mörker: {out.YES[bool(settings.get('dark'))]}",
+        f"  respons: {out.YES[bool(settings.get('use_response')) and not transmission]}",
+        f"  referens: {out.YES[transmission]}",
         f"  programversion: {settings.get('program_version')}",
         f"  mätt: {settings.get('measured_at')}",
     ]
@@ -413,11 +410,7 @@ def save_roi_image(parent, image, roi):
     x, y, w, h = roi
     cv2.rectangle(copy, (x, y), (x + w - 1, y + h - 1), (0, 255, 0), 1)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    path = Path(parent) / f"roi-{stamp}.png"
-    counter = 2
-    while path.exists():
-        path = Path(parent) / f"roi-{stamp}-{counter}.png"
-        counter += 1
+    path = _unused_path(Path(parent), f"roi-{stamp}", ".png")
     path.parent.mkdir(parents=True, exist_ok=True)
     ok, data = cv2.imencode(".png", copy)
     if not ok:

@@ -43,15 +43,11 @@ def cmd_response_save(state, args):
         "axis": np.array(cfg["axis"]),
         "coefficients": _empty_if_none(state["coefficients"], np.float64),
         "pixel_range": _empty_if_none(state["pixel_range"], np.float64),
-        "frames": np.array(response.get("frames") or 0),
-        "known_file": np.array(response.get("known_file") or ""),
+        "frames": np.array(response["frames"] or 0),
+        "known_file": np.array(response["known_file"] or ""),
         "taken": np.array(taken.isoformat(timespec="seconds") if taken else ""),
     }
-    try:
-        f = open(args[0], "xb")  # "x": bara en ny fil; en öppen fil gör att np.savez inte lägger till .npz själv
-    except FileExistsError as error:
-        raise ValueError(f"input.invalid_argument: {args[0]} finns redan, response save skriver inte över") from error
-    with f:
+    with registry.open_new(args[0], "xb", "response save") as f:
         np.savez(f, **arrays)
     out.say(f"respons: sparad i {args[0]}")
 
@@ -113,11 +109,7 @@ def cmd_dark_save(state, args):
     registry.need(args, ("FIL",), "dark save")
     if state["dark"] is None:
         raise ValueError("input.missing_data: inget mörker, kör dark först")
-    try:
-        f = open(args[0], "xb")  # "x": bara en ny fil; en öppen fil gör att np.save inte lägger till .npy själv
-    except FileExistsError as error:
-        raise ValueError(f"input.invalid_argument: {args[0]} finns redan, dark save skriver inte över") from error
-    with f:
+    with registry.open_new(args[0], "xb", "dark save") as f:
         np.save(f, state["dark"].astype(np.float32))
     height, width = state["dark"].shape[:2]
     out.say(f"mörker: sparat i {args[0]} ({width} x {height} pixlar)")

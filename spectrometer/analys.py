@@ -8,7 +8,7 @@ import sys
 
 import numpy as np
 
-from spectrometer import out, peaks, registry
+from spectrometer import calc, out, peaks, registry
 from spectrometer.analysis import bandgap, color, mapp
 
 PEAK_MIN = 0.10  # toppar: standardtröskeln, andel av största värdet (samma som toppar i prompten)
@@ -36,7 +36,7 @@ def _top_peaks(saved, fraction, count):
     """De count högsta topparna som (x, värde), högst först; tröskeln är fraction av största giltiga värdet."""
     if not saved["mask"].any():
         return []
-    values = np.where(saved["mask"], saved["values"], np.nan)
+    values = calc.masked_values(saved)
     found = peaks.find_peaks(saved["values"], saved["mask"], fraction * np.nanmax(values), PEAK_DISTANCE)[:count]
     index = np.arange(values.size)
     return [(float(np.interp(peaks.refine_peak(values, i), index, saved["x"])), float(values[i])) for i in found]
@@ -47,7 +47,7 @@ def cmd_sammanfatta(args):
     folder, _options = _folder_and_options(args, ())
     saved = mapp.read(folder)
     settings, mask = saved["settings"], saved["mask"]
-    unit = "nm" if saved["x_label"] == "nm" else "pixel"
+    unit = saved["x_label"]  # "nm" eller "pixel"
     out.say(f"mapp: {saved['folder']}")
     out.say(f"mättid: {settings.get('measured_at', 'okänd')}")
     out.say(f"läge: {settings.get('mode', 'okänt')}, enhet: {mapp.unit(settings)}, "
@@ -68,7 +68,7 @@ def cmd_toppar(args):
     fraction = registry.to_float("F", options.get("--min", str(PEAK_MIN)), 0)
     count = registry.to_int("N", options.get("--antal", "10"), 1)
     saved = mapp.read(folder)
-    unit = "nm" if saved["x_label"] == "nm" else "pixel"
+    unit = saved["x_label"]  # "nm" eller "pixel"
     out.say(f"toppar i {saved['folder']}: över {100 * fraction:g} % av största värdet")
     found = _top_peaks(saved, fraction, count)
     if not found:
@@ -80,16 +80,14 @@ def cmd_toppar(args):
 def cmd_farg(args):
     """farg MAPP: färgen i en sparad mätning, som color i prompten (sparad med response on i mode direct)."""
     folder, _options = _folder_and_options(args, ())
-    saved = mapp.read(folder)
-    mapp.require(saved, "direct")
+    saved = mapp.read_required(folder, "direct")
     out.say_all(color.report(saved["x"], saved["values"], saved["mask"]))
 
 
 def cmd_kant(args):
     """kant MAPP: bandgapet ur en sparad transmissionsmätning, som bandgap MAPP i prompten (Krav 22)."""
     folder, _options = _folder_and_options(args, ())
-    saved = mapp.read(folder)
-    mapp.require(saved, "transmission")
+    saved = mapp.read_required(folder, "transmission")
     out.say_all(bandgap.report(saved["x"], saved["values"], saved["mask"]))
 
 

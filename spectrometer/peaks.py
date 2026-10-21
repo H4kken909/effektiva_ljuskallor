@@ -74,5 +74,6 @@ def match_peaks(peak_pixels, line_nm):
         fitted = calc.evaluate_wavelength(pixels, calc.fit_wavelength(pixels, chosen, 1))
         tried.append((float(np.sqrt(np.mean((chosen - fitted) ** 2))), chosen))
     tried.sort(key=lambda t: t[0])
+    best_rms, best = tried[0]
     next_rms = tried[1][0] if len(tried) > 1 else float("inf")
-    return tried[0][1], tried[0][0], next_rms
+    return best, best_rms, next_rms

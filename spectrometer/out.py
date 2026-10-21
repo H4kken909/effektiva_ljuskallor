@@ -11,6 +11,7 @@ import time
 FARG = sys.stdin.isatty() and sys.stdout.isatty() and "NO_COLOR" not in os.environ
 STIL = {"ok": "green", "info": "blue", "run": "cyan", "warn": "yellow", "error": "bold red", "prompt": "cyan",
         "idle": "dim", "running": "green"}
+YES = {True: "ja", False: "nej"}  # ja/nej i README.txt och session.chain (show skriver ja/nej själv)
 
 if FARG:
     try:
@@ -42,6 +43,7 @@ def error(text):
 def warn(text):
     """Varningsrad: Varning: <text>, gul i terminal."""
     say(f"Varning: {text}", "warn")
+
 
 def ask(prompt):
     """Läs en rad efter prompten (input skriver prompten); prompten cyan i terminal."""

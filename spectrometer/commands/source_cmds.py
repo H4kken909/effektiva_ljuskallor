@@ -119,8 +119,7 @@ def cmd_cameras(state, args):
 @registry.command("snap", "[N]: spara N råbilder (1) ur källan som PNG i output_dir, utan att mäta")
 def cmd_snap(state, args):
     """Kommandot snap [N]: läser N bilder ur källan och sparar dem som PNG; state ändras inte."""
-    if len(args) > 1:
-        raise ValueError("input.invalid_argument: snap tar högst ett ord (N)")
+    registry.at_most_one(args, "snap", "N")
     n = registry.to_frames(args[0]) if args else 1
     images = measure._with_source(state, None, lambda s: source.read_frames(s, n))
     for path in files.save_snaps(state["settings"]["output_dir"], images):
@@ -130,8 +129,7 @@ def cmd_snap(state, args):
 @registry.command("image", "[FIL]: spara en bild ur källan med ROI:n inritad (bild.png)")
 def cmd_image(state, args):
     """Kommandot image [FIL]: läser en bild och sparar en kopia med ROI:n som grön ram, för att se var ROI:n ligger."""
-    if len(args) > 1:
-        raise ValueError("input.invalid_argument: image tar högst ett ord (FIL)")
+    registry.at_most_one(args, "image", "FIL")
     path = args[0] if args else "bild.png"
     if not path.lower().endswith(".png"):
         raise ValueError(f"input.invalid_argument: {path}: filnamnet ska sluta på .png")

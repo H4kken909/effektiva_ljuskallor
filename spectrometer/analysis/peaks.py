@@ -9,13 +9,14 @@ MIN_DISTANCE = 3  # toppar närmare än så (punkter) slås ihop till den högst
 def find_peaks(y, mask):
     """Lokala maxima över MIN_FRACTION·max, minst MIN_DISTANCE punkter isär. Ger index, störst först."""
     yy = np.where(mask, y, -np.inf)
-    top = np.nanmax(yy[np.isfinite(yy)]) if np.any(np.isfinite(yy)) else 0.0
-    hits = []
     if len(yy) and np.all(yy == yy[0]):
         return []  # helt platt kurva: ingen topp, inte heller i sista pixeln
+    finite = yy[np.isfinite(yy)]
+    limit = MIN_FRACTION * (finite.max() if finite.size else 0.0)
     around = np.pad(yy, 1, constant_values=-np.inf)  # utanför kanten räknas som lägre: första och sista pixeln kan vara toppar
+    hits = []
     for i in range(len(yy)):
-        if around[i + 1] >= around[i] and around[i + 1] > around[i + 2] and yy[i] >= MIN_FRACTION * top and np.isfinite(yy[i]):
+        if around[i + 1] >= around[i] and around[i + 1] > around[i + 2] and yy[i] >= limit and np.isfinite(yy[i]):
             hits.append(i)
     hits.sort(key=lambda i: -yy[i])
     kept = []
@@ -29,7 +30,8 @@ def centroid(x, y, i):
     """Toppens läge som tyngdpunkt över tre punkter (sub-pixel)."""
     lo, hi = max(i - 1, 0), min(i + 2, len(x))
     w = np.clip(y[lo:hi], 0, None)
-    return float(np.sum(x[lo:hi] * w) / np.sum(w)) if np.sum(w) > 0 else float(x[i])
+    total = np.sum(w)
+    return float(np.sum(x[lo:hi] * w) / total) if total > 0 else float(x[i])
 
 
 def bases(y, i):
@@ -85,11 +87,7 @@ def width(x, y, i, saturated=None):
 
 
 def fwhm(x, y, i):
-    """Full bredd vid halva höjden över baslinjen kring index i (width), linjärt interpolerad; NaN om den är ogiltig.
-
-    1.2.15: halva höjden räknas över en rak baslinje mellan baspunkterna (rev7), inte från noll. Utan bakgrund (mörkret
-    avdraget, baspunkterna på noll) blir bredden densamma som förut.
-    """
+    """Full bredd vid halva höjden över baslinjen kring index i (bara bredden ur width); NaN om den är ogiltig."""
     return width(x, y, i)[0]
 
 

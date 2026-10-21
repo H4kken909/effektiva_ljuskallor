@@ -6,6 +6,7 @@ import time
 import numpy as np
 
 from spectrometer import (
+    calc,
     display,
     files,
     measure,
@@ -31,32 +32,30 @@ def cmd_step(state, args):
         state["spectrum"] = None  # save ska inte spara en mätning som step vägrade
         raise ValueError("input.missing_data: ingen giltig position i spektrumet "
                          "(alla under tröskeln eller utanför kalibreringen)")
-    i = int(np.nanargmax(np.where(spectrum["mask"], spectrum["values"], np.nan)))
-    frames = state["settings"]["frames"]
-    word = "bild" if frames == 1 else "bilder"
-    out.say(f"Topp {out.fmt(spectrum['values'][i])} vid {spectrum['x_label']} {out.fmt(spectrum['x'][i])} ({frames} {word})")
+    i = int(np.nanargmax(calc.masked_values(spectrum)))
+    bilder_text = registry.plural(state["settings"]["frames"], "bild", "bilder")
+    out.say(f"Topp {out.fmt(spectrum['values'][i])} vid {spectrum['x_label']} {out.fmt(spectrum['x'][i])} ({bilder_text})")
     quality.warn_saturated(spectrum["saturated_px"])
     if source.auto_on(spectrum["camera"]):  # 1.2.0: KRV-03
         out.warn("auto-exponering är på: kameran ändrar exponeringen själv mellan mätningarna. Kör auto off.")
     quality.warn_changed(spectrum["camera"], state["dark_camera"], "mörkret", "dark")
     session.warn_old_dark(state)  # PRO-12
     if state["reference"] is not None:
-        quality.warn_changed(spectrum["camera"], state["reference"].get("camera"), "referensen", "reference")
+        quality.warn_changed(spectrum["camera"], state["reference"]["camera"], "referensen", "reference")
     if state["dark"] is not None and state["mode"] == "direct" and not state["use_response"]:
         # Negativt efter mörkret är rätt (brus), men starkt negativt betyder att mörkret inte passar. LOG-17.
         low = np.count_nonzero(spectrum["values"][spectrum["mask"]] < -5)
         if low:
-            unit = "position" if low == 1 else "positioner"
             out.warn(
-                f"{low} {unit} under -5 counts efter mörkeravdrag. Mörkret passar inte (exponering, gain, temperatur)?"
+                f"{registry.plural(low, 'position', 'positioner')} under -5 counts efter mörkeravdrag. "
+                "Mörkret passar inte (exponering, gain, temperatur)?"
             )
     if state["mode"] == "transmission":
         # Brus runt T = 1 ger T > 1 på ungefär halva positionerna; varna först över 1,05 (planens gräns). LOG-16.
         over = np.count_nonzero(spectrum["values"][spectrum["mask"]] > 1.05)
         if over:
-            unit = "position" if over == 1 else "positioner"
             out.warn(
-                f"transmission över 105 % på {over} {unit} "
+                f"transmission över 105 % på {registry.plural(over, 'position', 'positioner')} "
                 f"(högst {spectrum['values'][i]:g} vid {spectrum['x_label']} {spectrum['x'][i]:g})"
             )
 
@@ -67,21 +66,21 @@ def cmd_save(state, args):
     """Kommandot save [DIR]: sparar senaste mätningen i en ny mätmapp under DIR eller output_dir."""
     excel = "--excel" in args  # 1.2.2
     args = [word for word in args if word != "--excel"]
-    if len(args) > 1:
-        raise ValueError("input.invalid_argument: save tar högst ett ord (DIR)")
-    if state["spectrum"] is not None and "loaded_from" in state["spectrum"]:
-        raise ValueError(f"input.invalid_argument: mätningen kommer från load {state['spectrum']['loaded_from']}, den är redan sparad")
-    if state["spectrum"] is None:
+    registry.at_most_one(args, "save", "DIR")
+    spectrum = state["spectrum"]
+    if spectrum is None:
         raise ValueError("input.missing_data: Ingen mätning än. Kör step först.")
+    if "loaded_from" in spectrum:
+        raise ValueError(f"input.invalid_argument: mätningen kommer från load {spectrum['loaded_from']}, den är redan sparad")
     parent = args[0] if args else state["settings"]["output_dir"]
     if state["series"] is not None:  # 1.2.1
-        if state["spectrum"].get("saturated_px"):
+        if spectrum["saturated_px"]:
             raise ValueError("input.invalid_argument: mätningen är mättad och sparas inte i serien. "
                              "Sänk exposure eller strömmen")
         parent = args[0] if args else state["series"]["folder"]
     saved = state["settings"].copy()
-    saved["saturated_px"] = state["spectrum"].get("saturated_px")  # ROI-pixlar som var 255, i den värsta bilden
-    saved["camera"] = state["spectrum"].get("camera")  # drivrutinens reglage under mätningen; för en fil bara kind: file, resten None
+    saved["saturated_px"] = spectrum["saturated_px"]  # ROI-pixlar som var 255, i den värsta bilden
+    saved["camera"] = spectrum["camera"]  # drivrutinens reglage under mätningen; för en fil bara kind: file, resten None
     saved["pixel_range"] = [float(v) for v in state["pixel_range"]] if state["pixel_range"] is not None else None
     saved["image_size"] = [state["image"].shape[1], state["image"].shape[0]]  # bredd, höjd i pixlar
     saved["calibration_points_file"] = state["calibration_points_file"]
@@ -102,15 +101,15 @@ def cmd_save(state, args):
     # Id sist, när rigg, reglage och serie finns med; note och annotations undantas av meta.NOT_IN_ID, taken är en tid.
     counted = {key: value for key, value in saved.items() if key not in ("settings_id", "taken")}
     saved["settings_id"] = meta.settings_id(counted)
-    folder = files.save_measurement(parent, state["spectrum"], state["image"], saved)
-    state["spectrum"]["saved_in"] = folder.as_posix()  # quit frågar inte om en sparad mätning
+    folder = files.save_measurement(parent, spectrum, state["image"], saved)
+    spectrum["saved_in"] = folder.as_posix()  # quit frågar inte om en sparad mätning
     try:
         display.save_png(state, folder)
     except (ValueError, RuntimeError, OSError) as error:
         out.warn(f"spectrum.png kunde inte ritas ({error}). Mätningen är sparad ändå.")
     out.say(f"Sparad i {folder.as_posix()}")
     if state["series"] is not None:  # 1.2.1: en rad per mätning i serie.csv
-        rows = series.add_row(state["series"]["file"], folder, saved, state["spectrum"])
+        rows = series.add_row(state["series"]["file"], folder, saved, spectrum)
         out.say(f"serie {state['series']['name']}: rad {rows} i {state['series']['file']}")
     if excel:
         out.say(f"Excel: {files.save_excel(folder).as_posix()}")
@@ -123,8 +122,7 @@ def cmd_start(state, args):
 
     Källan och fönstret stängs alltid. Fel: ValueError med input.invalid_argument om SEKUNDER inte är ett tal över 0.
     """
-    if len(args) > 1:
-        raise ValueError("input.invalid_argument: start tar högst ett ord (SEKUNDER)")
+    registry.at_most_one(args, "start", "SEKUNDER")
     seconds = registry.to_float("SEKUNDER", args[0], 0) if args else None  # None: tills Ctrl+C. KOM-42
     out.say("Live. Tryck Ctrl+C eller stäng fönstret för att stoppa.")
     kind, value = state["settings"]["source"]
@@ -146,7 +144,7 @@ def cmd_start(state, args):
                 break
             started = time.perf_counter()
             spectrum = measure.measure(state, src)
-            masked = np.where(spectrum["mask"], spectrum["values"], np.nan)
+            masked = calc.masked_values(spectrum)
             if not _live_frame(state, win, spectrum, masked):
                 out.say("live stoppad")
                 break
@@ -185,8 +183,7 @@ def cmd_stability(state, args):
     variation: standardavvikelsen delad med medlet, i %. drift: medlet av sista tredjedelen minus medlet av första,
     delat med medlet, i %. Visar lampans uppvärmning, autoexponering som jagar och flimmer. Talen är relativa.
     """
-    if len(args) > 1:
-        raise ValueError("input.invalid_argument: stability tar högst ett ord (N)")
+    registry.at_most_one(args, "stability", "N")
     n = registry.to_int("N", args[0], 3) if args else 30
     peaks = measure._with_source(state, None, lambda s: peak_series(state, s, n))
     mean = np.mean(peaks)
@@ -216,15 +213,14 @@ def cmd_perf(state, args):
 
     läs: bilderna ur källan. räkna: mörker, ROI, kanal, medel, kalibrering, respons. Att öppna källan räknas inte.
     """
-    if len(args) > 1:
-        raise ValueError("input.invalid_argument: perf tar högst ett ord (N)")
+    registry.at_most_one(args, "perf", "N")
     n = registry.to_int("N", args[0], 1) if args else 20
     reads, computes = measure._with_source(state, None, lambda s: time_series(state, s, n))
     for name, seconds in (("läs", reads), ("räkna", computes)):
         out.say(f"{name}: median {np.median(seconds) * 1000:.2f} ms, p95 {np.percentile(seconds, 95) * 1000:.2f} ms")
     frames = state["settings"]["frames"]
     rate = n * frames / (reads.sum() + computes.sum())
-    out.say(f"{n} mätningar med {frames} {'bild' if frames == 1 else 'bilder'}: {rate:.1f} bilder/s utan fönster")
+    out.say(f"{n} mätningar med {registry.plural(frames, 'bild', 'bilder')}: {rate:.1f} bilder/s utan fönster")
     display.remember(state, "performance", {"read_ms": reads * 1000, "compute_ms": computes * 1000, "rate": rate})
 
 

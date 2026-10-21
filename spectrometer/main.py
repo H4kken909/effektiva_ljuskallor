@@ -11,6 +11,7 @@ import numpy as np
 
 from spectrometer import (
     __version__,
+    calc,
     commands,
     files,
     measure,
@@ -44,7 +45,7 @@ def run_file(state, path):
         folder = files.save_measurement(state["settings"]["output_dir"], spectrum, state["image"], state["settings"])
         out.say(f"Sparad i {folder.as_posix()}")
         win = plot.open_plot()
-        masked = np.where(spectrum["mask"], spectrum["values"], np.nan)
+        masked = calc.masked_values(spectrum)
         plot.draw(win, spectrum["x"], masked, spectrum["x_label"], spectrum["y_label"])
         plot.show()
     except (ValueError, RuntimeError, OSError) as error:

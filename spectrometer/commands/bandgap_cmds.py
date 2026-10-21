@@ -10,12 +10,9 @@ def _transmission(state, args):
     Fel: ValueError med input.missing_data utan mätning, kalibrering eller transmission.
     """
     if args:
-        saved = mapp.read(args[0])
-        mapp.require(saved, "transmission")  # samma kontroll som analysskriptet
+        saved = mapp.read_required(args[0], "transmission")
         return saved["x"], saved["values"], saved["mask"]
-    spectrum = state["spectrum"]
-    if spectrum is None:
-        raise ValueError("input.missing_data: Ingen mätning än. Kör step först.")
+    spectrum = registry.need_spectrum(state)
     if state["coefficients"] is None:
         raise ValueError("input.missing_data: ingen kalibrering, kör calibrate först")
     if state["mode"] != "transmission":
@@ -37,8 +34,7 @@ def cmd_bandgap(state, args):
     """
     fit = "--anpassa" in args
     words = [word for word in args if word != "--anpassa"]
-    if len(words) > 1:
-        raise ValueError("input.invalid_argument: bandgap tar högst ett ord (MAPP)")
+    registry.at_most_one(words, "bandgap", "MAPP")
     report = bandgap.fit_report if fit else bandgap.report
     x, values, mask = _transmission(state, words)
     out.say_all(report(x, values, mask))

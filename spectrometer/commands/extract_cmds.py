@@ -53,7 +53,7 @@ def cmd_background(state, args):
     n = registry.to_int("N", args[0], 1)
     image, cfg = state["image"], state["settings"]
     if image is not None:
-        roi = cfg["roi"] if cfg["roi"] is not None else (0, 0, image.shape[1], image.shape[0])
+        roi = calc.roi_or_whole(cfg["roi"], image)
         calc.side_background(image, roi, n, cfg["channel"], cfg["axis"])  # fel här om raderna inte ryms
     else:
         out.say("Bakgrunden kontrolleras vid nästa mätning.")
