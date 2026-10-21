@@ -4,6 +4,28 @@ Programmet gör en kamerabild (eller en bildfil) av ett spektrum till en spektra
 kalibrering, med mörkeravdrag, responskorrigering och transmission. Kursen TFYY51 vid Linköpings universitet,
 grupp GRYb1. Allt är relativt: kameran ger counts, inte watt eller lumen.
 
+## Vad är vad i mappen
+
+| Post | Vad det är | Behöver du den? |
+|---|---|---|
+| `spectrometer/` | programmet (Python-paketet) | ja, det är programmet |
+| `spektro.py` | startar programmet med startskärm (`python spektro.py`) | ja |
+| `docs/` | bruksanvisning, snabbkort, kommandoreferens, riggfält, mätpass-mall | när du mäter |
+| `exempel/` | färdiga kommandofiler att köra med `run`, och mallen `rigg.json` | när du mäter |
+| `kalibrering/` | kända spektrallinjer och lampa (csv) för `calibrate` och `response build` | när du kalibrerar |
+| `demo/` | kommandofiler och manus för demon | bara vid demon |
+| `tests/` | testerna; `tests/kommandon/` är Adrians kommandofiler med facit | bara när du ändrar kod |
+| `tools/` | två skript som skriver `docs/kommandon.md` och `docs/felkatalog.md` ur koden | bara när du ändrar kod |
+| `startskarm/` | bilden på startskärmen | nej, används av `spektro.py` |
+| `check_install.py`, `arch_start.bash` | kontroll av installationen; start på Arch Linux | vid installation |
+| `pyproject.toml`, `requirements*.txt`, `.python-version` | Pythons inställningar och beroenden | vid installation |
+| `CHANGELOG.md` | versionerna | nej |
+| `.github/`, `.gitattributes`, `.gitignore` | CI på GitHub och gits inställningar | nej |
+
+Mappar som dyker upp när du kör men inte hör till repot (git ignorerar dem): `.venv/` (Python och biblioteken), `data/`
+(dina mätningar), `logs/`, `__pycache__/`, `.ruff_cache/`. Grenen `dev` har dessutom mappen `dev/` med allt som bara
+utvecklingen behöver; på `main` finns den inte.
+
 ## Installation
 
 Python 3.12 (se `.python-version`). I projektmappen:
