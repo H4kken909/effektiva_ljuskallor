@@ -109,6 +109,7 @@ def cmd_history_save(state, args):
                   "clear dark, clear calibration, clear response, clear reference eller clear all")
 def cmd_clear(state, args):
     """Kommandot clear NAMN: tar bort mörker, kalibrering, respons eller referens; all tar alla fyra, inget annat.
+    Senaste mätningen glöms alltid (den mättes med det borttagna); inställningar, reglage, serie, note och vy står kvar.
 
     Det som mättes med det borttagna glöms också: dark tar referensen, calibration tar respons och referens (x i nm).
     Utan referens lämnas mode transmission (mode blir direct och det skrivs).
