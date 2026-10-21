@@ -36,8 +36,8 @@ def test_equal_energy_and_555_nm():
 
 
 def test_lampa_a_file():
-    """PRO-20: kalibrering/lampa_A.csv har 300–830 nm i steg om 1 nm, 100 vid 560 nm och kvoten 1,776 vid 650/550."""
-    nm, power = files.load_known(ROT / "kalibrering" / "lampa_A.csv")
+    """PRO-20: exempel/kalibrering/lampa_A.csv har 300–830 nm i steg om 1 nm, 100 vid 560 nm och kvoten 1,776 vid 650/550."""
+    nm, power = files.load_known(ROT / "exempel" / "kalibrering" / "lampa_A.csv")
     assert nm[0] == 300 and nm[-1] == 830 and nm.size == 531
     assert power[nm == 560][0] == pytest.approx(100)
     assert power[nm == 650][0] / power[nm == 550][0] == pytest.approx(1.776, abs=1e-3)

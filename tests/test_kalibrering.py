@@ -116,7 +116,7 @@ def test_toppar_descending_calibration_keeps_pixels(tmp_path, capsys):
 
 ROT = Path(__file__).resolve().parents[1]
 HG = [404.656, 435.833, 546.074, 576.960, 579.066]
-LINJER = (ROT / "kalibrering" / "hg_linjer.csv").as_posix()
+LINJER = (ROT / "exempel" / "kalibrering" / "hg_linjer.csv").as_posix()
 
 
 def hg_image(nm_per_pixel=0.4, sigma=1.5, noise=2.0):
@@ -185,7 +185,7 @@ def test_toppar_writes_point_file_once(tmp_path):
 def test_mall_refused_until_filled():
     state = session.new_state(session.DEFAULTS)
     with pytest.raises(ValueError, match="samma pixel står två gånger"):
-        registry.run_command(state, f"calibrate {(ROT / 'kalibrering' / 'punkter_MALL.csv').as_posix()}")
+        registry.run_command(state, f"calibrate {(ROT / 'exempel' / 'kalibrering' / 'punkter_MALL.csv').as_posix()}")
     np.testing.assert_allclose(files.load_lines(LINJER), HG)
 
 
@@ -193,8 +193,8 @@ def test_exempel_files_find_then_fit(tmp_path, monkeypatch, capsys):
     """Kommandofilerna i exempel/ med en testbild i stället för kameran: hitta, skriv punktfilen, anpassa."""
     image, _pixels = hg_image()
     cv2.imwrite(str(tmp_path / "hg.png"), image)
-    (tmp_path / "kalibrering").mkdir()
-    shutil.copy(LINJER, tmp_path / "kalibrering")
+    (tmp_path / "exempel" / "kalibrering").mkdir(parents=True)  # samma sökväg som kommandofilerna använder
+    shutil.copy(LINJER, tmp_path / "exempel" / "kalibrering")
     monkeypatch.chdir(tmp_path)
     state = session.new_state(session.DEFAULTS)
 
@@ -204,7 +204,7 @@ def test_exempel_files_find_then_fit(tmp_path, monkeypatch, capsys):
 
     run("kalibrera_1_hitta.txt")
     assert "förslag: 5 toppar mot 5 linjer" in capsys.readouterr().out
-    registry.run_command(state, "toppar kalibrering/hg_linjer.csv kalibrering/punkter.csv")  # efter granskningen
+    registry.run_command(state, "toppar exempel/kalibrering/hg_linjer.csv exempel/kalibrering/punkter.csv")
     run("kalibrera_2_anpassa.txt")
     text = capsys.readouterr().out
     assert "546.1 nm" in text
