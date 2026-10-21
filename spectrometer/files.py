@@ -17,6 +17,10 @@ import numpy as np
 
 from spectrometer import out
 
+SAVED_FILES = ("spectrum.csv", "raw.png", "settings.json", "README.txt")  # filerna som varje hel mätmapp har
+MIN_FREE_MB = 50  # en 1080p-PNG är några MB (antaget); under 50 MB ledigt sparas inget
+Y_LABELS = {"transmission": "transmission (kvot)", "response": "korrigerad signal (relativ)", "direct": "signal (counts)"}
+
 
 def save_measurement(parent, spectrum, image, settings):
     """Sparar en mätning som en mapp med spectrum.csv, raw.png, settings.json och README.txt.
@@ -53,14 +57,10 @@ def _write_files(folder, spectrum, image, settings):
     with open(folder / "spectrum.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         x_col = "x_px" if spectrum["x_label"] == "pixel" else "x_nm"
-        header = [x_col, "value", "valid"]
-        if transmission:
-            header.append("absorbance")
         extra = _extra_columns(spectrum, x_col)  # 1.2.2: raw_counts och x_px sist, så att kolumn 1-3 står kvar
-        writer.writerow(header + list(extra))
+        writer.writerow([x_col, "value", "valid"] + (["absorbance"] if transmission else []) + list(extra))
         for k, (x, value, ok) in enumerate(zip(spectrum["x"], spectrum["values"], spectrum["mask"])):
-            cell = f"{value:.10g}" if ok else ""
-            row = [f"{x:.10g}", cell, "true" if ok else "false"]
+            row = [f"{x:.10g}", f"{value:.10g}" if ok else "", "true" if ok else "false"]
             if transmission:
                 # Absorbans A = -log10(T), tom där T saknas eller är 0 eller mindre. Se rev7, Krav 22.
                 row.append(f"{-math.log10(value):.10g}" if ok and value > 0 else "")
@@ -71,11 +71,17 @@ def _write_files(folder, spectrum, image, settings):
         json.dump(settings, f, indent=2, ensure_ascii=False)
 
 
-def load_points(path):
-    """
-    Läser en punktfil med kolumnerna pixel, wavelength_nm och check.
+def _csv_rows(path):
+    """Varje icke-tom rad i CSV-filen som (radnummer från 1, fält); en tom rad sist i filen är vanlig."""
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        for line_no, row in enumerate(csv.reader(f), start=1):
+            if row:
+                yield line_no, row
 
-    Parametrar: path: sökvägen till CSV-filen (str eller Path); check är 0 för anpassning och 1 för kontroll
+
+def load_points(path):
+    """Läser en punktfil med kolumnerna pixel, wavelength_nm och check (0 för anpassning, 1 för kontroll).
+
     Returnerar: (pixels, wavelengths, is_check): pixlar i hela bilden (K,) float64, våglängder i nm (K,) float64 och is_check (K,) bool, True för en kontrollpunkt.
     Fel: ValueError med input.invalid_argument, filnamnet och radnumret vid fel rubrik, fel antal fält, ett fält som inte är ett tal, ett ogiltigt värde eller check som inte är 0 eller 1; OSError om filen saknas.
     """
@@ -83,41 +89,34 @@ def load_points(path):
     pixels = []
     wavelengths = []
     is_check = []
-    with open(path, encoding="utf-8-sig", newline="") as f:
-        for line_no, row in enumerate(csv.reader(f), start=1):
-            if not row:
-                continue  # tom rad, en sist i filen är vanlig
-            if line_no == 1:
-                if row != ["pixel", "wavelength_nm", "check"]:
-                    raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel rubrik, väntade pixel,wavelength_nm,check")
-                continue
-            if len(row) != 3:
-                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel antal fält, väntade 3")
-            try:
-                pixel = float(row[0])
-            except ValueError as err:
-                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: pixel är inte ett tal") from err
-            try:
-                wavelength = float(row[1])
-            except ValueError as err:
-                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: wavelength_nm är inte ett tal") from err
-            if not math.isfinite(pixel) or pixel < 0:
-                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: pixel har ett ogiltigt värde")
-            if row[2] not in ("0", "1"):
-                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: check ska vara 0 eller 1")
-            pixels.append(pixel)
-            wavelengths.append(wavelength)
-            is_check.append(row[2] == "1")
-    pixels = np.array(pixels, dtype=np.float64)
-    wavelengths = np.array(wavelengths, dtype=np.float64)
-    is_check = np.array(is_check, dtype=bool)
-    return pixels, wavelengths, is_check
+    for line_no, row in _csv_rows(path):
+        if line_no == 1:
+            if row != ["pixel", "wavelength_nm", "check"]:
+                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel rubrik, väntade pixel,wavelength_nm,check")
+            continue
+        if len(row) != 3:
+            raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel antal fält, väntade 3")
+        try:
+            pixel = float(row[0])
+        except ValueError as err:
+            raise ValueError(f"input.invalid_argument: {name} rad {line_no}: pixel är inte ett tal") from err
+        try:
+            wavelength = float(row[1])
+        except ValueError as err:
+            raise ValueError(f"input.invalid_argument: {name} rad {line_no}: wavelength_nm är inte ett tal") from err
+        if not math.isfinite(pixel) or pixel < 0:
+            raise ValueError(f"input.invalid_argument: {name} rad {line_no}: pixel har ett ogiltigt värde")
+        if row[2] not in ("0", "1"):
+            raise ValueError(f"input.invalid_argument: {name} rad {line_no}: check ska vara 0 eller 1")
+        pixels.append(pixel)
+        wavelengths.append(wavelength)
+        is_check.append(row[2] == "1")
+    return np.array(pixels, dtype=np.float64), np.array(wavelengths, dtype=np.float64), np.array(is_check, dtype=bool)
 
 
 def load_known(path):
     """Läser en känd fördelning med kolumnerna wavelength_nm och relative_power_per_nm.
 
-    Parametrar: path: sökvägen till CSV-filen (str eller Path).
     Returnerar: (wavelengths, values): våglängder i stigande nm (K,) float64 och relativ effekt per nm (K,) float64.
     Fel: ValueError med input.invalid_argument, filnamnet och radnumret vid fel rubrik, fel antal fält, ett fält som
     inte är ett tal, ett ogiltigt värde, en våglängd som inte stiger eller färre än två datarader; OSError om filen saknas.
@@ -125,30 +124,59 @@ def load_known(path):
     name = Path(path).name
     wavelengths = []
     values = []
-    with open(path, encoding="utf-8-sig", newline="") as f:
-        for line_no, row in enumerate(csv.reader(f), start=1):
-            if not row:
-                continue  # tom rad, en sist i filen är vanlig
-            if line_no == 1:
-                if row != ["wavelength_nm", "relative_power_per_nm"]:
-                    raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel rubrik {row}")
-                continue
-            if len(row) != 2:
-                raise ValueError(f"input.invalid_argument: {name}: fel antal fält, rad {line_no}")
-            try:
-                wavelength = float(row[0])
-                power = float(row[1])
-            except ValueError as err:
-                raise ValueError(f"input.invalid_argument: {name}: fältet är inte ett tal, rad {line_no}") from err
-            if not (math.isfinite(wavelength) and math.isfinite(power)) or power < 0:
-                raise ValueError(f"input.invalid_argument: {name}: ogiltigt värde, rad {line_no}")
-            if wavelengths and wavelength <= wavelengths[-1]:
-                raise ValueError(f"input.invalid_argument: {name}: våglängden stiger inte, rad {line_no}")
-            wavelengths.append(wavelength)
-            values.append(power)
+    for line_no, row in _csv_rows(path):
+        if line_no == 1:
+            if row != ["wavelength_nm", "relative_power_per_nm"]:
+                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel rubrik {row}")
+            continue
+        if len(row) != 2:
+            raise ValueError(f"input.invalid_argument: {name}: fel antal fält, rad {line_no}")
+        try:
+            wavelength = float(row[0])
+            power = float(row[1])
+        except ValueError as err:
+            raise ValueError(f"input.invalid_argument: {name}: fältet är inte ett tal, rad {line_no}") from err
+        if not (math.isfinite(wavelength) and math.isfinite(power)) or power < 0:
+            raise ValueError(f"input.invalid_argument: {name}: ogiltigt värde, rad {line_no}")
+        if wavelengths and wavelength <= wavelengths[-1]:
+            raise ValueError(f"input.invalid_argument: {name}: våglängden stiger inte, rad {line_no}")
+        wavelengths.append(wavelength)
+        values.append(power)
     if len(wavelengths) < 2:
         raise ValueError(f"input.invalid_argument: färre än två datarader i {name}")
     return np.array(wavelengths, dtype=np.float64), np.array(values, dtype=np.float64)
+
+
+def load_lines(path):
+    """Läser en linjefil: rubriken wavelength_nm och en våglängd i nm per rad; rader som börjar med # hoppas över.
+
+    Returnerar: våglängderna i stigande nm, (L,) float64, t.ex. ur kalibrering/hg_linjer.csv.
+    Fel: ValueError med input.invalid_argument, filnamnet och radnumret vid fel rubrik, fel antal fält, ett fält som
+    inte är ett tal eller färre än två linjer; OSError om filen saknas.
+    """
+    name = Path(path).name
+    wavelengths = []
+    header_seen = False
+    for line_no, row in _csv_rows(path):
+        if row[0].startswith("#"):
+            continue  # kommentar (källan för linjerna)
+        if not header_seen:
+            if row != ["wavelength_nm"]:
+                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel rubrik, väntade wavelength_nm")
+            header_seen = True
+            continue
+        if len(row) != 1:
+            raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel antal fält, väntade 1")
+        try:
+            wavelength = float(row[0])
+        except ValueError as err:
+            raise ValueError(f"input.invalid_argument: {name} rad {line_no}: wavelength_nm är inte ett tal") from err
+        if not math.isfinite(wavelength):
+            raise ValueError(f"input.invalid_argument: {name} rad {line_no}: wavelength_nm har ett ogiltigt värde")
+        wavelengths.append(wavelength)
+    if len(wavelengths) < 2:
+        raise ValueError(f"input.invalid_argument: färre än två linjer i {name}")
+    return np.sort(np.array(wavelengths, dtype=np.float64))
 
 
 def save_png(path, image, roi=None):
@@ -158,8 +186,7 @@ def save_png(path, image, roi=None):
     """
     if roi is not None:
         image = image.copy()
-        x, y, width, height = roi
-        cv2.rectangle(image, (x, y), (x + width - 1, y + height - 1), (0, 255, 0), 1)
+        _draw_roi_box(image, roi)
     try:
         written, encoded = cv2.imencode(".png", image)  # imencode och tofile, inte imwrite: klarar åäö i Windows
         if written:
@@ -168,6 +195,12 @@ def save_png(path, image, roi=None):
         written = False
     if not written:
         raise OSError(f"files.write_failed: {Path(path).name} kunde inte sparas: {path}")
+
+
+def _draw_roi_box(image, roi):
+    """Ritar ROI-rutan (x, y, bredd, höjd) som en grön ram direkt på image."""
+    x, y, width, height = roi
+    cv2.rectangle(image, (x, y), (x + width - 1, y + height - 1), (0, 255, 0), 1)
 
 
 def save_snaps(parent, images):
@@ -188,45 +221,10 @@ def save_snaps(parent, images):
     return paths
 
 
-def load_lines(path):
-    """Läser en linjefil: rubriken wavelength_nm och en våglängd i nm per rad; rader som börjar med # hoppas över.
-
-    Parametrar: path: sökvägen till CSV-filen (str eller Path), t.ex. kalibrering/hg_linjer.csv.
-    Returnerar: våglängderna i stigande nm, (L,) float64.
-    Fel: ValueError med input.invalid_argument, filnamnet och radnumret vid fel rubrik, fel antal fält, ett fält som
-    inte är ett tal eller färre än två linjer; OSError om filen saknas.
-    """
-    name = Path(path).name
-    wavelengths = []
-    header = False
-    with open(path, encoding="utf-8-sig", newline="") as f:
-        for line_no, row in enumerate(csv.reader(f), start=1):
-            if not row or row[0].startswith("#"):
-                continue  # tom rad eller kommentar (källan för linjerna)
-            if not header:
-                if row != ["wavelength_nm"]:
-                    raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel rubrik, väntade wavelength_nm")
-                header = True
-                continue
-            if len(row) != 1:
-                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: fel antal fält, väntade 1")
-            try:
-                wavelength = float(row[0])
-            except ValueError as err:
-                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: wavelength_nm är inte ett tal") from err
-            if not math.isfinite(wavelength):
-                raise ValueError(f"input.invalid_argument: {name} rad {line_no}: wavelength_nm har ett ogiltigt värde")
-            wavelengths.append(wavelength)
-    if len(wavelengths) < 2:
-        raise ValueError(f"input.invalid_argument: färre än två linjer i {name}")
-    return np.sort(np.array(wavelengths, dtype=np.float64))
-
-
 def save_points(path, rows):
     """Skriver en ny punktfil: rubriken pixel,wavelength_nm,check och raderna som de är. Skriver aldrig över.
 
-    Parametrar: path: den nya filen (str eller Path); rows: raderna som text, t.ex. "412.3,404.656,0".
-    Returnerar: None.
+    rows: raderna som text, t.ex. "412.3,404.656,0".
     Fel: ValueError med input.invalid_argument om filen redan finns; OSError om den inte går att skriva.
     """
     try:
@@ -242,7 +240,7 @@ def save_points(path, rows):
 def points_file_info(path):
     """Vilken punktfil kalibreringen kom ifrån: sökvägen, de 12 första tecknen av sha256 och tiden då den lästes.
 
-    Samma sha256 betyder samma innehåll i filen. Parametrar: path: punktfilen (str eller Path).
+    Samma sha256 betyder samma innehåll i filen.
     Returnerar: {"path": "kalibrering/punkter.csv", "sha256": "3f2a...", "time": "2026-10-20T14:03:12"}.
     Fel: OSError om filen inte går att läsa.
     """
@@ -253,7 +251,6 @@ def points_file_info(path):
 def load_saved_calibration(path):
     """Läser kalibreringen ur en mätmapps settings.json (sparad av save, pixel_range finns från 1.0.26).
 
-    Parametrar: path: sökvägen till settings.json (str eller Path).
     Returnerar: ordbok med coefficients (2 eller 3 värden, float64, a0 först), pixel_range (låg, hög),
     axis och image_size ([bredd, höjd]) som de sparades (None om de saknas) och calibration_points_file.
     Fel: ValueError med input.invalid_argument om filen inte är JSON eller värdena har fel form, med
@@ -288,19 +285,13 @@ def load_saved_calibration(path):
 def save_response(path, wavelengths, values):
     """Skriver responsen som CSV: wavelength_nm, response och valid, med tom cell där responsen saknas (NaN).
 
-    Parametrar: path: filen (str eller Path); wavelengths: (P,) i nm; values: (P,) relativ respons, NaN där ogiltig.
-    Fel: OSError om filen inte går att skriva.
+    values: (P,) relativ respons, NaN där ogiltig. Fel: OSError om filen inte går att skriva.
     """
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(["wavelength_nm", "response", "valid"])
         for x, value in zip(wavelengths, values):
-            ok = bool(np.isfinite(value))
-            writer.writerow([f"{x:.10g}", f"{value:.10g}" if ok else "", "true" if ok else "false"])
-
-
-SAVED_FILES = ("spectrum.csv", "raw.png", "settings.json", "README.txt")  # filerna som varje hel mätmapp har
-MIN_FREE_MB = 50  # en 1080p-PNG är några MB (antaget); under 50 MB ledigt sparas inget
+            writer.writerow([f"{x:.10g}", _cell(value), "true" if np.isfinite(value) else "false"])
 
 
 def _unused_path(folder, stem, suffix=""):
@@ -336,14 +327,13 @@ def _rename(partial, folder):
 
     Windows Defender eller OneDrive kan låsa en ny fil en kort stund (antaget), därför en halv sekund mellan försöken.
     """
-    for attempt in range(3):
+    for _ in range(2):
         try:
             os.replace(partial, folder)
             return
         except PermissionError:
-            if attempt == 2:
-                raise
             time.sleep(0.5)
+    os.replace(partial, folder)  # tredje försöket: ett fel här går vidare
 
 
 def opencv_version():
@@ -401,21 +391,20 @@ def _write_readme(folder, settings):
 def save_roi_image(parent, image, roi):
     """Sparar en kopia av bilden med ROI-rutan (grön) och mättade pixlar (255 i någon kanal) i magenta.
 
-    Parametrar: parent: mappen (str eller Path), skapas om den saknas; image: (H, W, 3) uint8 i BGR; roi: (x, y, w, h).
+    Parametrar: parent: mappen (skapas om den saknas); image: (H, W, 3) uint8 i BGR; roi: (x, y, w, h).
     Returnerar: sökvägen parent/roi-ÅÅÅÅMMDD-HHMMSS.png (med -2, -3 ... om namnet redan finns).
     Fel: OSError med files.write_failed om bilden inte går att skriva.
     """
     copy = image.copy()
     copy[(image >= 255).any(axis=2)] = (255, 0, 255)
-    x, y, w, h = roi
-    cv2.rectangle(copy, (x, y), (x + w - 1, y + h - 1), (0, 255, 0), 1)
+    _draw_roi_box(copy, roi)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     path = _unused_path(Path(parent), f"roi-{stamp}", ".png")
     path.parent.mkdir(parents=True, exist_ok=True)
     ok, data = cv2.imencode(".png", copy)
     if not ok:
         raise OSError(f"files.write_failed: {path.name} kunde inte kodas som PNG")
-    data.tofile(str(path))  # tofile klarar åäö i sökvägen på Windows, det gör inte cv2.imwrite
+    data.tofile(path)  # tofile klarar åäö i sökvägen på Windows, det gör inte cv2.imwrite
     return path
 
 
@@ -452,7 +441,18 @@ def save_excel(folder):
     return path
 
 
-Y_LABELS = {"transmission": "transmission (kvot)", "response": "korrigerad signal (relativ)", "direct": "signal (counts)"}
+def _read_spectrum_table(folder):
+    """spectrum.csv i mätmappen som (rubrikraden, dataraderna), efter kontroll att alla rader har lika många fält."""
+    with open(measurement_folder(folder), newline="", encoding="utf-8-sig") as f:  # 1.2.13: Fel-rad, inte [Errno 2]
+        reader = csv.reader(f)
+        numbered = [(reader.line_num, row) for row in reader if row]
+    if not numbered:
+        raise ValueError(f"input.invalid_argument: {folder.as_posix()}/spectrum.csv är tom")
+    header = numbered[0][1]
+    for line_no, row in numbered[1:]:
+        if len(row) != len(header):  # en rad med fel antal fält ger annars IndexError i column
+            raise ValueError(f"input.invalid_argument: {folder.name}/spectrum.csv rad {line_no}: fel antal fält")
+    return header, [row for _, row in numbered[1:]]
 
 
 def load_measurement(folder):
@@ -463,16 +463,7 @@ def load_measurement(folder):
     Fel: ValueError med input.invalid_argument om rubriken saknar x_nm eller x_px, value eller valid; OSError om filen saknas.
     """
     folder = Path(folder)
-    with open(measurement_folder(folder), newline="", encoding="utf-8-sig") as f:  # 1.2.13: Fel-rad, inte [Errno 2]
-        reader = csv.reader(f)
-        numbered = [(reader.line_num, row) for row in reader if row]
-    if not numbered:
-        raise ValueError(f"input.invalid_argument: {folder.as_posix()}/spectrum.csv är tom")
-    for line_no, row in numbered[1:]:
-        if len(row) != len(numbered[0][1]):  # en rad med fel antal fält ger annars IndexError i column
-            raise ValueError(f"input.invalid_argument: {folder.name}/spectrum.csv rad {line_no}: fel antal fält")
-    rows = [row for _, row in numbered]
-    header, body = rows[0], rows[1:]
+    header, body = _read_spectrum_table(folder)
     x_col = "x_nm" if "x_nm" in header else "x_px"
     if x_col not in header or "value" not in header or "valid" not in header:
         raise ValueError(f"input.invalid_argument: {folder.name}/spectrum.csv saknar x_nm eller x_px, value eller valid")
@@ -481,8 +472,8 @@ def load_measurement(folder):
         k = header.index(name)
         return np.array([float(row[k]) if row[k] else np.nan for row in body])
 
-    path = folder / "settings.json"
-    settings = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    settings_path = folder / "settings.json"
+    settings = json.loads(settings_path.read_text(encoding="utf-8")) if settings_path.is_file() else {}
     mode = settings.get("mode", "direct")
     if mode == "direct" and settings.get("use_response"):
         mode = "response"

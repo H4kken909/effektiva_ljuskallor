@@ -54,6 +54,30 @@ def new_state(settings):
     }
 
 
+def forget_response(state):
+    """Glömmer responsen och att den används, och säger det; gör ingenting om det inte finns någon respons."""
+    if state["response"] is not None:
+        state["response"] = None
+        state["use_response"] = False
+        out.say("Responsen glömd. Kör response build igen.")
+
+
+def forget_reference(state):
+    """Glömmer referensen och säger det; gör ingenting om det inte finns någon referens."""
+    if state["reference"] is not None:
+        state["reference"] = None
+        out.say("Referensen glömd. Kör reference igen.")
+
+
+def after_new_dark(state):
+    """Efter ett nytt mörker: referensen mättes med det gamla och tas bort; responsen får en varning. PRO-15."""
+    if state["reference"] is not None:
+        state["reference"] = None
+        out.say("referensen togs bort: kör reference igen")
+    if state["response"] is not None:
+        out.warn("responsen byggdes med det gamla mörkret")
+
+
 def set_setting(state, key, value):
     """Lägger en inställning i state och glömmer den gamla mätningen.
 
@@ -63,13 +87,8 @@ def set_setting(state, key, value):
     state["settings"][key] = value
     state["spectrum"] = None
     if key in ("roi", "channel", "axis"):
-        if state["response"] is not None:
-            state["response"] = None
-            state["use_response"] = False
-            out.say("Responsen glömd. Kör response build igen.")
-        if state["reference"] is not None:
-            state["reference"] = None
-            out.say("Referensen glömd. Kör reference igen.")
+        forget_response(state)
+        forget_reference(state)
     if key == "axis" and state["coefficients"] is not None:
         state["coefficients"] = None
         state["pixel_range"] = None

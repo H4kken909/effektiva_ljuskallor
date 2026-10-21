@@ -164,8 +164,4 @@ def cmd_dark_load(state, args):
     if image is None:
         out.say("Bildstorleken prövas mot källan vid nästa mätning.")
     out.warn("mörkret gäller bara med samma exponering och gain som när det mättes (filen säger inte vilka)")
-    if state["reference"] is not None:
-        state["reference"] = None  # mätt med det gamla mörkret, som efter dark
-        out.say("referensen togs bort: kör reference igen")
-    if state["response"] is not None:
-        out.warn("responsen byggdes med det gamla mörkret")
+    session.after_new_dark(state)

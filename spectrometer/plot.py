@@ -11,12 +11,17 @@ from spectrometer import theme
 
 
 def open_plot():
-    """Öppnar ett fönster med en tom kurva."""
+    """Öppnar ett fönster med en tom kurva: mörkt tema, layout som följer fönstrets storlek och 60 % av skärmen."""
     plt.ion()
     fig, ax = plt.subplots()
     line = ax.plot([], [])[0]
     win = {"fig": fig, "ax": ax, "line": line}
-    _setup(win)
+    fig.set_layout_engine("constrained")
+    line.set_linewidth(1.5)
+    line.set_label("senaste mätningen")
+    _theme(win)
+    _size_window(fig, 0.6)
+    _keys(win)
     return win
 
 
@@ -54,14 +59,10 @@ def show():
 LABELS = {"pixel": "pixel (läge i bilden)", "signal (counts)": "signal (counts, relativ)"}  # bara visningen
 
 
-def _setup(win):
-    """Nytt fönster: layout som följer fönstrets storlek, mörkt tema, tjockare kurva med namn och 60 % av skärmen."""
-    win["fig"].set_layout_engine("constrained")
-    win["line"].set_linewidth(1.5)
-    win["line"].set_label("senaste mätningen")
-    _theme(win)
-    _size_window(win["fig"], 0.6)
-    _keys(win)
+def _set_labels(ax, x_label, y_label):
+    """Axeltexterna, med enhet för de som finns i LABELS."""
+    ax.set_xlabel(LABELS.get(x_label, x_label))
+    ax.set_ylabel(LABELS.get(y_label, y_label))
 
 
 def _size_window(fig, share):
@@ -94,8 +95,7 @@ def _decorate(win):
         win["fig"].canvas.manager.set_window_title(win["name"])
         win["named"] = win["name"]
     ax = win["ax"]
-    ax.set_xlabel(LABELS.get(ax.get_xlabel(), ax.get_xlabel()))
-    ax.set_ylabel(LABELS.get(ax.get_ylabel(), ax.get_ylabel()))
+    _set_labels(ax, ax.get_xlabel(), ax.get_ylabel())
     _live_texts(win)
     _areas(win)
     _camera(win)
@@ -117,7 +117,7 @@ def _live_texts(win):
     _limits(win)
     _help_text(win)
     _compare(win)
-    _legend(win)
+    _curve_legend(win)
     if win.get("foot"):
         win["fig"].supxlabel(win["foot"], fontsize=8, color=colors["fg"])
 
@@ -139,19 +139,33 @@ def _extra(win, key, style, color, label, zorder=1.5):
         artist.set_label(label)
 
 
-def _legend(win):
+def _curve_legend(win):
     """Förklaring bara när fler kurvor än live-kurvan har namn; byggs om bara när namnen ändras."""
-    ax, colors = win["ax"], win["colors"]
+    ax = win["ax"]
     names = tuple(line.get_label() for line in ax.lines if line.get_visible() and not line.get_label().startswith("_"))
     if names == win.get("legend"):
         return
     win["legend"] = names
     if len(names) > 1:
-        legend = ax.legend(loc="upper right", fontsize=8, facecolor=colors["axes"], edgecolor=colors["grid"])
-        for text in legend.get_texts():
-            text.set_color(colors["fg"])
+        _themed_legend(ax, win["colors"], "upper right", 8)
     elif ax.get_legend() is not None:
         ax.get_legend().remove()
+
+
+def _themed_legend(ax, colors, loc, fontsize):
+    """Förklaring i temats färger."""
+    legend = ax.legend(loc=loc, fontsize=fontsize, facecolor=colors["axes"], edgecolor=colors["grid"])
+    for text in legend.get_texts():
+        text.set_color(colors["fg"])
+
+
+def _due(win, key, every):
+    """Sant om det gått minst every sekunder sedan förra gången; då sparas tiden i win[key]. Första gången är sant."""
+    now = time.perf_counter()
+    if now - win.get(key, -every) < every:
+        return False
+    win[key] = now
+    return True
 
 
 CAMERA_EVERY = 0.25  # sekunder mellan två kamerabilder i fönstret: begränsat i tid, inte var N:e varv (rev7 L1621)
@@ -190,12 +204,8 @@ def _camera(win):
     view = win.get("view", {})
     image = win.get("image")
     win["ax"].set_visible(view.get("spectrum", True))
-    if image is None or "camera_ax" not in win:
+    if image is None or "camera_ax" not in win or not _due(win, "camera_time", CAMERA_EVERY):
         return
-    now = time.perf_counter()
-    if now - win.get("camera_time", -CAMERA_EVERY) < CAMERA_EVERY:
-        return
-    win["camera_time"] = now
     x, y, w, h = win["roi"]
     step = max(1, image.shape[1] // 320)  # högst ca 320 kolumner i fönstret
     _show_image(win, "camera", image[::step, ::step, ::-1], (0, image.shape[1], image.shape[0], 0))
@@ -251,13 +261,16 @@ def _help_text(win):
     win["help_text"].set_visible(bool(text))
 
 
-def save_png(path, x, values, x_label, y_label, title):
-    """Rapportfigur som PNG utan fönster (Figure och FigureCanvasAgg, inte pyplot): ljust tema, 200 dpi, topp markerad.
-
-    Går utan skärm och i testerna; values har NaN där mätningen är ogiltig (luckor i kurvan).
-    """
-    fig = Figure(figsize=(8, 4.5), layout="constrained")
+def _report_figure(width, height):
+    """En figur utan fönster (Figure och FigureCanvasAgg, inte pyplot): går utan skärm och i testerna."""
+    fig = Figure(figsize=(width, height), layout="constrained")
     FigureCanvasAgg(fig)
+    return fig
+
+
+def save_png(path, x, values, x_label, y_label, title):
+    """Rapportfigur som PNG: ljust tema, 200 dpi, topp markerad. values har NaN där mätningen är ogiltig (luckor i kurvan)."""
+    fig = _report_figure(8, 4.5)
     ax = fig.add_subplot()
     colors = theme.apply(fig, ax, "light")
     ax.plot(x, values, color=colors["line"], linewidth=1.5)
@@ -265,8 +278,7 @@ def save_png(path, x, values, x_label, y_label, title):
         i = int(np.nanargmax(values))
         ax.plot([x[i]], [values[i]], "v", color=colors["warn"])
         ax.annotate(f"{x[i]:g}", (x[i], values[i]), textcoords="offset points", xytext=(5, 5), fontsize=8, color=colors["fg"])
-    ax.set_xlabel(LABELS.get(x_label, x_label))
-    ax.set_ylabel(LABELS.get(y_label, y_label))
+    _set_labels(ax, x_label, y_label)
     ax.set_title(title, loc="left", fontsize=8, color=colors["fg"])
     fig.savefig(path, dpi=200)
 
@@ -277,12 +289,8 @@ PANEL_EVERY = 0.5  # sekunder mellan två omritningar av analyspanelen
 def _panel(win):
     """Analyspanelen till höger om spektrumet ur win["panel"]: kurvor, punkter och en kort tabell; högst var 0,5 s."""
     panel = win.get("panel")
-    if panel is None or "panel_ax" not in win:
+    if panel is None or "panel_ax" not in win or not _due(win, "panel_time", PANEL_EVERY):
         return
-    now = time.perf_counter()
-    if now - win.get("panel_time", -PANEL_EVERY) < PANEL_EVERY:
-        return
-    win["panel_time"] = now
     ax, colors = win["panel_ax"], win["colors"]
     ax.cla()
     theme.apply(win["fig"], ax, win["themed"])
@@ -298,9 +306,7 @@ def _panel(win):
     if panel.get("equal"):
         ax.set_aspect("equal", adjustable="datalim")  # xy-diagrammen utan förvrängning
     if panel.get("legend"):
-        legend = ax.legend(loc="best", fontsize=6, facecolor=colors["axes"], edgecolor=colors["grid"])
-        for text in legend.get_texts():
-            text.set_color(colors["fg"])
+        _themed_legend(ax, colors, "best", 6)
     ax.text(0.02, 0.97, panel["text"], transform=ax.transAxes, va="top", fontsize=7, family="monospace",
             color=colors["fg"])
 
@@ -338,8 +344,7 @@ def _spectra(fig, curves, x_label, y_label):
         marker = "o" if len(x) <= 30 else None  # 1.2.6: serier har få punkter, och de ska synas
         ax.plot(x, y, linestyle=STYLES[k % len(STYLES)], color=PALETTE[k % len(PALETTE)], linewidth=1.2, label=name,
                 marker=marker, markersize=4)
-    ax.set_xlabel(LABELS.get(x_label, x_label))
-    ax.set_ylabel(LABELS.get(y_label, y_label))
+    _set_labels(ax, x_label, y_label)
     ax.legend(fontsize=8)
     return ax
 
@@ -355,12 +360,11 @@ def show_spectra(curves, x_label, y_label):
 
 
 def save_figure(path, curves, x_label, y_label, xlim=None, log=False):
-    """figure: rapportfigur utan fönster (Figure, inte pyplot): 16 x 9 cm, 200 dpi, ingen titel; PNG eller SVG efter ändelsen.
+    """figure: rapportfigur utan fönster: 16 x 9 cm, 200 dpi, ingen titel; PNG eller SVG efter ändelsen.
 
     Legend bara när kurvorna är fler än en. xlim: (min, max) eller None; log: logaritmisk y-axel.
     """
-    fig = Figure(figsize=(16 / 2.54, 9 / 2.54), layout="constrained")
-    FigureCanvasAgg(fig)
+    fig = _report_figure(16 / 2.54, 9 / 2.54)
     ax = _spectra(fig, curves, x_label, y_label)
     if len(curves) == 1:
         ax.get_legend().remove()
@@ -381,8 +385,7 @@ def save_cie(path, locus, planck, marks, points):
     temperaturerna som får en etikett; points: [(x, y, namn)], en punkt per mätning. Tre punkter får triangeln de
     spänner (vad tre LED kan blanda). Egen bild ur programmets tabell, inga upphovsrättsproblem (W27).
     """
-    fig = Figure(figsize=(12 / 2.54, 12 / 2.54), layout="constrained")
-    FigureCanvasAgg(fig)
+    fig = _report_figure(12 / 2.54, 12 / 2.54)
     ax = fig.add_subplot()
     colors = theme.apply(fig, ax, "light")
     nm, lx, ly = locus

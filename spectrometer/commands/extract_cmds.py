@@ -1,19 +1,14 @@
 """rows och background: hur ROI:ns rader blir ett spektrum (medel eller median) och bakgrunden bredvid bandet."""
 
-from spectrometer import calc, out, registry
+from spectrometer import calc, out, registry, session
 
 
 def _set(state, key, value):
     """Sätter rows eller background och glömmer mätningen, responsen och referensen (de gjordes på det gamla sättet)."""
     state[key] = value
     state["spectrum"] = None
-    if state["response"] is not None:
-        state["response"] = None
-        state["use_response"] = False
-        out.say("Responsen glömd. Kör response build igen.")
-    if state["reference"] is not None:
-        state["reference"] = None
-        out.say("Referensen glömd. Kör reference igen.")
+    session.forget_response(state)
+    session.forget_reference(state)
 
 
 @registry.command("rows", "mean|median: medel eller median över ROI:ns rader (rows ensam visar valet)",

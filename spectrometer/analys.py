@@ -11,9 +11,6 @@ import numpy as np
 from spectrometer import calc, out, peaks, registry
 from spectrometer.analysis import bandgap, color, mapp
 
-PEAK_MIN = 0.10  # toppar: standardtröskeln, andel av största värdet (samma som toppar i prompten)
-PEAK_DISTANCE = 3  # toppar närmare än så (positioner) slås ihop till den högsta
-
 
 def _folder_and_options(args, allowed):
     """MAPP och valen efter den: ["MAPP", "--min", "0.2"] ger ("MAPP", {"--min": "0.2"}).
@@ -37,7 +34,8 @@ def _top_peaks(saved, fraction, count):
     if not saved["mask"].any():
         return []
     values = calc.masked_values(saved)
-    found = peaks.find_peaks(saved["values"], saved["mask"], fraction * np.nanmax(values), PEAK_DISTANCE)[:count]
+    height = fraction * np.nanmax(values)
+    found = peaks.find_peaks(saved["values"], saved["mask"], height, peaks.PEAK_MIN_DISTANCE)[:count]
     index = np.arange(values.size)
     return [(float(np.interp(peaks.refine_peak(values, i), index, saved["x"])), float(values[i])) for i in found]
 
@@ -57,7 +55,8 @@ def cmd_sammanfatta(args):
         i = int(np.nanargmax(np.where(mask, saved["values"], np.nan)))
         out.say(f"max: {out.fmt(saved['values'][i])} vid {unit} {out.fmt(saved['x'][i])}")
     out.say(f"bilder: {settings.get('frames', 'okänt')}, mättade pixlar: {settings.get('saturated_px', 'okänt')}")
-    tops = ", ".join(f"{unit} {x:.1f} ({out.fmt(value)})" for x, value in _top_peaks(saved, PEAK_MIN, 3))
+    top3 = _top_peaks(saved, peaks.PEAK_MIN_FRACTION, 3)
+    tops = ", ".join(f"{unit} {x:.1f} ({out.fmt(value)})" for x, value in top3)
     out.say(f"toppar: {tops or 'inga'}")
     out.say("Relativa tal från kameran.")
 
@@ -65,7 +64,7 @@ def cmd_sammanfatta(args):
 def cmd_toppar(args):
     """toppar MAPP [--min F] [--antal N]: topparna i en sparad mätning, högst först (som toppar i prompten)."""
     folder, options = _folder_and_options(args, ("--min", "--antal"))
-    fraction = registry.to_float("F", options.get("--min", str(PEAK_MIN)), 0)
+    fraction = registry.to_float("F", options.get("--min", str(peaks.PEAK_MIN_FRACTION)), 0)
     count = registry.to_int("N", options.get("--antal", "10"), 1)
     saved = mapp.read(folder)
     unit = saved["x_label"]  # "nm" eller "pixel"

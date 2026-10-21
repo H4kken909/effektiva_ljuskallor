@@ -33,8 +33,13 @@ def cmd_step(state, args):
         raise ValueError("input.missing_data: ingen giltig position i spektrumet "
                          "(alla under tröskeln eller utanför kalibreringen)")
     i = int(np.nanargmax(calc.masked_values(spectrum)))
-    bilder_text = registry.plural(state["settings"]["frames"], "bild", "bilder")
-    out.say(f"Topp {out.fmt(spectrum['values'][i])} vid {spectrum['x_label']} {out.fmt(spectrum['x'][i])} ({bilder_text})")
+    frames = registry.plural(state["settings"]["frames"], "bild", "bilder")
+    out.say(f"Topp {out.fmt(spectrum['values'][i])} vid {spectrum['x_label']} {out.fmt(spectrum['x'][i])} ({frames})")
+    _warn_after_step(state, spectrum, i)
+
+
+def _warn_after_step(state, spectrum, i):
+    """Varningarna efter step: mättnad, auto-exponering, ändrade reglage, gammalt mörker, mörkret som inte passar."""
     quality.warn_saturated(spectrum["saturated_px"])
     if source.auto_on(spectrum["camera"]):  # 1.2.0: KRV-03
         out.warn("auto-exponering är på: kameran ändrar exponeringen själv mellan mätningarna. Kör auto off.")
@@ -78,6 +83,23 @@ def cmd_save(state, args):
             raise ValueError("input.invalid_argument: mätningen är mättad och sparas inte i serien. "
                              "Sänk exposure eller strömmen")
         parent = args[0] if args else state["series"]["folder"]
+    saved = _settings_to_save(state, spectrum)
+    folder = files.save_measurement(parent, spectrum, state["image"], saved)
+    spectrum["saved_in"] = folder.as_posix()  # quit frågar inte om en sparad mätning
+    try:
+        display.save_png(state, folder)
+    except (ValueError, RuntimeError, OSError) as error:
+        out.warn(f"spectrum.png kunde inte ritas ({error}). Mätningen är sparad ändå.")
+    out.say(f"Sparad i {folder.as_posix()}")
+    if state["series"] is not None:  # 1.2.1: en rad per mätning i serie.csv
+        rows = series.add_row(state["series"]["file"], folder, saved, spectrum)
+        out.say(f"serie {state['series']['name']}: rad {rows} i {state['series']['file']}")
+    if excel:
+        out.say(f"Excel: {files.save_excel(folder).as_posix()}")
+
+
+def _settings_to_save(state, spectrum):
+    """Innehållet i settings.json: inställningarna, mätningens villkor, metadata, rigg, reglage, serie och settings_id."""
     saved = state["settings"].copy()
     saved["saturated_px"] = spectrum["saturated_px"]  # ROI-pixlar som var 255, i den värsta bilden
     saved["camera"] = spectrum["camera"]  # drivrutinens reglage under mätningen; för en fil bara kind: file, resten None
@@ -101,18 +123,7 @@ def cmd_save(state, args):
     # Id sist, när rigg, reglage och serie finns med; note och annotations undantas av meta.NOT_IN_ID, taken är en tid.
     counted = {key: value for key, value in saved.items() if key not in ("settings_id", "taken")}
     saved["settings_id"] = meta.settings_id(counted)
-    folder = files.save_measurement(parent, spectrum, state["image"], saved)
-    spectrum["saved_in"] = folder.as_posix()  # quit frågar inte om en sparad mätning
-    try:
-        display.save_png(state, folder)
-    except (ValueError, RuntimeError, OSError) as error:
-        out.warn(f"spectrum.png kunde inte ritas ({error}). Mätningen är sparad ändå.")
-    out.say(f"Sparad i {folder.as_posix()}")
-    if state["series"] is not None:  # 1.2.1: en rad per mätning i serie.csv
-        rows = series.add_row(state["series"]["file"], folder, saved, spectrum)
-        out.say(f"serie {state['series']['name']}: rad {rows} i {state['series']['file']}")
-    if excel:
-        out.say(f"Excel: {files.save_excel(folder).as_posix()}")
+    return saved
 
 
 @registry.command("start", "[SEKUNDER]: live med kameran, Ctrl+C stoppar (med SEKUNDER: efter så lång tid)",
@@ -135,20 +146,14 @@ def cmd_start(state, args):
         win = plot.open_plot()
         win.update(display.window_info(state))
         begun = time.perf_counter()
-        while True:
-            if not plot.is_open(win):
-                out.say("live stoppad")
-                break
-            if seconds is not None and time.perf_counter() - begun >= seconds:
-                out.say("live stoppad")
-                break
+        while plot.is_open(win) and (seconds is None or time.perf_counter() - begun < seconds):
             started = time.perf_counter()
             spectrum = measure.measure(state, src)
             masked = calc.masked_values(spectrum)
             if not _live_frame(state, win, spectrum, masked):
-                out.say("live stoppad")
                 break
             plot.pause(max(0.001, LIVE_INTERVAL - (time.perf_counter() - started)))
+        out.say("live stoppad")
     except KeyboardInterrupt:
         out.say("live stoppad")
     except RuntimeError:

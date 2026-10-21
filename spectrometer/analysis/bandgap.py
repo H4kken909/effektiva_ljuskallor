@@ -20,17 +20,22 @@ def absorbance(transmission, mask):
     return a
 
 
+def _by_energy(x_nm, absorb):
+    """(E, A) för de giltiga punkterna (A är ändlig), stigande i E."""
+    ok = np.isfinite(absorb)
+    E = ev(x_nm)[ok]
+    order = np.argsort(E)
+    return E[order], absorb[ok][order]
+
+
 def edge(x_nm, absorb, step_nm):
     """Absorptionskanten: brantaste lutningen i A mot E, linjen genom den extrapolerad till A = 0.
 
     Returnerar (E_g_eV, osäkerhet_eV, index). Osäkerheten är ±0,5 pixelsteg omräknat till eV vid kanten.
     """
-    E = ev(x_nm)
-    ok = np.isfinite(absorb)
-    if np.count_nonzero(ok) < 3:
+    Eo, Ao = _by_energy(x_nm, absorb)
+    if Eo.size < 3:
         raise ValueError("input.missing_data: för få giltiga absorbansvärden")
-    order = np.argsort(E[ok])
-    Eo, Ao = E[ok][order], absorb[ok][order]
     slope = np.gradient(Ao, Eo)
     i = int(np.nanargmax(slope))
     eg = Eo[i] - Ao[i] / slope[i]
@@ -52,9 +57,7 @@ def rise(x_nm, absorb):
     Ändarna är END_SHARE av de giltiga punkterna (minst 3), sorterade efter energi. Brus kring en platt T (T ≈ 1)
     ger nära 0, en verklig kant tiondelar eller mer. Medianen gör att enstaka brusiga punkter inte räcker. 1.2.13.
     """
-    E = ev(x_nm)
-    ok = np.isfinite(absorb)
-    A = absorb[ok][np.argsort(E[ok])]
+    A = _by_energy(x_nm, absorb)[1]
     k = max(3, round(END_SHARE * A.size))
     return float(np.median(A[-k:]) - np.median(A[:k]))
 
@@ -212,8 +215,6 @@ def edge_lines(x_nm, transmission, mask, fit=False):
         line_A = lines["a"] + lines["b"] * (line_E - lines["ec"]) + lines["d"] * np.maximum(0.0, line_E - lines["ec"])
         return E, A, (line_E, line_A), lines["ec"]
     absorb, eg, _unc, i = _find_edge(x_nm, transmission, mask)
-    ok = np.isfinite(absorb)
-    order = np.argsort(ev(x_nm[ok]))
-    E, A = ev(x_nm[ok])[order], absorb[ok][order]  # samma ordning som i edge, så i pekar på samma punkt
+    E, A = _by_energy(x_nm, absorb)  # samma ordning som i edge, så i pekar på samma punkt
     line_E = np.array([eg, eg + np.max(A) * (E[i] - eg) / A[i]])  # från A = 0 upp till största absorbansen
     return E, A, (line_E, A[i] * (line_E - eg) / (E[i] - eg)), eg

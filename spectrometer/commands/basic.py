@@ -88,12 +88,11 @@ def _next_step(state):
 def cmd_status(state, args):
     """Kommandot status: mörker, kalibrering, respons, referens och läge på en rad, sedan nästa steg i kedjan."""
     registry.need(args, (), "status")
-    yes = {True: "ja", False: "nej"}
     parts = [
-        f"mörker {yes[state['dark'] is not None]}",
-        f"kalibrering {yes[state['coefficients'] is not None]}",
-        f"respons {yes[state['response'] is not None]}",
-        f"referens {yes[state['reference'] is not None]}",
+        f"mörker {out.YES[state['dark'] is not None]}",
+        f"kalibrering {out.YES[state['coefficients'] is not None]}",
+        f"respons {out.YES[state['response'] is not None]}",
+        f"referens {out.YES[state['reference'] is not None]}",
         f"läge {state['mode']}",
     ]
     out.say("  ".join(parts))

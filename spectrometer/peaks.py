@@ -9,6 +9,9 @@ import numpy as np
 
 from spectrometer import calc
 
+PEAK_MIN_FRACTION = 0.1  # en topp ska vara minst 10 % av det högsta giltiga värdet (antaget, prova vid riggen)
+PEAK_MIN_DISTANCE = 3  # toppar närmare än 3 positioner slås ihop till den högsta
+
 
 def find_peaks(values, mask, min_height, min_distance):
     """Index för lokala maxima bland giltiga positioner, högsta toppen först.

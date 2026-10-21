@@ -73,6 +73,9 @@ def frame_info(state, win, spectrum, values):
     if len(laps) > 1 and laps[-1] > laps[0]:
         text += f" · {(len(laps) - 1) / (laps[-1] - laps[0]):.1f} bilder/s"
     image = state["image"]
+    roi = state["settings"]["roi"]
+    if roi is None and image is not None:
+        roi = calc.roi_or_whole(roi, image)  # hela bilden när ingen ROI är vald
     return {
         "title": f"{win.get('head', '')}\n{text}",
         "warn": " · ".join(warnings) or None,
@@ -80,7 +83,7 @@ def frame_info(state, win, spectrum, values):
         "foot": f"{session.chain(state)} · frames {state['settings']['frames']} · mättad {'ja' if full else 'nej'}",
         "status": " · ".join(["running", text, *warnings]),
         "image": image,
-        "roi": state["settings"]["roi"] or (None if image is None else (0, 0, image.shape[1], image.shape[0])),
+        "roi": roi,
         "panel": panel(state, state["view"]["analysis"], spectrum, values) if state["view"]["analysis"] else None,
     }
 
@@ -139,6 +142,16 @@ def save_png(state, folder):
     plot.save_png(folder / "spectrum.png", spectrum["x"], values, spectrum["x_label"], spectrum["y_label"], title)
 
 
+def _top_five(values):
+    """Index för de fem högsta topparna i kurvan, högst först. Bara för visning (linjebredd och area ger kommandot fwhm)."""
+    y = np.where(np.isfinite(values), values, -np.inf)
+    half = max(2, len(y) // 20)  # en topp är störst inom ±5 % av kurvans längd och över 5 % av största värdet
+    local = np.lib.stride_tricks.sliding_window_view(np.pad(y, half, constant_values=-np.inf), 2 * half + 1)
+    first = y > np.concatenate(([-np.inf], y[:-1]))  # bara första punkten på en platå
+    top = np.flatnonzero((y == local.max(axis=1)) & first & np.isfinite(y) & (y >= 0.05 * y.max()))
+    return top[np.argsort(-y[top])][:5]
+
+
 def panel(state, name, spectrum, values):
     """Analyspanelen name ur det som redan finns i state; räknar ingen ny analys. Ordboken ritas av plot.
 
@@ -147,12 +160,7 @@ def panel(state, name, spectrum, values):
     """
     if name == "peaks":
         x = spectrum["x"]
-        y = np.where(np.isfinite(values), values, -np.inf)
-        half = max(2, len(y) // 20)  # en topp är störst inom ±5 % av kurvans längd och över 5 % av största värdet
-        local = np.lib.stride_tricks.sliding_window_view(np.pad(y, half, constant_values=-np.inf), 2 * half + 1)
-        first = y > np.concatenate(([-np.inf], y[:-1]))  # bara första punkten på en platå
-        top = np.flatnonzero((y == local.max(axis=1)) & first & np.isfinite(y) & (y >= 0.05 * y.max()))
-        top = top[np.argsort(-y[top])][:5]  # de fem högsta, bara för visning (linjebredd och area ger kommandot fwhm)
+        top = _top_five(values)
         rows = "\n".join(f"{x[i]:>8.5g} {values[i]:>8.4g}" for i in top) or "inga toppar"
         return {"title": "peaks: toppar i kurvan", "x_label": spectrum["x_label"], "lines": [(x, values, "kurvan")],
                 "points": (x[top], values[top]), "text": f"{'x':>8} {'värde':>8}\n{rows}"}

@@ -42,13 +42,33 @@ def cmd_dark(state, args):
         _roi_mean(state, state["dark"]) >= 0.5 * _roi_mean(state, image)
     ):
         out.warn("mörkret liknar bilden. Var ljusvägen blockerad?")
-    if state["reference"] is not None:
-        # Referensen mättes med det gamla mörkret, så den gäller inte längre.
-        state["reference"] = None
-        out.say("referensen togs bort: kör reference igen")
-    if state["response"] is not None:
-        # Lampmätningen i responsen drogs av med det gamla mörkret. PRO-15.
-        out.warn("responsen byggdes med det gamla mörkret")
+    session.after_new_dark(state)
+
+
+def _response_build(state, args):
+    """response build KNOWNFILE [N]: mäter lampan direkt (utan respons) och delar den med den kända kurvan."""
+    if not args:
+        raise ValueError("input.invalid_argument: response: KNOWNFILE saknas")
+    if len(args) > 2:
+        raise ValueError("input.invalid_argument: response build tar högst två ord (KNOWNFILE N)")
+    n = registry.to_frames(args[1]) if len(args) == 2 else measure.CAPTURE_FRAMES
+    if state["dark"] is None:
+        raise ValueError("input.missing_data: inget mörker, kör dark först")
+    if state["coefficients"] is None:
+        raise ValueError("input.missing_data: ingen kalibrering, kör calibrate först")
+    known_wavelengths, known_values = files.load_known(args[0])
+    lamp = measure.measure_direct(state, n)
+    values = calc.build_response(lamp["x"], calc.masked_values(lamp), known_wavelengths, known_values)
+    state["response"] = {"x": lamp["x"].copy(), "values": values, "frames": n, "known_file": args[0]}
+    session.mark_taken(state, "response")
+    state["spectrum"] = None
+    out.say(f"respons: {np.count_nonzero(np.isfinite(values))} av {len(values)} positioner giltiga")
+    # Under 0,1 förstärks bruset mer än 10 gånger; min_response (0,01) släpper igenom 100 gånger. PRO-31.
+    weak = np.count_nonzero((values > state["settings"]["min_response"]) & (values < 0.1))
+    if weak:
+        out.warn(f"{registry.plural(weak, 'position har', 'positioner har')} respons under 0.1 "
+                 "(bruset förstärks mer än 10 gånger)")
+    quality.warn_saturated(lamp["saturated_px"])
 
 
 @registry.command("response", "build KNOWNFILE [N] | on | off | export PATH", "response build KNOWNFILE [N], response on, response off eller response export PATH")
@@ -57,34 +77,13 @@ def cmd_response(state, args):
     if not args or args[0] not in ("build", "on", "off", "export"):
         raise ValueError("input.invalid_argument: första ordet ska vara build, on, off eller export")
     if args[0] == "build":
-        rest = args[1:]
-        if not rest:
-            raise ValueError("input.invalid_argument: response: KNOWNFILE saknas")
-        if len(rest) > 2:
-            raise ValueError("input.invalid_argument: response build tar högst två ord (KNOWNFILE N)")
-        n = registry.to_frames(rest[1]) if len(rest) == 2 else measure.CAPTURE_FRAMES
-        if state["dark"] is None:
-            raise ValueError("input.missing_data: inget mörker, kör dark först")
-        if state["coefficients"] is None:
-            raise ValueError("input.missing_data: ingen kalibrering, kör calibrate först")
-        known_wavelengths, known_values = files.load_known(rest[0])
-        lamp = measure.measure_direct(state, n)
-        values = calc.build_response(lamp["x"], calc.masked_values(lamp), known_wavelengths, known_values)
-        state["response"] = {"x": lamp["x"].copy(), "values": values, "frames": n, "known_file": rest[0]}
-        session.mark_taken(state, "response")
-        state["spectrum"] = None
-        out.say(f"respons: {np.count_nonzero(np.isfinite(values))} av {len(values)} positioner giltiga")
-        # Under 0,1 förstärks bruset mer än 10 gånger; min_response (0,01) släpper igenom 100 gånger. PRO-31.
-        weak = np.count_nonzero((values > state["settings"]["min_response"]) & (values < 0.1))
-        if weak:
-            out.warn(f"{registry.plural(weak, 'position har', 'positioner har')} respons under 0.1 "
-                     "(bruset förstärks mer än 10 gånger)")
-        quality.warn_saturated(lamp["saturated_px"])
+        _response_build(state, args[1:])
     elif args[0] == "export":
         registry.need(args[1:], ("PATH",), "response export")
         if state["response"] is None:
             raise ValueError("input.missing_data: ingen respons, kör response build först")
-        files.save_response(args[1], state["response"]["x"], state["response"]["values"])
+        response = state["response"]
+        files.save_response(args[1], response["x"], response["values"])
         out.say(f"respons: sparad i {args[1]}")
     elif args[0] == "on":
         if state["response"] is None:

@@ -20,10 +20,8 @@ def frame_spectrum(state, image):
         corrected = calc.subtract_dark(image.astype(np.float64), state["dark"])
     roi = calc.roi_or_whole(cfg["roi"], image)
     table = calc.prepare(corrected, roi, cfg["axis"], cfg["channel"])
-    if state["rows"] == "median":
-        values = calc.extract_median(table)  # ROI-14
-    else:
-        values = calc.extract_spectrum(table)
+    extract = calc.extract_median if state["rows"] == "median" else calc.extract_spectrum  # ROI-14
+    values = extract(table)
     if state["background"] is not None:
         # Bakgrunden bredvid bandet (ströljus i kameran) dras av efter mörkret. ROI-21.
         values = values - calc.side_background(corrected, roi, state["background"], cfg["channel"], cfg["axis"])
@@ -111,6 +109,19 @@ def measure(state, src=None, timing=None):
     started = time.perf_counter()
     images, camera = _with_source(state, src, lambda s: (_read_frames(s, n, src is None), source.describe(s)))
     read_done = time.perf_counter()
+    spectrum = _spectrum_of_images(state, images, camera)
+    apply_response(state, spectrum)
+    apply_transmission(state, spectrum)
+    state["image"] = images[-1]
+    state["spectrum"] = spectrum
+    if timing is not None:
+        timing["read"] = read_done - started
+        timing["compute"] = time.perf_counter() - read_done
+    return spectrum
+
+
+def _spectrum_of_images(state, images, camera):
+    """Medel över bilderna på en kalibrerad, stigande x-axel: spektrumet före respons och transmission."""
     spectra = []
     saturated_px, saturated = 0, False  # flest mättade ROI-pixlar i en bild, och var längs spektrumet (alla bilder)
     for image in images:
@@ -128,17 +139,10 @@ def measure(state, src=None, timing=None):
     spectrum = {"x": x, "values": values, "mask": mask, "x_label": x_label, "y_label": "signal (counts)"}
     spectrum["saturated_px"], spectrum["saturated"] = saturated_px, saturated[order]
     spectrum["stddev"] = stddev[order]  # slumpbrus mellan bilderna i counts (stickprov, ddof=1); ingen osäkerhet för instrumentet
-    spectrum["frames"] = n  # 1.2.14: antalet bilder bakom medlet, till slumpfelet i fwhm
+    spectrum["frames"] = state["settings"]["frames"]  # 1.2.14: antalet bilder bakom medlet, till slumpfelet i fwhm
     spectrum["px"] = pixels[order]  # 1.2.2: pixeln för varje position, också i nm-läge
     spectrum["raw"] = np.where(mask, values, np.nan)  # 1.2.2: före respons och transmission, i counts
     spectrum["camera"] = camera  # kamerans reglage under mätningen (source.describe)
-    apply_response(state, spectrum)
-    apply_transmission(state, spectrum)
-    state["image"] = image
-    state["spectrum"] = spectrum
-    if timing is not None:
-        timing["read"] = read_done - started
-        timing["compute"] = time.perf_counter() - read_done
     return spectrum
 
 

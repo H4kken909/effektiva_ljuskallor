@@ -22,7 +22,15 @@ def _lost(state):
     return [name for name, key in names if state[key] is not None]
 
 
-@registry.command("reset", "[ja]: nollställ allt som vid start (i en terminal med mörker eller kalibrering: reset ja)",
+def _renew(state, settings):
+    """Tömmer state och bygger en ny med settings; start_settings (det reset går tillbaka till) står kvar."""
+    start = state.get("start_settings")
+    state.clear()
+    state.update(session.new_state(settings))
+    state["start_settings"] = start
+
+
+@registry.command("reset","[ja]: nollställ allt som vid start (i en terminal med mörker eller kalibrering: reset ja)",
                   "reset eller reset ja")
 def cmd_reset(state, args):
     """Kommandot reset [ja]: ny state med DEFAULTS. I en terminal frågar det först om något går förlorat; undo ångrar.
@@ -36,9 +44,7 @@ def cmd_reset(state, args):
         out.say(f"Du förlorar {', '.join(lost)}. Skriv reset ja för att fortsätta.")
         return
     start = state.get("start_settings")  # inställningarna vid start, med --output, --input och --camera
-    state.clear()
-    state.update(session.new_state(start or session.DEFAULTS))
-    state["start_settings"] = start
+    _renew(state, start or session.DEFAULTS)
     out.say("Allt nollställt (som vid start).")
 
 
@@ -106,20 +112,15 @@ def cmd_clear(state, args):
     registry.need(args, ("NAMN",), "clear")
     name = args[0]
     if name == "all":
-        settings, start = state["settings"], state.get("start_settings")
-        state.clear()
-        state.update(session.new_state(settings))
-        state["start_settings"] = start
+        _renew(state, state["settings"])
         out.say("Allt borttaget utom inställningarna.")
         return
     if name not in PARTS:
         raise ValueError("input.invalid_argument: clear: välj dark, calibration, response, reference eller all")
-    if name == "calibration" and state["response"] is not None:
-        state["response"] = None
-        out.say("Responsen glömd. Kör response build igen.")
-    if name in ("dark", "calibration") and state["reference"] is not None:
-        state["reference"] = None
-        out.say("Referensen glömd. Kör reference igen.")
+    if name == "calibration":
+        session.forget_response(state)
+    if name in ("dark", "calibration"):
+        session.forget_reference(state)
     keys, text = PARTS[name]
     for key in keys:
         state[key] = None

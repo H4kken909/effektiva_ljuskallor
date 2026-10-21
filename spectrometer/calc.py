@@ -18,15 +18,7 @@ red_weight: float = 0.299
 
 
 def _check(name, a):
-    """Kontrollera att a är en float64-array med bara ändliga tal.
-
-    Parametrar: name: argumentets namn som text, för felmeddelandet (str).
-                a: värdet som kontrolleras.
-    Returnerar: None.
-    Fel: ValueError med input.invalid_argument om a inte är en
-         float64-array, eller om a innehåller inf eller NaN.
-    """
-
+    """Fel (input.invalid_argument, med name i texten) om a inte är en float64-array med bara ändliga tal."""
     if not isinstance(a, np.ndarray) or a.dtype != np.float64:
         raise ValueError(f"input.invalid_argument: {name} måste vara en float64-array")
     if not np.all(np.isfinite(a)):
@@ -42,23 +34,15 @@ def prepare(image, roi, axis, channel):
     Fel: ValueError med input.invalid_argument om bilden eller ROI:n är fel.
     """
     if not isinstance(image, np.ndarray) or image.dtype not in (np.uint8, np.float64):
-        raise ValueError(
-            "input.invalid_argument: image måste vara en uint8- eller float64-array"
-        )
+        raise ValueError("input.invalid_argument: image måste vara en uint8- eller float64-array")
     if image.ndim != 3 or image.shape[2] != 3:
-        raise ValueError(
-            f"input.invalid_argument: image måste ha formen (H, W, 3), fick {image.shape}"
-        )
+        raise ValueError(f"input.invalid_argument: image måste ha formen (H, W, 3), fick {image.shape}")
     x, y, width, height = roi
     if width <= 0 or height <= 0:
-        raise ValueError(
-            f"input.invalid_argument: roi måste ha bredd och höjd större än 0, fick {roi}"
-        )
+        raise ValueError(f"input.invalid_argument: roi måste ha bredd och höjd större än 0, fick {roi}")
     h, w = image.shape[:2]
     if x < 0 or y < 0 or x + width > w or y + height > h:
-        raise ValueError(
-            f"input.invalid_argument: roi {roi} ligger utanför bilden ({w} bred, {h} hög)"
-        )
+        raise ValueError(f"input.invalid_argument: roi {roi} ligger utanför bilden ({w} bred, {h} hög)")
     cut = image[y : y + height, x : x + width].astype(np.float64)
     blue = cut[:, :, CHANNEL_INDEX["blue"]]
     green = cut[:, :, CHANNEL_INDEX["green"]]
@@ -76,11 +60,7 @@ def prepare(image, roi, axis, channel):
 
 
 def extract_spectrum(table):
-    """Medlet av raderna i tabellen, ett värde per kolumn.
-
-    Parametrar: table: tabellen från prepare(), (rader, kolumner) float64.
-    Returnerar: medlet per kolumn, (kolumner,) float64. Se rev7, RX05.
-    """
+    """Medlet av raderna i tabellen från prepare(), ett värde per kolumn, (kolumner,) float64. Se rev7, RX05."""
     return np.mean(table, axis=0)
 
 
@@ -91,8 +71,7 @@ def average_spectra(stack):
     Returnerar: mean och stddev, båda (P,) float64; stddev är NaN när N är 1.
     """
     mean = np.mean(stack, axis=0)
-    n = stack.shape[0]
-    if n == 1:
+    if stack.shape[0] == 1:
         # En enda bild har ingen spridning: NaN utan varning. Se rev7, RX07.
         stddev = np.full(len(mean), np.nan)
     else:
@@ -113,9 +92,7 @@ def evaluate_wavelength(pixels, coefficients):
     _check("pixels", pixels)
     _check("coefficients", coefficients)
     if coefficients.size not in (2, 3):
-        raise ValueError(
-            f"input.invalid_argument: coefficients ska ha 2 eller 3 värden, fick {coefficients.size}"
-        )
+        raise ValueError(f"input.invalid_argument: coefficients ska ha 2 eller 3 värden, fick {coefficients.size}")
     # Våglängd = a0 + a1·p (+ a2·p²), a0 först. Se rev7, RX09.
     return poly.polyval(pixels, coefficients)
 
@@ -130,18 +107,13 @@ def fit_wavelength(pixels, wavelengths, degree):
     samma pixel står två gånger eller punkterna är för få.
     """
     if degree not in (1, 2):
-        raise ValueError(
-            f"input.invalid_argument: degree ska vara 1 eller 2, fick {degree}"
-        )
+        raise ValueError(f"input.invalid_argument: degree ska vara 1 eller 2, fick {degree}")
     _check("pixels", pixels)
     _check("wavelengths", wavelengths)
-    unique = np.unique(pixels)
-    if unique.size < pixels.size:
+    if np.unique(pixels).size < pixels.size:
         raise ValueError("input.invalid_argument: samma pixel står två gånger")
     if pixels.size < degree + 1:
-        raise ValueError(
-            f"input.invalid_argument: grad {degree} behöver minst {degree + 1} punkter, fick {pixels.size}"
-        )
+        raise ValueError(f"input.invalid_argument: grad {degree} behöver minst {degree + 1} punkter, fick {pixels.size}")
     # Minsta kvadrat-anpassning, koefficienterna i stigande ordning. Se rev7, RX10.
     return poly.polyfit(pixels, wavelengths, degree)
 
@@ -156,9 +128,7 @@ def subtract_dark(image, dark):
     _check("image", image)
     _check("dark", dark)
     if image.shape != dark.shape:
-        raise ValueError(
-            f"input.invalid_argument: mörkret har formen {dark.shape} men bilden har {image.shape}"
-        )
+        raise ValueError(f"input.invalid_argument: mörkret har formen {dark.shape} men bilden har {image.shape}")
     # Signal utan mörker = bild minus mörker, i float64 så att inget slår runt. Se rev7, RX03.
     return image - dark
 
@@ -201,9 +171,7 @@ def _divide_where_above(numerator, denominator, mask, minimum, names):
     """
     minimum_name, numerator_name, denominator_name = names
     if not np.isfinite(minimum) or minimum <= 0:
-        raise ValueError(
-            f"input.invalid_argument: {minimum_name} måste vara ändligt och större än 0, fick {minimum}"
-        )
+        raise ValueError(f"input.invalid_argument: {minimum_name} måste vara ändligt och större än 0, fick {minimum}")
     _check(numerator_name, numerator[mask])
     _check(denominator_name, denominator[mask])
     new_mask = mask & (denominator > minimum)
@@ -217,9 +185,7 @@ def apply_response(signal, response, mask, min_response):
 
     Parametrar: signal: (P,) float64 i counts; response: (P,) float64, relativ, utan enhet;
     mask: (P,) bool, True där värdet duger; min_response: minsta giltiga respons, utan enhet.
-    Returnerar: (values, mask): values (P,) float64, relativ, NaN där det inte går att räkna, och den nya masken (P,) bool.
-    Fel: ValueError med input.invalid_argument vid en tröskel som inte är ändlig och större än 0,
-    eller NaN och inf på en giltig plats.
+    Returnerar och Fel: som _divide_where_above; values är relativa.
     """
     # Korrigerad signal = signal delad med responsen. Se rev7, RX16.
     return _divide_where_above(signal, response, mask, min_response, ("min_response", "signal", "response"))
@@ -230,10 +196,7 @@ def transmission_ratio(sample, reference, mask, min_reference):
 
     Parametrar: sample: provet, (P,) float64 i counts, får vara negativt; reference: referensen, (P,) float64 i counts;
     mask: (P,) bool, True där värdet duger; min_reference: minsta giltiga referens i counts.
-    Returnerar: (values, mask): transmissionen (P,) float64 som kvot, NaN där den inte går att räkna,
-    och den nya masken (P,) bool.
-    Fel: ValueError med input.invalid_argument vid en tröskel som inte är ändlig och större än 0,
-    eller NaN och inf på en giltig plats.
+    Returnerar och Fel: som _divide_where_above; values är transmissionen som kvot.
     """
     # Transmission T = I_prov / I_ref. Se rev7, T06 och RX17.
     return _divide_where_above(sample, reference, mask, min_reference, ("min_reference", "sample", "reference"))
@@ -243,10 +206,8 @@ def extract_median(table):
     """Medianen av raderna i tabellen, ett värde per kolumn: som extract_spectrum, men median i stället för medel.
 
     Medianen bryr sig inte om en enstaka het pixel eller en rad med ströljus; medlet har mindre brus när raderna är lika.
-    Parametrar: table: tabellen från prepare(), (rader, kolumner) float64.
-    Returnerar: medianen per kolumn, (kolumner,) float64.
+    ROI-14; RX05 är medlet.
     """
-    # Spektrumet är medianen av raderna, ett värde per kolumn (ROI-14; RX05 är medlet).
     return np.median(table, axis=0)
 
 

@@ -49,9 +49,8 @@ def units(spectrum):
 
 
 def summary(spectrum, values, i):
-    """Toppen i som (läge, höjd, FWHM): läget är tyngdpunkten över tre punkter, FWHM NaN om kurvan inte når halva höjden."""
-    x = spectrum["x"]
-    return peaks.centroid(x, values, i), float(values[i]), peaks.fwhm(x, values, i)
+    """Toppen i som (läge, höjd): läget är tyngdpunkten över tre punkter."""
+    return peaks.centroid(spectrum["x"], values, i), float(values[i])
 
 
 def spread(spectrum):
@@ -73,8 +72,8 @@ def cmd_fwhm(state, args):
     """Kommandot fwhm [N]: topparna i senaste mätningen med linjebredd vid halva höjden, och arean under kurvan.
 
     Halva höjden räknas över en rak baslinje mellan toppens baspunkter (rev7, 1.2.15); en mättad topp ger ingen bredd.
-    FWHM av en smal linje (laser, Hg 546 nm) är instrumentets
-    upplösning, inte källans bredd (Krav 19b, 20). Arean är relativ uteffekt, aldrig watt.
+    FWHM av en smal linje (laser, Hg 546 nm) är instrumentets upplösning, inte källans bredd (Krav 19b, 20).
+    Arean är relativ uteffekt, aldrig watt.
     """
     registry.at_most_one(args, "fwhm", "N")
     n = registry.to_int("N", args[0], 1) if args else 5
@@ -85,7 +84,7 @@ def cmd_fwhm(state, args):
     if not found:
         out.say("inga toppar")
     for k, i in enumerate(found, start=1):
-        where, height, _width = summary(spectrum, values, i)
+        where, height = summary(spectrum, values, i)
         width, why = peaks.width(spectrum["x"], values, i, spectrum.get("saturated"))  # 1.2.15: baslinje, mättnad
         error = peaks.fwhm_sigma(spectrum["x"], values, i, sigma) if sigma is not None else float("nan")
         text = out.pm(width, error, x_unit) if why is None else why
@@ -108,7 +107,12 @@ def load_curves(folders):
     spectra = [files.load_measurement(folder) for folder in folders]
     if len({(s["x_label"], s["y_label"]) for s in spectra}) > 1:
         raise ValueError("input.invalid_argument: mapparna har olika enheter (pixel eller nm; counts, relativ eller kvot)")
-    return [(s, s["settings"].get("note") or Path(s["folder"]).name) for s in spectra]
+    return [(s, _curve_name(s)) for s in spectra]
+
+
+def _curve_name(spectrum):
+    """Namnet på en kurva: note ur settings.json, annars mappens namn."""
+    return spectrum["settings"].get("note") or Path(spectrum["folder"]).name
 
 
 def normalized(values, name):
@@ -126,7 +130,8 @@ def _row(spectrum, values):
     found = peaks.find_peaks(values, spectrum["mask"])
     if not found:
         return f"ingen topp, {area}"
-    where, height, width = summary(spectrum, values, found[0])
+    where, height = summary(spectrum, values, found[0])
+    width = peaks.fwhm(spectrum["x"], values, found[0])
     return f"topp {out.fmt(where)} {x_unit}, höjd {out.fmt(height)}, FWHM {out.fmt(width)} {x_unit}, {area}"
 
 
@@ -203,7 +208,7 @@ def _figure_cie(state, path, folders, others):
     measured = []  # (mätningen, namnet)
     for folder in folders:
         saved = mapp.read_required(folder, "direct")
-        measured.append((saved, saved["settings"].get("note") or Path(saved["folder"]).name))
+        measured.append((saved, _curve_name(saved)))
     if not folders:
         spectrum = latest(state)[0]
         settings = spectrum.get("settings") or {"use_response": state["use_response"], "mode": state["mode"]}
@@ -214,14 +219,39 @@ def _figure_cie(state, path, folders, others):
         measured.append((spectrum, "senaste mätningen"))
     points = [(*color.xy(*color.xyz(s["x"], s["values"], s["mask"])), name) for s, name in measured]
     plot.save_cie(path, color.locus(), color.planck_locus(), color.planck_locus(CIE_MARKS), points)
-    caption = Path(path).with_suffix(".txt")
     low, high = color.CCT_K
     rows = [f"Figur {Path(path).name}: CIE 1931 xy (2°), spektralkurvan ur programmets tabell 380–700 nm, "
             f"Planck-kurvan {low:.0f}–{high:.0f} K"]
     rows += [f"{name}: x {x:.4f}  y {y:.4f}; {_conditions(s, state)}" for (x, y, name), (s, _) in zip(points, measured)]
     rows.append("Färgen ur responskorrigerade relativa tal; inte watt, lumen eller verkningsgrad.")
+    _write_caption(path, rows)
+
+
+def _write_caption(path, rows):
+    """Skriver UT.txt bredvid figuren (villkoren till bildtexten) och säger var båda ligger."""
+    caption = Path(path).with_suffix(".txt")
     caption.write_text("\n".join(rows) + "\n", encoding="utf-8")
     out.say(f"Sparad: {path} och {caption.as_posix()} (villkoren till bildtexten)")
+
+
+def _figure_curves(state, path, folders, flags, xlim):
+    """figure UT.png [MAPP...] med --norm, --xlim, --log och --ev: kurvorna i egna axlar och UT.txt."""
+    loaded = load_curves(folders) if folders else [(latest(state)[0], "senaste mätningen")]
+    x_label = loaded[0][0]["x_label"]
+    if "--ev" in flags and x_label != "våglängd (nm)":
+        raise ValueError("input.invalid_argument: figure --ev kräver våglängd i nm, kör calibrate först")
+    curves, lines = [], []
+    for spectrum, name in loaded:
+        values = calc.masked_values(spectrum)
+        x = bandgap.ev(spectrum["x"]) if "--ev" in flags else spectrum["x"]
+        curves.append((x, normalized(values, name) if "--norm" in flags else values, name))
+        lines.append(f"{name}: {_conditions(spectrum, state)}")
+    x_label = "fotonenergi (eV)" if "--ev" in flags else x_label
+    y_label = NORM_LABEL if "--norm" in flags else loaded[0][0]["y_label"]
+    plot.save_figure(path, curves, x_label, y_label, xlim, "--log" in flags)
+    head = f"Figur {Path(path).name}: x {x_label}, y {y_label}" + (", logaritmisk y" if "--log" in flags else "")
+    tail = "Relativa tal från kameran; inte watt, lumen eller verkningsgrad."
+    _write_caption(path, [head, *lines, tail])
 
 
 @registry.command("figure", "UT.png|UT.svg [MAPP...] [--norm] [--xlim MIN MAX] [--log] [--ev] [--cie]: rapportfigur och UT.txt till bildtexten",
@@ -236,25 +266,5 @@ def cmd_figure(state, args):
     path, folders, flags, xlim = _figure_words(args)
     if "--cie" in flags:
         _figure_cie(state, path, folders, (flags - {"--cie"}) or xlim)
-        return
-    if folders:
-        loaded = load_curves(folders)
     else:
-        loaded = [(latest(state)[0], "senaste mätningen")]
-    x_label = loaded[0][0]["x_label"]
-    if "--ev" in flags and x_label != "våglängd (nm)":
-        raise ValueError("input.invalid_argument: figure --ev kräver våglängd i nm, kör calibrate först")
-    curves, lines = [], []
-    for spectrum, name in loaded:
-        values = calc.masked_values(spectrum)
-        x = bandgap.ev(spectrum["x"]) if "--ev" in flags else spectrum["x"]
-        curves.append((x, normalized(values, name) if "--norm" in flags else values, name))
-        lines.append(f"{name}: {_conditions(spectrum, state)}")
-    x_label = "fotonenergi (eV)" if "--ev" in flags else x_label
-    y_label = NORM_LABEL if "--norm" in flags else loaded[0][0]["y_label"]
-    plot.save_figure(path, curves, x_label, y_label, xlim, "--log" in flags)
-    caption = Path(path).with_suffix(".txt")
-    head = f"Figur {Path(path).name}: x {x_label}, y {y_label}" + (", logaritmisk y" if "--log" in flags else "")
-    tail = "Relativa tal från kameran; inte watt, lumen eller verkningsgrad."
-    caption.write_text("\n".join([head, *lines, tail]) + "\n", encoding="utf-8")
-    out.say(f"Sparad: {path} och {caption.as_posix()} (villkoren till bildtexten)")
+        _figure_curves(state, path, folders, flags, xlim)
