@@ -47,8 +47,7 @@ def run_file(state, path):
         folder = files.save_measurement(state["settings"]["output_dir"], spectrum, state["image"], state["settings"])
         out.say(f"Sparad i {folder.as_posix()}")
         win = plot.open_plot()
-        masked = calc.masked_values(spectrum)
-        plot.draw(win, spectrum["x"], masked, spectrum["x_label"], spectrum["y_label"])
+        plot.draw(win, spectrum["x"], calc.masked_values(spectrum), spectrum["x_label"], spectrum["y_label"])
         plot.show()
     except (ValueError, RuntimeError, OSError) as error:
         out.error(error)
@@ -81,11 +80,9 @@ def run_at_start(state, path):
 def main(argv=None):
     """Kör prompten spektro> tills quit, Ctrl+D eller Ctrl+C vid prompten; ett fel blir en rad Fel:.
 
-    Med en sökväg efter kommandot mäts bara den bildfilen en gång (run_file). Flaggorna (-h visar dem): --version,
-    --kor FIL [--avsluta], --camera N, --input PATH, --output DIR. Med --avsluta: 1 om en rad i filen gav Fel:,
-    annars 0; argparse ger 2 vid en felaktig flagga. argv: orden efter programnamnet, None läser sys.argv.
-    Returnerar: slutkoden. Med en sökväg den från run_file. Annars 1 om något kommando gav Fel: och stdin inte är en
-    terminal (en kommandofil eller ett rör), annars 0.
+    Med en sökväg mäts bara den bildfilen en gång (run_file). Flaggorna visar -h. argv: orden efter programnamnet,
+    None läser sys.argv. Slutkoden är 1 om ett kommando gav Fel: och stdin inte är en terminal (en kommandofil eller
+    ett rör), annars 0. Med --avsluta är den 1 om en rad i filen gav Fel:; argparse ger 2 vid en felaktig flagga.
     """
     for stream in (sys.stdout, sys.stdin):
         if hasattr(stream, "reconfigure"):  # pytest byter ut sys.stdin mot ett objekt utan reconfigure

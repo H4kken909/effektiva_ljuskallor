@@ -1,6 +1,6 @@
 """All utskrift till terminalen går genom den här modulen; ingen annan modul i paketet anropar print.
 
-Texten är exakt som förut, så Adrians facit är oförändrat. Färg (rich) bara i en riktig terminal, se FARG.
+Texten är exakt som förut, så Adrians facit är oförändrat.
 """
 
 import os
@@ -12,7 +12,7 @@ import time
 FARG = sys.stdin.isatty() and sys.stdout.isatty() and "NO_COLOR" not in os.environ
 STIL = {"ok": "green", "info": "blue", "run": "cyan", "warn": "yellow", "error": "bold red", "prompt": "cyan",
         "idle": "dim", "running": "green"}
-YES = {True: "ja", False: "nej"}  # ja/nej i README.txt och session.chain (show skriver ja/nej själv)
+YES = {True: "ja", False: "nej"}  # ja/nej i utskrifter och README.txt
 
 if FARG:
     try:
@@ -129,7 +129,7 @@ def say_all(lines):
 
 
 def pm(value, uncertainty, unit=""):
-    """value ± uncertainty med 1–2 värdesiffror i osäkerheten och värdet avrundat till samma decimal (RAP-14). 1.2.14.
+    """value ± uncertainty med 1–2 värdesiffror i osäkerheten och värdet avrundat till samma decimal.
 
     Två värdesiffror när osäkerheten börjar på 1 eller 2 (0.012, 0.25), annars en (0.3, 0.008). Saknas osäkerheten
     (NaN, oändlig eller 0) blir det bara värdet, som fmt. Exempel: pm(2.25376, 0.00274, "eV") ger "2.2538 ± 0.0027 eV",

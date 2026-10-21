@@ -36,9 +36,9 @@ def centroid(x, y, i):
 
 
 def bases(y, i):
-    """Toppens baspunkter (vänster, höger): lägsta punkten på var sida innan nästa lika höga topp. 1.2.15.
+    """Toppens baspunkter (vänster, höger): lägsta punkten på var sida innan nästa lika höga topp.
 
-    Som prominensen i katalogen (ANA-06): gå från toppen åt var sida tills ett högre värde, en lucka (NaN) eller kanten
+    Som prominensen i katalogen: gå från toppen åt var sida tills ett högre värde, en lucka (NaN) eller kanten
     kommer, och ta den lägsta punkten på vägen. Ett lika högt värde efter en dal är också en annan topp; en platå vid
     toppen (samma tal i rad, vanligt med 8 bitar) är det inte. Brus på flanken stoppar alltså inte sökningen.
     """
@@ -57,7 +57,7 @@ def bases(y, i):
 
 
 def width(x, y, i, saturated=None):
-    """FWHM över en rak baslinje mellan toppens baspunkter, som rev7: (bredd, None) eller (NaN, orsak). 1.2.15.
+    """FWHM över en rak baslinje mellan toppens baspunkter, som rev7: (bredd, None) eller (NaN, orsak).
 
     Baslinjen dras mellan baspunkterna (bases) och dras av; halva höjden är halva toppens höjd över baslinjen, och
     korsningarna interpoleras linjärt på var sida. Ogiltig (rev7: inget tal hellre än ett påhittat) när toppen är
@@ -100,7 +100,7 @@ def area(x, y, mask):
 
 
 def fwhm_sigma(x, y, i, sigma):
-    """Slumpfelet i fwhm(x, y, i) när varje position har osäkerheten sigma (oberoende), till första ordningen. 1.2.14.
+    """Slumpfelet i fwhm(x, y, i) när varje position har osäkerheten sigma (oberoende), till första ordningen.
 
     Varje position nära toppen flyttas lite upp och ner; ändringen i FWHM gånger sigma är dess bidrag, och bidragen
     läggs ihop i kvadrat. Ger NaN när FWHM saknas eller sigma saknas där den behövs. Bara slumpbruset: kalibrering

@@ -13,10 +13,7 @@ from spectrometer.analysis import bandgap, color, mapp
 
 
 def _folder_and_options(args, allowed):
-    """MAPP och valen efter den: ["MAPP", "--min", "0.2"] ger ("MAPP", {"--min": "0.2"}).
-
-    Fel: ValueError med input.invalid_argument om MAPP saknas, ett val är okänt eller saknar sitt värde.
-    """
+    """MAPP och valen efter den: ["MAPP", "--min", "0.2"] ger ("MAPP", {"--min": "0.2"})."""
     if not args:
         raise ValueError("input.invalid_argument: MAPP saknas")
     options, rest = {}, args[1:]
@@ -55,7 +52,8 @@ def cmd_sammanfatta(args):
         i = int(np.nanargmax(np.where(mask, saved["values"], np.nan)))
         out.say(f"max: {out.fmt(saved['values'][i])} vid {unit} {out.fmt(saved['x'][i])}")
     out.say(f"bilder: {settings.get('frames', 'okänt')}, mättade pixlar: {settings.get('saturated_px', 'okänt')}")
-    tops = ", ".join(f"{unit} {x:.1f} ({out.fmt(value)})" for x, value in _top_peaks(saved, peaks.PEAK_MIN_FRACTION, 3))
+    top3 = _top_peaks(saved, peaks.PEAK_MIN_FRACTION, 3)
+    tops = ", ".join(f"{unit} {x:.1f} ({out.fmt(value)})" for x, value in top3)
     out.say(f"toppar: {tops or 'inga'}")
     out.say("Relativa tal från kameran.")
 
@@ -93,10 +91,7 @@ KOMMANDON = {"sammanfatta": cmd_sammanfatta, "toppar": cmd_toppar, "farg": cmd_f
 
 
 def main(argv=None):
-    """Kör ett kommando ur KOMMANDON. argv: orden efter programnamnet, None läser sys.argv.
-
-    Returnerar slutkoden: 0 när det gick, 1 vid fel (Fel: skrivs), 2 vid okänt eller saknat kommando (listan skrivs).
-    """
+    """Kör ett kommando ur KOMMANDON och returnerar slutkoden. argv: orden efter programnamnet, None läser sys.argv."""
     if hasattr(sys.stdout, "reconfigure"):  # som main: samma bytes på Windows och Arch
         sys.stdout.reconfigure(encoding="utf-8")
     args = sys.argv[1:] if argv is None else list(argv)

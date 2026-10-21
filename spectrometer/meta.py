@@ -20,7 +20,7 @@ NOT_IN_ID = ("note", "measured_at", "annotations", "program_version", "git_commi
 
 
 def _git(*args):
-    """Kör git i programmets mapp och ger utskriften. Fel: OSError utan git, SubprocessError vid fel eller tidsgräns."""
+    """Kör git i programmets mapp och ger utskriften. OSError utan git, SubprocessError vid fel eller tidsgräns."""
     done = subprocess.run(
         ["git", *args], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5,
         check=True,
@@ -29,7 +29,7 @@ def _git(*args):
 
 
 def git_state():
-    """(commit, dirty): kort commit och True om något är ändrat sedan den; (None, None) om git inte svarar. DAT-09."""
+    """(commit, dirty): kort commit och True om något är ändrat sedan den; (None, None) om git inte svarar."""
     try:
         commit = _git("rev-parse", "--short", "HEAD").strip()
         dirty = _git("status", "--porcelain") != ""
@@ -38,26 +38,22 @@ def git_state():
     return commit, dirty
 
 
-def _installed(name):
-    """Versionen av ett installerat paket, eller None om den inte går att läsa."""
-    try:
-        return metadata.version(name)
-    except metadata.PackageNotFoundError:
-        return None
-
-
 def libraries():
-    """Python och biblioteken som gav mätningen, som text. DAT-10."""
+    """Python och biblioteken som gav mätningen, som text (matplotlib None om den inte går att läsa)."""
+    try:
+        matplotlib = metadata.version("matplotlib")
+    except metadata.PackageNotFoundError:
+        matplotlib = None
     return {
         "python": platform.python_version(),
         "numpy": np.__version__,
         "opencv": files.opencv_version(),
-        "matplotlib": _installed("matplotlib"),
+        "matplotlib": matplotlib,
     }
 
 
 def profiles(state):
-    """Mörker, respons och referens i några tal (None där den saknas), till settings.json. DAT-12."""
+    """Mörker, respons och referens i några tal (None där den saknas), till settings.json."""
     result = {"dark": None, "response": None, "reference": None}
     if state["dark"] is not None:
         result["dark"] = {"frames": state["dark_frames"], "mean": round(float(np.mean(state["dark"])), 3)}
@@ -80,7 +76,7 @@ def profiles(state):
 
 
 def settings_id(saved):
-    """De 12 första hex-tecknen av SHA-256 över saved med sorterade nycklar, utan nycklarna i NOT_IN_ID. DAT-16."""
+    """De 12 första hex-tecknen av SHA-256 över saved med sorterade nycklar, utan nycklarna i NOT_IN_ID."""
     kept = {key: value for key, value in saved.items() if key not in NOT_IN_ID}
     text = json.dumps(kept, sort_keys=True, ensure_ascii=False, default=str)
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
@@ -99,7 +95,7 @@ def with_metadata(state, saved):
         "git_dirty": dirty,
         "libraries": libraries(),
         "profiles": profiles(state),
-        "extraction": {"rows": state["rows"], "background": state["background"]},  # 1.0.37
+        "extraction": {"rows": state["rows"], "background": state["background"]},
     }
     extra["settings_id"] = settings_id(saved | extra)
     keys = list(saved)
@@ -108,7 +104,7 @@ def with_metadata(state, saved):
 
 
 def version_line():
-    """Raden som kommandot version skriver: programmet, Python, biblioteken, git och operativsystemet. UT-32."""
+    """Raden som kommandot version skriver: programmet, Python, biblioteken, git och operativsystemet."""
     libs = libraries()
     commit, dirty = git_state()
     git = "git okänd" if commit is None else f"git {commit}" + (" (ändrad)" if dirty else "")
@@ -119,10 +115,7 @@ def version_line():
 
 
 def put_before(saved, key, value):
-    """En ny ordbok: saved med key: value just före coefficients.
-
-    Så hamnar nya nycklar före coefficients, och slutet av settings.json är som förut (test_metadata).
-    """
+    """En ny ordbok: saved med key: value just före coefficients, så att slutet av settings.json är som förut."""
     keys = [k for k in saved if k != key]
     cut = keys.index("coefficients")
     return {k: saved[k] for k in keys[:cut]} | {key: value} | {k: saved[k] for k in keys[cut:]}

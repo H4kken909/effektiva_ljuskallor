@@ -174,7 +174,7 @@ def cmd_calibrate_save(state, args):
         out.warn("upplösning okänd, högsta toppen är mättad")
     elif resolution is None:
         out.warn("upplösning okänd, resolution_nm blir null: mät en smal linje med step efter calibrate och spara igen "
-                 "med ett nytt namn")  # 1.2.13: filen sparas ändå, kalibreringen gäller
+                 "med ett nytt namn")  # filen sparas ändå, kalibreringen gäller
     else:
         out.say(f"upplösning: {out.fmt(resolution)} nm (FWHM för högsta toppen i senaste mätningen)")
     out.say(f"Sparad i {args[0]}")

@@ -50,7 +50,6 @@ def _say_and_check_range(fit_pixels, coefficients, margin):
 
     Giltigt är de anpassade pixlarna och margin gånger deras bredd på var sida. Linjen måste vara monoton i
     intervallet, annars får två pixlar samma våglängd.
-    Fel: ValueError med input.invalid_argument om den inte är det.
     """
     low, high = np.min(fit_pixels), np.max(fit_pixels)
     width = high - low
@@ -103,10 +102,9 @@ def spectrum_peaks(state, n):
     """De n högsta topparna i senaste mätningen som (pixel, värde), i stigande pixel.
 
     Pixeln räknas i hela bilden (inte plats i ROI:n), med delpixel från peaks.refine_peak avrundad till 0.1 pixel.
-    Fel: ValueError med input.missing_data om ingen mätning finns.
     """
     spectrum = registry.need_spectrum(state)
-    if "loaded_from" in spectrum:  # 1.2.2
+    if "loaded_from" in spectrum:
         raise ValueError("input.invalid_argument: toppar fungerar efter step, inte efter load "
                          "(pixlarna räknas ur nuvarande roi)")
     image = state["image"]
@@ -162,8 +160,6 @@ def propose_points(state, line_path, out_path):
 
     Programmet kalibrerar inte själv: en människa granskar raderna och kör sedan calibrate. Med out_path skrivs
     filen också (aldrig över en befintlig). Den andra toppen blir kontrollpunkt (check 1) när det finns minst tre.
-    Fel: ValueError med input.missing_data utan mätning eller med färre än två toppar; fel ur load_lines och
-    save_points.
     """
     lines = files.load_lines(line_path)
     found = spectrum_peaks(state, lines.size)
@@ -187,10 +183,7 @@ def propose_points(state, line_path, out_path):
 
 
 def to_margin(text):
-    """MARGIN i calibrate: hur stor del av den anpassade bredden som får extrapoleras på var sida (minst 0).
-
-    Fel: ValueError med input.invalid_argument om ordet inte är ett tal eller är mindre än 0.
-    """
+    """MARGIN i calibrate: hur stor del av den anpassade bredden som får extrapoleras på var sida (minst 0)."""
     try:
         margin = float(text)
     except ValueError as error:
@@ -212,7 +205,6 @@ def load_settings_calibration(state, args):
 
     Varnar när axis eller bildens storlek skiljer sig från nu: då betyder pixlarna olika saker. En annan ROI spelar
     ingen roll, pixlarna räknas i hela bilden. Bildens storlek jämförs bara om en bild redan finns (efter step).
-    Fel: ValueError med input.invalid_argument vid fler ord; fel ur files.load_saved_calibration.
     """
     if len(args) > 1:
         raise ValueError("input.invalid_argument: calibrate MAPP/settings.json tar inga fler ord")

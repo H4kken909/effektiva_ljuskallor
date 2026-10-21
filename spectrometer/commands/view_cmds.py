@@ -1,6 +1,6 @@
 """theme, view och graf: fönstrets färger, vad nästa fönster visar och senaste mätningen i ett fönster.
 
-Terminalen väljer, fönstret visar (rev7 4E). Allt här ändrar bara state["view"], aldrig en mätning.
+Terminalen väljer, fönstret visar. Allt här ändrar bara state["view"], aldrig en mätning.
 """
 
 import math
@@ -55,7 +55,7 @@ def cmd_view(state, args):
 
 
 def _limits(name, rest):
-    """MIN MAX som två ändliga tal i stigande ordning, eller auto (None): rev7 set_axis_limits."""
+    """MIN MAX som två ändliga tal i stigande ordning, eller auto (None)."""
     if rest == ["auto"]:
         return None
     registry.need(rest, ("MIN", "MAX"), f"view {name}")

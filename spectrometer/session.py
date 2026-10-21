@@ -19,11 +19,7 @@ AXES = ("horizontal", "vertical")
 
 
 def new_state(settings):
-    """Ger en ny state-ordbok med en kopia av inställningarna.
-
-    Parametrar: settings: inställningarna, till exempel DEFAULTS (ändras inte).
-    Returnerar: state, en ordbok med nycklarna nedan.
-    """
+    """Ger en ny state-ordbok med en kopia av settings (till exempel DEFAULTS, som inte ändras)."""
     return {
         "settings": settings.copy(),  # inställningarna, skrivs till settings.json
         "image": None,  # senaste råbilden, (H, W, 3) uint8 i counts, None tills step
@@ -149,13 +145,13 @@ def age_minutes(state, what):
 
 
 def taken_text(state):
-    """Tiden för det som finns, som text (ISO 8601 med tidszon), till "taken" i settings.json. PRO-10."""
+    """Tiden för det som finns, som text (ISO 8601 med tidszon), till "taken" i settings.json."""
     return {what: moment.isoformat(timespec="seconds") for what, moment in state["taken"].items()
             if state[TAKEN_KEYS[what]] is not None}
 
 
 def warn_old_dark(state):
-    """Varning när mörkret är äldre än DARK_MAX_MIN minuter: kamerans temperatur och mörker driver. PRO-12."""
+    """Varning när mörkret är äldre än DARK_MAX_MIN minuter: kamerans temperatur och mörker driver."""
     minutes = age_minutes(state, "dark")
     if minutes is not None and minutes > DARK_MAX_MIN:
         out.warn(f"mörkret är {minutes} min gammalt (gräns {DARK_MAX_MIN}). Kör dark igen.")
@@ -195,7 +191,7 @@ def controls_text(controls):
 
 
 def extra_lines(state):
-    """Raderna som show skriver sist, bara för det du valt (1.2.x): så är show som förut i facit."""
+    """Raderna som show skriver sist, bara för det du valt: så är show som förut i facit."""
     lines = []
     controls = controls_text(state["controls"])
     if controls:

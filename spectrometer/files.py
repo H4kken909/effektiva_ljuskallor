@@ -1,7 +1,5 @@
-"""Sparar mätningar på disk och läser punktfiler och kända fördelningar. Filen räknar inte.
+"""Sparar mätningar på disk och läser punktfiler och kända fördelningar. Filen räknar inte."""
 
-Används av main.py (save, calibrate och response build).
-"""
 import csv
 import hashlib
 import json
@@ -27,17 +25,13 @@ Y_LABELS = {
 
 
 def save_measurement(parent, spectrum, image, settings):
-    """Sparar en mätning som en mapp med spectrum.csv, raw.png, settings.json och README.txt.
+    """Sparar en mätning som en mapp med spectrum.csv, raw.png, settings.json och README.txt; ger mappen som Path.
 
     Säkert: mappen skrivs först som <stämpel>.partial, filerna kontrolleras och sist byter mappen namn (os.replace),
     så en mapp utan .partial är alltid hel. Vid varje fel tas .partial bort; under 50 MB ledigt sparas inget.
-    Parametrar: parent: föräldramappen (str eller Path); spectrum: ordboken från measure med x, values, mask,
-    x_label och y_label; image: råbilden, (H, W, 3) uint8; settings: inställningarna (bara tal, text, tuple,
-    listor, bool och None).
-    Returnerar: mätmappen som Path, till exempel data/20261016-153012 eller data/20261016-153012-2.
-    Fel: OSError om något inte går att skriva, med files.write_failed om raw.png inte sparas.
+    Mappen heter t.ex. data/20261016-153012 (eller ...-2). settings: bara tal, text, listor, bool, None.
     """
-    # Mappnamnet är samma ögonblick som measured_at i settings.json, när den finns. DAT-07.
+    # Mappnamnet är samma ögonblick som measured_at i settings.json, när den finns.
     moment = datetime.fromisoformat(settings["measured_at"]) if "measured_at" in settings else datetime.now()
     stamp = moment.strftime("%Y%m%d-%H%M%S")
     folder = _unused_path(Path(parent), stamp)
@@ -49,7 +43,7 @@ def save_measurement(parent, spectrum, image, settings):
         _check_files(partial)
         _rename(partial, folder)
     except BaseException:
-        # Vid varje fel, även Ctrl+C (KeyboardInterrupt) och full disk: hellre ingen mapp än en halv. ROB-12.
+        # Vid varje fel, även Ctrl+C (KeyboardInterrupt) och full disk: hellre ingen mapp än en halv.
         shutil.rmtree(partial, ignore_errors=True)
         raise
     return folder
@@ -57,16 +51,16 @@ def save_measurement(parent, spectrum, image, settings):
 
 def _write_files(folder, spectrum, image, settings):
     """Skriver spectrum.csv, raw.png, README.txt och settings.json i mappen folder, som redan finns."""
-    transmission = settings.get("mode") == "transmission"  # valfritt (0.9.3): kolumnen absorbance
+    transmission = settings.get("mode") == "transmission"  # mode transmission ger kolumnen absorbance
     with open(folder / "spectrum.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         x_col = "x_px" if spectrum["x_label"] == "pixel" else "x_nm"
-        extra = _extra_columns(spectrum, x_col)  # 1.2.2: raw_counts och x_px sist, så att kolumn 1-3 står kvar
+        extra = _extra_columns(spectrum, x_col)  # raw_counts och x_px sist, så att kolumn 1-3 står kvar
         writer.writerow([x_col, "value", "valid"] + (["absorbance"] if transmission else []) + list(extra))
         for k, (x, value, ok) in enumerate(zip(spectrum["x"], spectrum["values"], spectrum["mask"])):
             row = [f"{x:.10g}", f"{value:.10g}" if ok else "", "true" if ok else "false"]
             if transmission:
-                # Absorbans A = -log10(T), tom där T saknas eller är 0 eller mindre. Se rev7, Krav 22.
+                # Absorbans A = -log10(T), tom där T saknas eller är 0 eller mindre.
                 row.append(f"{-math.log10(value):.10g}" if ok and value > 0 else "")
             writer.writerow(row + [_cell(column[k]) for column in extra.values()])
     save_png(folder / "raw.png", image)
@@ -86,10 +80,7 @@ def _csv_rows(path):
 def load_points(path):
     """Läser en punktfil med kolumnerna pixel, wavelength_nm och check (0 för anpassning, 1 för kontroll).
 
-    Returnerar: (pixels, wavelengths, is_check): pixlar i hela bilden (K,) float64, våglängder i nm (K,) float64 och
-    is_check (K,) bool, True för en kontrollpunkt.
-    Fel: ValueError med input.invalid_argument, filnamnet och radnumret vid fel rubrik, fel antal fält, ett fält som
-    inte är ett tal, ett ogiltigt värde eller check som inte är 0 eller 1; OSError om filen saknas.
+    Ger (pixels, wavelengths, is_check): pixlar i hela bilden, våglängder i nm (float64) och True för kontrollpunkter.
     """
     name = Path(path).name
     pixels = []
@@ -125,10 +116,7 @@ def load_points(path):
 def load_known(path):
     """Läser en känd fördelning med kolumnerna wavelength_nm och relative_power_per_nm.
 
-    Returnerar: (wavelengths, values): våglängder i stigande nm (K,) float64 och relativ effekt per nm (K,) float64.
-    Fel: ValueError med input.invalid_argument, filnamnet och radnumret vid fel rubrik, fel antal fält, ett fält som
-    inte är ett tal, ett ogiltigt värde, en våglängd som inte stiger eller färre än två datarader; OSError om filen
-    saknas.
+    Ger (wavelengths, values): våglängder i stigande nm och relativ effekt per nm, float64.
     """
     name = Path(path).name
     wavelengths = []
@@ -159,9 +147,7 @@ def load_known(path):
 def load_lines(path):
     """Läser en linjefil: rubriken wavelength_nm och en våglängd i nm per rad; rader som börjar med # hoppas över.
 
-    Returnerar: våglängderna i stigande nm, (L,) float64, t.ex. ur kalibrering/hg_linjer.csv.
-    Fel: ValueError med input.invalid_argument, filnamnet och radnumret vid fel rubrik, fel antal fält, ett fält som
-    inte är ett tal eller färre än två linjer; OSError om filen saknas.
+    Ger våglängderna i stigande nm (float64), t.ex. ur kalibrering/hg_linjer.csv.
     """
     name = Path(path).name
     wavelengths = []
@@ -189,10 +175,7 @@ def load_lines(path):
 
 
 def save_png(path, image, roi=None):
-    """Skriver bilden som PNG; med roi ritas ROI:n som en grön ram på en kopia (råbilden ändras inte).
-
-    Fel: OSError med files.write_failed om filen inte går att skriva.
-    """
+    """Skriver bilden som PNG; med roi ritas ROI:n som en grön ram på en kopia (råbilden ändras inte)."""
     if roi is not None:
         image = image.copy()
         _draw_roi_box(image, roi)
@@ -215,8 +198,7 @@ def _draw_roi_box(image, roi):
 def save_snaps(parent, images):
     """Sparar råbilderna som PNG i parent: snap-ÅÅÅÅMMDD-HHMMSS.png, eller med -001, -002 ... när de är flera.
 
-    En fil som redan finns skrivs inte över; namnet får då -2, -3 ... sist. Returnerar: sökvägarna som Path.
-    Fel: OSError, med files.write_failed om en bild inte går att skriva.
+    En fil som redan finns skrivs inte över; namnet får då -2, -3 ... sist. Ger sökvägarna som Path.
     """
     folder = Path(parent)
     folder.mkdir(parents=True, exist_ok=True)
@@ -231,10 +213,9 @@ def save_snaps(parent, images):
 
 
 def save_points(path, rows):
-    """Skriver en ny punktfil: rubriken pixel,wavelength_nm,check och raderna som de är. Skriver aldrig över.
+    """Skriver en ny punktfil: rubriken pixel,wavelength_nm,check och raderna (text, t.ex. "412.3,404.656,0").
 
-    rows: raderna som text, t.ex. "412.3,404.656,0".
-    Fel: ValueError med input.invalid_argument om filen redan finns; OSError om den inte går att skriva.
+    Skriver aldrig över.
     """
     try:
         f = open(path, "x", encoding="utf-8")  # "x": bara en ny fil, annars FileExistsError
@@ -250,8 +231,6 @@ def points_file_info(path):
     """Vilken punktfil kalibreringen kom ifrån: sökvägen, de 12 första tecknen av sha256 och tiden då den lästes.
 
     Samma sha256 betyder samma innehåll i filen.
-    Returnerar: {"path": "kalibrering/punkter.csv", "sha256": "3f2a...", "time": "2026-10-20T14:03:12"}.
-    Fel: OSError om filen inte går att läsa.
     """
     path = Path(path)
     return {
@@ -264,10 +243,8 @@ def points_file_info(path):
 def load_saved_calibration(path):
     """Läser kalibreringen ur en mätmapps settings.json (sparad av save, pixel_range finns från 1.0.26).
 
-    Returnerar: ordbok med coefficients (2 eller 3 värden, float64, a0 först), pixel_range (låg, hög),
-    axis och image_size ([bredd, höjd]) som de sparades (None om de saknas) och calibration_points_file.
-    Fel: ValueError med input.invalid_argument om filen inte är JSON eller värdena har fel form, med
-    input.missing_data om kalibreringen eller pixel_range saknas; OSError om filen saknas.
+    Ger coefficients (2 eller 3 värden, float64, a0 först), pixel_range (låg, hög), axis, image_size ([bredd, höjd])
+    och calibration_points_file; de tre sista är None om de saknas.
     """
     name = Path(path).name
     try:
@@ -298,10 +275,7 @@ def load_saved_calibration(path):
 
 
 def save_response(path, wavelengths, values):
-    """Skriver responsen som CSV: wavelength_nm, response och valid, med tom cell där responsen saknas (NaN).
-
-    values: (P,) relativ respons, NaN där ogiltig. Fel: OSError om filen inte går att skriva.
-    """
+    """Skriver responsen som CSV: wavelength_nm, response (relativ) och valid; tom cell där responsen saknas (NaN)."""
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(["wavelength_nm", "response", "valid"])
@@ -320,7 +294,7 @@ def _unused_path(folder, stem, suffix=""):
 
 
 def _check_free_space(parent):
-    """Kräver MIN_FREE_MB ledigt på närmaste befintliga mapp ovanför parent. Fel: OSError med files.write_failed."""
+    """Kräver MIN_FREE_MB ledigt på närmaste befintliga mapp ovanför parent."""
     folder = Path(parent).resolve()
     while not folder.exists() and folder != folder.parent:
         folder = folder.parent
@@ -330,7 +304,7 @@ def _check_free_space(parent):
 
 
 def _check_files(folder):
-    """Kontrollerar att varje fil i SAVED_FILES finns och inte är tom. Fel: OSError med files.write_failed."""
+    """Kontrollerar att varje fil i SAVED_FILES finns och inte är tom."""
     for name in SAVED_FILES:
         path = folder / name
         if not path.is_file() or path.stat().st_size == 0:
@@ -340,8 +314,7 @@ def _check_files(folder):
 def _rename(partial, folder):
     """Byter namn från .partial till det slutliga namnet med os.replace; tre försök vid PermissionError.
 
-    Windows Defender eller OneDrive kan låsa en ny fil en kort stund (antaget), därför en halv sekund mellan
-    försöken.
+    Windows Defender eller OneDrive kan låsa en ny fil en kort stund (antaget), därför en halv sekund mellan försöken.
     """
     for _ in range(2):
         try:
@@ -384,7 +357,7 @@ som text, ändra kolumnernas typ med nationella inställningar Engelska (USA) un
 
 
 def _write_readme(folder, settings):
-    """Skriver README.txt: den fasta texten och raderna om just den här mätningen ur settings. DAT-24."""
+    """Skriver README.txt: den fasta texten och raderna om just den här mätningen ur settings."""
     transmission = settings.get("mode") == "transmission"
     lines = [
         "",
@@ -407,9 +380,7 @@ def _write_readme(folder, settings):
 def save_roi_image(parent, image, roi):
     """Sparar en kopia av bilden med ROI-rutan (grön) och mättade pixlar (255 i någon kanal) i magenta.
 
-    Parametrar: parent: mappen (skapas om den saknas); image: (H, W, 3) uint8 i BGR; roi: (x, y, w, h).
-    Returnerar: sökvägen parent/roi-ÅÅÅÅMMDD-HHMMSS.png (med -2, -3 ... om namnet redan finns).
-    Fel: OSError med files.write_failed om bilden inte går att skriva.
+    Ger sökvägen parent/roi-ÅÅÅÅMMDD-HHMMSS.png (med -2, -3 ... om namnet redan finns); parent skapas om den saknas.
     """
     copy = image.copy()
     copy[(image >= 255).any(axis=2)] = (255, 0, 255)
@@ -425,11 +396,11 @@ def save_roi_image(parent, image, roi):
 
 
 def _extra_columns(spectrum, x_col):
-    """Kolumnerna sist i spectrum.csv (1.2.2): raw_counts, stddev (1.2.14) och x_px efter calibrate."""
+    """Kolumnerna sist i spectrum.csv: raw_counts, stddev och x_px efter calibrate."""
     extra = {}
     if "raw" in spectrum:
         extra["raw_counts"] = spectrum["raw"]
-        if "stddev" in spectrum:  # 1.2.14: spridningen mellan bilderna i counts, tom vid en bild (DAT-02, LOG-14)
+        if "stddev" in spectrum:  # spridningen mellan bilderna i counts, tom vid en bild
             extra["stddev"] = np.where(np.isfinite(spectrum["raw"]), spectrum["stddev"], np.nan)
     if "px" in spectrum and x_col == "x_nm":
         extra["x_px"] = spectrum["px"]
@@ -442,10 +413,9 @@ def _cell(value):
 
 
 def save_excel(folder):
-    """Skriver folder/spectrum_sv.csv ur spectrum.csv för svensk Excel: semikolon, decimalkomma, utf-8 med BOM. 1.2.2.
+    """Skriver folder/spectrum_sv.csv ur spectrum.csv för svensk Excel: semikolon, decimalkomma, utf-8 med BOM.
 
-    Tomma celler står kvar tomma (inte 0); spectrum.csv ändras inte. Returnerar sökvägen.
-    Fel: OSError om en fil inte går att läsa eller skriva.
+    Tomma celler står kvar tomma (inte 0); spectrum.csv ändras inte. Ger sökvägen.
     """
     path = Path(folder) / "spectrum_sv.csv"
     with open(Path(folder) / "spectrum.csv", newline="", encoding="utf-8") as f:
@@ -459,7 +429,7 @@ def save_excel(folder):
 
 def _read_spectrum_table(folder):
     """spectrum.csv i mätmappen som (rubrikraden, dataraderna), efter kontroll att alla rader har lika många fält."""
-    with open(measurement_folder(folder), newline="", encoding="utf-8-sig") as f:  # 1.2.13: Fel-rad, inte [Errno 2]
+    with open(measurement_folder(folder), newline="", encoding="utf-8-sig") as f:  # ger en Fel-rad, inte [Errno 2]
         reader = csv.reader(f)
         numbered = [(reader.line_num, row) for row in reader if row]
     if not numbered:
@@ -472,12 +442,10 @@ def _read_spectrum_table(folder):
 
 
 def load_measurement(folder):
-    """Läser en mätmapp tillbaka: spectrum.csv efter rubrik (inte plats) och settings.json (om den finns). 1.2.2.
+    """Läser en mätmapp tillbaka: spectrum.csv efter rubrik (inte plats) och settings.json (om den finns).
 
-    Returnerar: ordboken som measure ger (x, values, mask, x_label, y_label), raw och px när kolumnerna finns, settings
-    (ur settings.json, tom ordbok utan filen) och folder. Klarar gamla mappar med tre kolumner.
-    Fel: ValueError med input.invalid_argument om rubriken saknar x_nm eller x_px, value eller valid; OSError om filen
-    saknas.
+    Ger ordboken som measure ger (x, values, mask, x_label, y_label) med raw, stddev och px när kolumnerna finns, samt
+    settings (tom ordbok utan filen), folder och frames. Klarar gamla mappar med tre kolumner.
     """
     folder = Path(folder)
     header, body = _read_spectrum_table(folder)
@@ -506,18 +474,15 @@ def load_measurement(folder):
         "settings": settings,
         "folder": folder.as_posix(),
     }
-    for key, name in (("raw", "raw_counts"), ("stddev", "stddev"), ("px", "x_px")):  # 1.2.14: stddev om den finns
+    for key, name in (("raw", "raw_counts"), ("stddev", "stddev"), ("px", "x_px")):
         if name in header and name != x_col:
             spectrum[key] = column(name)
-    spectrum["frames"] = settings.get("frames")  # 1.2.14: antalet bilder bakom medlet, till slumpfelet i fwhm
+    spectrum["frames"] = settings.get("frames")  # antalet bilder bakom medlet, till slumpfelet i fwhm
     return spectrum
 
 
 def save_columns(path, columns):
-    """Skriver en CSV med en kolumn per (rubrik, värden); NaN blir en tom cell, text skrivs som den är.
-
-    Skriver aldrig över. Fel: OSError om filen redan finns (FileExistsError) eller inte går att skriva.
-    """
+    """Skriver en CSV med en kolumn per (rubrik, värden); NaN blir en tom cell, text som den är. Skriver aldrig över."""
     with open(path, "x", newline="", encoding="utf-8") as f:  # "x": fel om filen redan finns
         writer = csv.writer(f)
         writer.writerow([name for name, _values in columns])
@@ -526,17 +491,15 @@ def save_columns(path, columns):
 
 
 def save_json(path, data):
-    """Skriver data som JSON med indrag och åäö som de är. Skriver aldrig över; fel: OSError som save_columns."""
+    """Skriver data som JSON med indrag och åäö som de är. Skriver aldrig över."""
     with open(path, "x", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
 def measurement_folder(folder):
-    """spectrum.csv i mätmappen folder, som Path, efter en kontroll att mappen finns och har filen. 1.2.13.
+    """spectrum.csv i mätmappen folder, som Path, efter en kontroll att mappen finns och har filen.
 
-    load, compare, figure, mix och bandgap läser genom den, så att en fel mapp ger en Fel-rad i stället för rått
-    [Errno 2] ... spectrum.csv.
-    Fel: ValueError med input.invalid_argument om folder inte finns eller inte har någon spectrum.csv.
+    load, compare, figure, mix och bandgap läser genom den, så en fel mapp ger en Fel-rad i stället för rått [Errno 2].
     """
     folder = Path(folder)
     if not folder.exists():

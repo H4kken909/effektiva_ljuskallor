@@ -1,4 +1,4 @@
-"""Mätserier: en rad per mätning i serie.csv, och analysen uteffekt mot ström (Krav 18) och droop (Krav 21)."""
+"""Mätserier: en rad per mätning i serie.csv, och analysen uteffekt mot ström och droop."""
 
 import csv
 from pathlib import Path
@@ -50,9 +50,8 @@ def droop(xs, areas):
 
 
 def add_row(series_csv, folder, saved, spectrum):
-    """Lägger mätningen i folder som en rad i serie.csv: tid, series note, note, topp, area och exponering.
-
-    Ger antalet rader.
+    """Lägger mätningen i folder som en rad i serie.csv: mapp, tid, ström, spänning, LED, prov, lampa (series note),
+    note, topp, area, exponering och gain. Ger antalet rader.
 
     area är trapetsytan under kurvan där masken är sann: relativ uteffekt (counts·nm eller counts·pixel), aldrig watt.
     exposure och gain är vad drivrutinen sa under mätningen (tomt för en bildfil).
@@ -70,10 +69,10 @@ def add_row(series_csv, folder, saved, spectrum):
 
 
 def repeats(xs, areas):
-    """Mätningar vid samma x slås ihop: (x, medel, spridning, antal), x stigande. 1.2.14.
+    """Mätningar vid samma x slås ihop: (x, medel, spridning, antal), x stigande.
 
-    Spridningen är stickprovets (ddof=1) mellan de upprepade mätningarna, NaN där x bara mättes en gång (RAP-14:
-    osäkerheten är spridningen mellan upprepade mätningar; total osäkerhet är inte kvantifierad).
+    Spridningen är stickprovets (ddof=1) mellan de upprepade mätningarna, NaN där x bara mättes en gång. Osäkerheten
+    är spridningen mellan upprepade mätningar; total osäkerhet är inte kvantifierad.
     """
     xs, areas = np.asarray(xs, dtype=np.float64), np.asarray(areas, dtype=np.float64)
     unique = np.unique(xs)

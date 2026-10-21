@@ -1,4 +1,5 @@
-"""reset, undo, history, clear och set: nollställ, ångra, se och spara raderna, ta bort en del av kedjan, ändra gräns."""
+"""reset, undo, history, clear och set: nollställ, ångra, se och spara raderna vid prompten,
+ta bort en del av kedjan och ändra en gräns."""
 
 import sys
 from datetime import datetime

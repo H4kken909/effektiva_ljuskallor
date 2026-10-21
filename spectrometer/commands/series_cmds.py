@@ -1,4 +1,4 @@
-"""note och series: anteckning och metadata till varje save, och mätserier med en rad per mätning i serie.csv. 1.2.1.
+"""note och series: anteckning och metadata till varje save, och mätserier med en rad per mätning i serie.csv.
 
 Krav 18 och 21: varje punkt i en serie bär ström, spänning och vad som mättes. Ordningen vid riggen:
 series start NAMN, series note current_mA=20 voltage_V=2.9, step, save, nästa ström ..., series stop.
@@ -90,10 +90,7 @@ DROOP_LABEL = "relativ effektivitet (area/I, max 1)"
 
 
 def _plot_words(args):
-    """Orden efter series plot som (namnen, x-axeln, droop, UT eller None).
-
-    Fel: ValueError med input.invalid_argument.
-    """
+    """Orden efter series plot som (namnen, x-axeln, droop, UT eller None)."""
     words, axis = list(args), "current"
     if "--x" in words:
         k = words.index("--x")
@@ -122,13 +119,13 @@ def cmd_series_plot(state, args):
     """
     names, axis, droop, target = _plot_words(args)
     column, unit, x_label = AXES[axis]
-    curves, found = [], []  # found: till droop-panelen (1.2.16)
+    curves, found = [], []  # found: till droop-panelen
     for name in names:
         path = Path(state["settings"]["output_dir"]) / name / "serie.csv"
         if not path.is_file():
             raise ValueError(f"input.missing_data: {path.as_posix()} finns inte. Kör series start {name} och save")
         xs, areas = series.table(series.load(path), column)
-        xs, areas, spreads, counts = series.repeats(xs, areas)  # 1.2.14: samma ström flera gånger: medel ± spridning
+        xs, areas, spreads, counts = series.repeats(xs, areas)  # samma ström flera gånger: medel ± spridning
         out.say(f"serie {name}: {xs.size} punkter ur {path.as_posix()}")
         eff = series.droop(xs, areas) if axis == "current" else None
         for k, (x, area) in enumerate(zip(xs, areas)):
@@ -143,7 +140,7 @@ def cmd_series_plot(state, args):
             out.say(f"  ± är spridningen mellan upprepade mätningar vid samma {same}; total osäkerhet ej kvantifierad")
         curves.append((xs, eff if droop else areas, name))
         found.append((name, xs, areas, eff))
-    display.remember(state, "droop", {"curves": found, "x_label": x_label})  # 1.2.16: view analysis droop
+    display.remember(state, "droop", {"curves": found, "x_label": x_label})  # view analysis droop
     y_label = DROOP_LABEL if droop else POWER_LABEL
     if target is not None:
         plot.save_figure(target, curves, x_label, y_label)

@@ -1,15 +1,12 @@
 """Starta spektrometern: py -m spektro (Windows) eller python3 -m spektro (Linux).
 
-Körs i projektmappen. Första gången byggs .venv här och requirements.txt
-installeras; när requirements.txt ändras installeras den igen. Sedan körs
-programmet alltid i den miljön, utan att någon aktiverar den.
+Körs i projektmappen. Första gången byggs .venv här och requirements.txt installeras; när requirements.txt ändras
+installeras den igen. Sedan körs programmet alltid i den miljön, utan att någon aktiverar den.
 
-Utan flaggor: maximerat fönster, gul text medan modulerna laddas, färgprismat
-ur startskarm/prisma.py och sedan prompten. --windowed lämnar fönstret som
-det är, --no-splash går direkt till prompten, --delay ändrar pausen mellan
-raderna. Övriga flaggor skickas till spectrometer.main. Utan terminal
-(omdirigerad in- eller utmatning, som i jamfor och pytest) startas
-spectrometer.main direkt med oförändrad utskrift.
+Utan flaggor: maximerat fönster, gul text medan modulerna laddas, färgprismat ur startskarm/prisma.py och sedan
+prompten. --windowed lämnar fönstret som det är, --no-splash går direkt till prompten, --delay ändrar pausen mellan
+raderna. Övriga flaggor skickas till spectrometer.main. Utan terminal (omdirigerad in- eller utmatning, som i jamfor
+och pytest) startas spectrometer.main direkt med oförändrad utskrift.
 """
 
 import argparse
@@ -56,15 +53,8 @@ TEAM = [
     ("Oscar Al-Ishak", "Design och optik", False),
 ]
 
-MODULER = [
-    "numpy",
-    "cv2",
-    "matplotlib.pyplot",
-    "spectrometer.calc",
-    "spectrometer.files",
-    "spectrometer.source",
-    "spectrometer.plot",
-]
+MODULER = ["numpy", "cv2", "matplotlib.pyplot", "spectrometer.calc", "spectrometer.files", "spectrometer.source",
+           "spectrometer.plot"]
 
 
 def skriv(text):
@@ -87,18 +77,9 @@ def las_flaggor():
         allow_abbrev=False,
     )
     tolk.add_argument("--windowed", action="store_true", help="maximera inte fönstret")
-    tolk.add_argument(
-        "--no-splash",
-        action="store_true",
-        help="ingen startskärm, direkt till prompten",
-    )
-    tolk.add_argument(
-        "--delay",
-        type=float,
-        default=PAUS_RAD,
-        metavar="SEK",
-        help=f"paus mellan raderna i sekunder (standard {PAUS_RAD})",
-    )
+    tolk.add_argument("--no-splash", action="store_true", help="ingen startskärm, direkt till prompten")
+    tolk.add_argument("--delay", type=float, default=PAUS_RAD, metavar="SEK",
+                      help=f"paus mellan raderna i sekunder (standard {PAUS_RAD})")
     return tolk.parse_known_args()
 
 
@@ -216,8 +197,7 @@ def skriv_info():
     skriv_rad(f"  Spektro {VERSION}", GRA)
     skriv_rad()
     for namn, ansvar, framhav in TEAM:
-        stil = VIT if framhav else GRA
-        skriv_rad(f"    {namn:<18} {ansvar}", stil)
+        skriv_rad(f"    {namn:<18} {ansvar}", VIT if framhav else GRA)
     skriv_rad()
     skriv_rad('  Skriv "help" för kommandona, "quit" för att avsluta.', GRA)
     skriv_rad()

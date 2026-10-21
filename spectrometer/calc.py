@@ -1,6 +1,6 @@
 """All räkning i programmet, bara med NumPy: spektrum, medel, våglängd, mörker, respons och transmission.
 
-Används av main.py. Filen vet ingenting om state, filer eller kameran.
+Filen vet ingenting om state, filer eller kameran.
 """
 
 import numpy as np
@@ -24,12 +24,10 @@ def _check(name, a):
 
 
 def prepare(image, roi, axis, channel):
-    """Skär ut ROI:n som float64, väljer kanal och vänder vid vertical.
+    """Skär ut ROI:n (x, y, width, height) som float64, väljer kanal och vänder vid vertical.
 
-    Parametrar: image: bilden, (H, W, 3) uint8 i BGR och counts, eller float64 efter mörkeravdrag;
-    roi: (x, y, width, height) i pixlar; axis: "horizontal" eller "vertical"; channel: ett namn i CHANNELS.
-    Returnerar: tabellen, (rader, kolumner) float64 i counts, med spektrumet längs kolumnerna.
-    Fel: ValueError med input.invalid_argument om bilden eller ROI:n är fel.
+    image är (H, W, 3) uint8 i BGR och counts, eller float64 efter mörkeravdrag. Ger tabellen (rader, kolumner)
+    float64 i counts, med spektrumet längs kolumnerna.
     """
     if not isinstance(image, np.ndarray) or image.dtype not in (np.uint8, np.float64):
         raise ValueError("input.invalid_argument: image måste vara en uint8- eller float64-array")
@@ -50,7 +48,7 @@ def prepare(image, roi, axis, channel):
     elif channel == "sum":
         result = blue + green + red
     elif channel == "gray":
-        # Gråvärdet är varje färg gånger sin vikt, ihop (vikterna summerar till 1). Se rev7, RX01.
+        # Vikterna summerar till 1 (rev7 RX01).
         result = red_weight * red + green_weight * green + blue_weight * blue
     if axis == "vertical":
         result = result.T
@@ -63,46 +61,37 @@ def extract_spectrum(table):
 
 
 def average_spectra(stack):
-    """Ger medel och spridning av flera spektrum.
+    """Ger medel och spridning av flera spektrum: stack är (N, P) float64, en rad per bild.
 
-    Parametrar: stack: en float64-array med formen (N, P), en rad per bild.
-    Returnerar: mean och stddev, båda (P,) float64; stddev är NaN när N är 1.
+    mean och stddev är (P,) float64; stddev är NaN när N är 1.
     """
     mean = np.mean(stack, axis=0)
     if stack.shape[0] == 1:
-        # En enda bild har ingen spridning: NaN utan varning. Se rev7, RX07.
+        # En enda bild har ingen spridning: NaN utan varning (rev7 RX07).
         stddev = np.full(len(mean), np.nan)
     else:
-        # Stickprovsstandardavvikelse, delad med N - 1 (ddof=1). Se rev7, RX06.
+        # Stickprovsstandardavvikelse, delad med N - 1 (rev7 RX06).
         stddev = np.std(stack, axis=0, ddof=1)
     return mean, stddev
 
 
 def evaluate_wavelength(pixels, coefficients):
-    """Ger våglängden i nm vid varje pixel.
+    """Ger våglängden i nm vid varje pixel: a0 + a1·p (+ a2·p²), a0 först (rev7 RX09).
 
-    Parametrar: pixels: pixlar räknade i hela bilden, (P,) float64; coefficients: 2 eller 3 koefficienter,
-    float64, a0 först (nm, nm per pixel, nm per pixel i kvadrat).
-    Returnerar: våglängderna i nm, (P,) float64.
-    Fel: ValueError med input.invalid_argument om en array inte är float64 med ändliga tal,
-    eller om coefficients inte har 2 eller 3 värden.
+    pixels är (P,) float64, räknade i hela bilden. coefficients är 2 eller 3 värden i nm, nm per pixel och nm per
+    pixel i kvadrat.
     """
     _check("pixels", pixels)
     _check("coefficients", coefficients)
     if coefficients.size not in (2, 3):
         raise ValueError(f"input.invalid_argument: coefficients ska ha 2 eller 3 värden, fick {coefficients.size}")
-    # Våglängd = a0 + a1·p (+ a2·p²), a0 först. Se rev7, RX09.
     return poly.polyval(pixels, coefficients)
 
 
 def fit_wavelength(pixels, wavelengths, degree):
-    """Anpassar ett polynom av grad 1 eller 2 till anpassningspunkterna.
+    """Anpassar ett polynom av grad 1 eller 2 till anpassningspunkterna med minsta kvadrat (rev7 RX10).
 
-    Parametrar: pixels: pixlar i hela bilden, (K,) float64; wavelengths: kända våglängder i nm, (K,) float64;
-    degree: 1 eller 2.
-    Returnerar: degree + 1 koefficienter, float64, a0 först.
-    Fel: ValueError med input.invalid_argument om graden inte är 1 eller 2, arrayerna är fel,
-    samma pixel står två gånger eller punkterna är för få.
+    pixels (i hela bilden) och wavelengths (kända, i nm) är (K,) float64. Ger degree + 1 koefficienter, a0 först.
     """
     if degree not in (1, 2):
         raise ValueError(f"input.invalid_argument: degree ska vara 1 eller 2, fick {degree}")
@@ -114,39 +103,32 @@ def fit_wavelength(pixels, wavelengths, degree):
         raise ValueError(
             f"input.invalid_argument: grad {degree} behöver minst {degree + 1} punkter, fick {pixels.size}"
         )
-    # Minsta kvadrat-anpassning, koefficienterna i stigande ordning. Se rev7, RX10.
     return poly.polyfit(pixels, wavelengths, degree)
 
 
 def subtract_dark(image, dark):
-    """Drar av mörkret från bilden, utan att klippa negativa tal.
+    """Drar av mörkret från bilden, utan att klippa negativa tal (float64, så att inget slår runt; rev7 RX03).
 
-    Parametrar: image och dark: (H, W, 3) float64 i counts.
-    Returnerar: image minus dark, en ny (H, W, 3) float64-array i counts.
-    Fel: ValueError med input.invalid_argument om en array inte är float64 med ändliga tal eller formerna skiljer sig.
+    image och dark är (H, W, 3) float64 i counts. Ger en ny array.
     """
     _check("image", image)
     _check("dark", dark)
     if image.shape != dark.shape:
         raise ValueError(f"input.invalid_argument: mörkret har formen {dark.shape} men bilden har {image.shape}")
-    # Signal utan mörker = bild minus mörker, i float64 så att inget slår runt. Se rev7, RX03.
     return image - dark
 
 
 def build_response(wavelengths, measured, known_wavelengths, known_values):
     """Räknar instrumentets relativa respons ur en lampmätning med känd fördelning.
 
-    measured får ha NaN där lampmätningen saknar värde, därför ingen _check på den.
-
-    Parametrar: wavelengths: lampmätningens våglängder i nm, (P,); measured: lampmätningen i counts, (P,), får ha NaN;
-    known_wavelengths: kända våglängder i stigande nm, (K,); known_values: känd relativ effekt, (K,).
-    Returnerar: responsen, (P,) float64, normerad så att största värdet är 1, NaN där den inte går att räkna.
-    Fel: ValueError med input.missing_data om inget värde är giltigt eller toppen inte är större än 0.
+    wavelengths (nm) och measured (counts) är (P,); measured får ha NaN där lampmätningen saknar värde, därför ingen
+    _check på den. known_wavelengths (stigande nm) och known_values (relativ effekt) är (K,). Ger responsen (P,)
+    float64, normerad så att största värdet är 1, NaN där den inte går att räkna.
     """
-    # Interpolation utan extrapolation: NaN utanför de kända punkterna. Se rev7, RX15.
+    # Ingen extrapolation: NaN utanför de kända punkterna (rev7 RX15).
     known_at_lamp = np.interp(wavelengths, known_wavelengths, known_values, left=np.nan, right=np.nan)
     valid = np.isfinite(measured) & np.isfinite(known_at_lamp) & (known_at_lamp > 0)
-    # Respons = uppmätt delat med känt, där det är giltigt. Se rev7, RX14.
+    # Uppmätt delat med känt, där det är giltigt (rev7 RX14).
     ratio = np.full(measured.shape[0], np.nan)
     np.divide(measured, known_at_lamp, out=ratio, where=valid)
     if not np.any(valid):
@@ -154,18 +136,15 @@ def build_response(wavelengths, measured, known_wavelengths, known_values):
     peak = np.max(ratio[valid])
     if peak <= 0:
         raise ValueError("input.missing_data: toppen är inte större än 0")
-    # Normerad: 1 där instrumentet är känsligast.
     return ratio / peak
 
 
 def _divide_where_above(numerator, denominator, mask, minimum, names):
     """Delar numerator med denominator där masken är True och denominator är strikt större än minimum.
 
-    Gemensam kärna i apply_response och transmission_ratio. Strikt >: exakt minimum är ogiltigt.
-    Parametrar: names: (tröskelns, täljarens, nämnarens) namn som text, för felmeddelandena.
-    Returnerar: (values, mask): kvoten (P,) float64, NaN där den inte går att räkna, och den nya masken (P,) bool.
-    Fel: ValueError med input.invalid_argument vid en tröskel som inte är ändlig och större än 0,
-    eller NaN och inf på en giltig plats.
+    Gemensam kärna i apply_response och transmission_ratio. Strikt >: exakt minimum är ogiltigt. names är
+    (tröskelns, täljarens, nämnarens) namn, för felmeddelandena. Ger (values, mask): kvoten (P,) float64, NaN där den
+    inte går att räkna, och den nya masken (P,) bool.
     """
     minimum_name, numerator_name, denominator_name = names
     if not np.isfinite(minimum) or minimum <= 0:
@@ -181,28 +160,20 @@ def _divide_where_above(numerator, denominator, mask, minimum, names):
 def apply_response(signal, response, mask, min_response):
     """Delar signalen med responsen där masken är True och responsen är strikt större än min_response.
 
-    Parametrar: signal: (P,) float64 i counts; response: (P,) float64, relativ, utan enhet;
-    mask: (P,) bool, True där värdet duger; min_response: minsta giltiga respons, utan enhet.
-    Returnerar: (values, mask): den korrigerade signalen, (P,) float64 och relativ, NaN där den inte går att räkna,
-    och den nya masken (P,) bool.
-    Fel: ValueError med input.invalid_argument om min_response inte är ändlig och större än 0, eller om signal
-    eller response har NaN eller inf på en giltig plats.
+    signal är (P,) float64 i counts, response relativ och utan enhet, mask (P,) bool (True där värdet duger).
+    Ger (values, mask): den korrigerade signalen (relativ, NaN där den inte går att räkna) och den nya masken.
+    Se rev7 RX16.
     """
-    # Korrigerad signal = signal delad med responsen. Se rev7, RX16.
     return _divide_where_above(signal, response, mask, min_response, ("min_response", "signal", "response"))
 
 
 def transmission_ratio(sample, reference, mask, min_reference):
     """Delar provet med referensen där masken är True och referensen är strikt större än min_reference.
 
-    Parametrar: sample: provet, (P,) float64 i counts, får vara negativt; reference: referensen, (P,) float64 i counts;
-    mask: (P,) bool, True där värdet duger; min_reference: minsta giltiga referens i counts.
-    Returnerar: (values, mask): transmissionen som kvot, (P,) float64, NaN där den inte går att räkna, och den nya
-    masken (P,) bool.
-    Fel: ValueError med input.invalid_argument om min_reference inte är ändlig och större än 0, eller om sample
-    eller reference har NaN eller inf på en giltig plats.
+    sample (får vara negativt) och reference är (P,) float64 i counts, mask (P,) bool (True där värdet duger).
+    Ger (values, mask): transmissionen T = I_prov / I_ref som kvot (NaN där den inte går att räkna) och den nya
+    masken. Se rev7 T06 och RX17.
     """
-    # Transmission T = I_prov / I_ref. Se rev7, T06 och RX17.
     return _divide_where_above(sample, reference, mask, min_reference, ("min_reference", "sample", "reference"))
 
 
@@ -210,8 +181,7 @@ def extract_median(table):
     """Medianen av raderna i tabellen, ett värde per kolumn: som extract_spectrum, men median i stället för medel.
 
     Medianen bryr sig inte om en enstaka het pixel eller en rad med ströljus; medlet har mindre brus när raderna
-    är lika.
-    ROI-14; RX05 är medlet.
+    är lika. ROI-14.
     """
     return np.median(table, axis=0)
 
@@ -220,10 +190,7 @@ def side_background(image, roi, margin, channel, axis="horizontal"):
     """Bakgrunden bredvid bandet: medianen av margin rader ovanför och margin rader under ROI:n, per kolumn.
 
     Vid axis vertical är det margin kolumner till vänster och till höger. Dras av efter mörkret (ROI-21).
-    Parametrar: image: (H, W, 3) uint8 eller float64; roi: (x, y, width, height); margin: rader på varje sida, minst 1;
-    channel: ett namn i CHANNELS; axis: "horizontal" eller "vertical".
-    Returnerar: bakgrunden, (P,) float64 i counts, med samma P som prepare ger för roi.
-    Fel: ValueError med input.invalid_argument om margin är mindre än 1 eller inte ryms på båda sidor om ROI:n.
+    margin är minst 1. Ger bakgrunden, (P,) float64 i counts, med samma P som prepare ger för roi.
     """
     if margin < 1:
         raise ValueError(f"input.invalid_argument: margin ska vara minst 1, fick {margin}")

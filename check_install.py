@@ -56,9 +56,9 @@ def installerad(namn):
 
 
 def lasa_krav(fil):
-    """Läser en requirements-fil som UTF-8 (med eller utan BOM). Ger [(namn, version eller None)].
+    """Läser en requirements-fil som UTF-8 (med eller utan BOM): [(namn, version eller None)].
 
-    Fel: ValueError om filen inte är UTF-8, till exempel sparad som UTF-16 av PowerShell.
+    ValueError om filen inte är UTF-8, till exempel UTF-16 från PowerShell.
     """
     try:
         text = fil.read_text(encoding="utf-8-sig")
@@ -159,7 +159,10 @@ def kolla_opencv():
 
 
 def kolla_tk():
-    """Skapar ett Tk-fönster och släpper det (matplotlib ritar med Tk). Ingen skärm (SSH) är VARNING, ingen Tk FEL."""
+    """Skapar ett Tk-fönster och släpper det (matplotlib ritar med Tk).
+
+    Ingen skärm (SSH) ger VARNING; saknad eller trasig Tk ger FEL.
+    """
     try:
         import tkinter
     except ImportError:
@@ -192,7 +195,7 @@ def kor_alla(rot):
 
 
 def kolla_kamera(index, antal):
-    """Öppnar kamera index, läser antal bilder och ger en rad per bild med storleken. Varnar om första är mörk."""
+    """Öppnar kamera index, läser antal bilder och ger en rad per bild. Varnar om första bilden är mörk."""
     try:
         import cv2
     except ImportError as error:
@@ -221,10 +224,7 @@ def kolla_kamera(index, antal):
 
 
 def lasa_argument(argv):
-    """Läser --kamera N och --bilder K. Ger (kamera eller None, antal bilder).
-
-    Fel: ValueError med en rad på svenska vid en okänd flagga eller ett värde som inte är ett heltal.
-    """
+    """Läser --kamera N och --bilder K: (kamera eller None, antal bilder). ValueError vid fel flagga eller värde."""
     varden = {"--kamera": None, "--bilder": "3"}
     rest = list(argv)
     while rest:

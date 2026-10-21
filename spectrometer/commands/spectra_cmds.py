@@ -1,4 +1,4 @@
-"""load, och från 1.2.3 analysen: läsa tillbaka en mätmapp och räkna på senaste mätningen eller på mappar. 1.2.2.
+"""load och analysen: läsa tillbaka en mätmapp och räkna på senaste mätningen eller på mappar.
 
 Inget här mäter. Kamerans tal är relativa: inte watt, lumen eller verkningsgrad.
 """
@@ -36,10 +36,7 @@ UNITS = {"signal (counts)": "counts", "korrigerad signal (relativ)": "relativ", 
 
 
 def latest(state):
-    """Senaste mätningen (step eller load) och värdena med NaN där masken är falsk.
-
-    Fel: ValueError med input.missing_data utan mätning.
-    """
+    """Senaste mätningen (step eller load) och värdena med NaN där masken är falsk; fel om det saknas en."""
     spectrum = state["spectrum"]
     if spectrum is None:
         raise ValueError("input.missing_data: Ingen mätning än. Kör step eller load först.")
@@ -58,7 +55,7 @@ def summary(spectrum, values, i):
 
 
 def spread(spectrum):
-    """Slumpfelet per position i values: spridningen mellan bilderna delad med √N; None vid en bild. 1.2.14.
+    """Slumpfelet per position i values: spridningen mellan bilderna delad med √N; None vid en bild.
 
     stddev är i counts före respons och transmission; values/raw räknar om den till values enhet (1 i mode direct
     utan respons). Bara bruset mellan bilderna: kalibrering, mörker och instrument ingår inte.
@@ -75,7 +72,7 @@ def spread(spectrum):
 def cmd_fwhm(state, args):
     """Kommandot fwhm [N]: topparna i senaste mätningen med linjebredd vid halva höjden, och arean under kurvan.
 
-    Halva höjden räknas över en rak baslinje mellan toppens baspunkter (rev7, 1.2.15); en mättad topp ger ingen bredd.
+    Halva höjden räknas över en rak baslinje mellan toppens baspunkter (rev7); en mättad topp ger ingen bredd.
     FWHM av en smal linje (laser, Hg 546 nm) är instrumentets upplösning, inte källans bredd (Krav 19b, 20).
     Arean är relativ uteffekt, aldrig watt.
     """
@@ -84,12 +81,12 @@ def cmd_fwhm(state, args):
     spectrum, values = latest(state)
     x_unit, area_unit = units(spectrum)
     found = peaks.find_peaks(values, spectrum["mask"])[:n]
-    sigma = spread(spectrum)  # 1.2.14: slumpfelet per position, None vid en bild
+    sigma = spread(spectrum)  # slumpfelet per position, None vid en bild
     if not found:
         out.say("inga toppar")
     for k, i in enumerate(found, start=1):
         where, height = summary(spectrum, values, i)
-        width, why = peaks.width(spectrum["x"], values, i, spectrum.get("saturated"))  # 1.2.15: baslinje, mättnad
+        width, why = peaks.width(spectrum["x"], values, i, spectrum.get("saturated"))
         error = peaks.fwhm_sigma(spectrum["x"], values, i, sigma) if sigma is not None else float("nan")
         text = out.pm(width, error, x_unit) if why is None else why
         out.say(f"topp {k}: {out.fmt(where)} {x_unit}, höjd {out.fmt(height)}, FWHM {text}")
@@ -104,10 +101,7 @@ NORM_LABEL = "normerad signal (relativ, bara visning)"
 
 
 def load_curves(folders):
-    """Mätmapparna som [(spektrum, namn)]; namnet är note ur settings.json, annars mappens namn.
-
-    Fel: ValueError med input.invalid_argument när mapparna har olika enheter; fel ur files.load_measurement.
-    """
+    """Mätmapparna som [(spektrum, namn)]; namnet är note ur settings.json, annars mappens namn."""
     spectra = [files.load_measurement(folder) for folder in folders]
     if len({(s["x_label"], s["y_label"]) for s in spectra}) > 1:
         raise ValueError(
@@ -122,10 +116,7 @@ def _curve_name(spectrum):
 
 
 def normalized(values, name):
-    """values delad med sitt största giltiga värde, bara för visning.
-
-    Fel: ValueError med input.invalid_argument om det största värdet inte är över 0.
-    """
+    """values delad med sitt största giltiga värde, bara för visning."""
     top = np.nanmax(values) if np.any(np.isfinite(values)) else 0.0
     if top <= 0:
         raise ValueError(f"input.invalid_argument: {name} går inte att normera, största värdet är {top:g}")
@@ -168,14 +159,11 @@ def cmd_compare(state, args):
     plot.show_spectra(curves, first["x_label"], NORM_LABEL if norm else first["y_label"])
 
 
-FLAGS = ("--norm", "--log", "--ev", "--cie")  # 1.2.16: --cie
+FLAGS = ("--norm", "--log", "--ev", "--cie")
 
 
 def _figure_words(args):
-    """Orden efter figure som (UT, mapparna, flaggorna, xlim).
-
-    Fel: ValueError med input.invalid_argument vid fel ord.
-    """
+    """Orden efter figure som (UT, mapparna, flaggorna, xlim)."""
     if not args or not args[0].lower().endswith((".png", ".svg")):
         raise ValueError("input.invalid_argument: figure: första ordet ska vara UT.png eller UT.svg")
     rest, xlim = list(args[1:]), None
@@ -210,15 +198,11 @@ def _conditions(spectrum, state):
             f"respons {'ja' if settings.get('use_response') else 'nej'}, version {settings.get('program_version')}")
 
 
-CIE_MARKS = (2000, 3000, 4000, 6500, 10000)  # 1.2.16: temperaturerna med etikett på Planck-kurvan i figure --cie
+CIE_MARKS = (2000, 3000, 4000, 6500, 10000)  # temperaturerna med etikett på Planck-kurvan i figure --cie
 
 
 def _figure_cie(state, path, folders, others):
-    """figure UT.png --cie [MAPP...]: kromaticitetsdiagrammet med en punkt per mätning och UT.txt (KRV-23, RAP-11).
-
-    Fel: ValueError med input.invalid_argument med andra flaggor (others), med input.missing_data om en mätning inte
-    är kalibrerad och responskorrigerad i mode direct (som color och mix).
-    """
+    """figure UT.png --cie [MAPP...]: kromaticitetsdiagrammet med en punkt per mätning och UT.txt (KRV-23, RAP-11)."""
     if others:
         raise ValueError("input.invalid_argument: figure --cie går inte med --norm, --log, --ev eller --xlim")
     measured = []  # (mätningen, namnet)
@@ -268,8 +252,7 @@ def _figure_curves(state, path, folders, flags, xlim):
     y_label = NORM_LABEL if "--norm" in flags else loaded[0][0]["y_label"]
     plot.save_figure(path, curves, x_label, y_label, xlim, "--log" in flags)
     head = f"Figur {Path(path).name}: x {x_label}, y {y_label}" + (", logaritmisk y" if "--log" in flags else "")
-    tail = "Relativa tal från kameran; inte watt, lumen eller verkningsgrad."
-    _write_caption(path, [head, *lines, tail])
+    _write_caption(path, [head, *lines, "Relativa tal från kameran; inte watt, lumen eller verkningsgrad."])
 
 
 @registry.command("figure",
@@ -280,7 +263,7 @@ def cmd_figure(state, args):
     """Kommandot figure UT.png|UT.svg: senaste mätningen, eller mapparna i samma axlar, som egen figur till rapporten.
 
     16 x 9 cm, 200 dpi, axlar med enhet och ingen titel: bildtexten skrivs under figuren i rapporten. UT.txt bredvid
-    bilden har villkoren till den. --ev: fotonenergi på x-axeln (kräver nm). --cie (1.2.16): kromaticitetsdiagrammet
+    bilden har villkoren till den. --ev: fotonenergi på x-axeln (kräver nm). --cie: kromaticitetsdiagrammet
     med en punkt per mätning (_figure_cie). Ändrar inte state.
     """
     path, folders, flags, xlim = _figure_words(args)

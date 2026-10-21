@@ -1,7 +1,4 @@
-"""Mätkedjan: bilder ur källan till ett spektrum, med mörker, kalibrering, respons och transmission.
-
-measure() gör samma sak som main.measure i v1.0.0, delad i steg som går att testa ett och ett.
-"""
+"""Mätkedjan: bilder ur källan till ett spektrum, med mörker, kalibrering, respons och transmission."""
 
 import time
 
@@ -39,7 +36,7 @@ def pixel_axis(roi, axis):
 def calibrate_axis(state, x, values, mask):
     """Pixlar till nm om kalibrering finns, masken bara inom det giltiga intervallet, x stigande.
 
-    Returnerar: (x, values, mask, x_label). x_label "pixel" styr CSV-rubriken x_px i files.py; ändra den inte.
+    Ger (x, values, mask, x_label). x_label "pixel" styr CSV-rubriken x_px i files.py; ändra den inte.
     """
     x_label = "pixel"
     if state["coefficients"] is not None:
@@ -101,16 +98,13 @@ def measure(state, src=None, timing=None):
     """Mäter ett spektrum med inställningarna och lägger det och råbilden i state.
 
     Ordning: frames bilder (mörker, ROI, kanal, medel per bild), medel över bilderna, nm, respons, transmission.
-    Parametrar: state: programmets state; src: en redan öppen källa som lånas (start), eller None för att öppna och
-    stänga källan här; timing: en ordbok som får sekunderna för read (bilderna ur källan) och compute (resten),
-    eller None.
-    Returnerar: spektrumet, en ordbok med x, values, mask, x_label, y_label, saturated_px, saturated, stddev och camera.
-    Fel: ValueError med input.invalid_argument eller input.missing_data, RuntimeError med camera.open_failed eller
-    camera.read_failed.
+    src är en redan öppen källa som lånas (start), annars öppnas och stängs källan här. timing, om den ges, får
+    sekunderna för read (bilderna ur källan) och compute (resten).
+    Ger spektrumet: x, values, mask, x_label, y_label, saturated_px, saturated, stddev, frames, px, raw och camera.
     """
     n = state["settings"]["frames"]
     started = time.perf_counter()
-    images, camera = _with_source(state, lambda s: (_read_frames(s, n, src is None), source.describe(s)), src)
+    images, camera = _with_source(state, lambda s: (_read_frames(s, n, src is None), source.describe(s)), src=src)
     read_done = time.perf_counter()
     spectrum = _spectrum_of_images(state, images, camera)
     apply_response(state, spectrum)
@@ -143,9 +137,9 @@ def _spectrum_of_images(state, images, camera):
     spectrum = {"x": x, "values": values, "mask": mask, "x_label": x_label, "y_label": "signal (counts)"}
     spectrum["saturated_px"], spectrum["saturated"] = saturated_px, saturated[order]
     spectrum["stddev"] = stddev[order]  # slumpbrus mellan bilderna i counts (stickprov, ddof=1), inte instrumentets
-    spectrum["frames"] = cfg["frames"]  # 1.2.14: antalet bilder bakom medlet, till slumpfelet i fwhm
-    spectrum["px"] = pixels[order]  # 1.2.2: pixeln för varje position, också i nm-läge
-    spectrum["raw"] = np.where(mask, values, np.nan)  # 1.2.2: före respons och transmission, i counts
+    spectrum["frames"] = cfg["frames"]  # antalet bilder bakom medlet, till slumpfelet i fwhm
+    spectrum["px"] = pixels[order]  # pixeln för varje position, också i nm-läge
+    spectrum["raw"] = np.where(mask, values, np.nan)  # före respons och transmission, i counts
     spectrum["camera"] = camera  # kamerans reglage under mätningen (source.describe)
     return spectrum
 
@@ -163,10 +157,7 @@ def measure_direct(state, n):
 def _with_source(state, funktion, src=None):
     """Kör funktion(src) med en öppen källa och ger det funktion ger.
 
-    Parametrar: state: programmets state (källan står i settings); funktion: tar den öppna källan; src: en öppen
-    källa som lånas (start), eller None för att öppna källan här och alltid stänga den efteråt, också vid fel och
-    Ctrl+C.
-    Exempel: images = _with_source(state, lambda s: source.read_frames(s, 16))
+    src är en källa som lånas (start); annars öppnas källan här och stängs alltid efteråt, också vid fel och Ctrl+C.
     """
     opened_here = src is None
     if opened_here:
@@ -176,7 +167,7 @@ def _with_source(state, funktion, src=None):
         src = source.open_source(kind, value)
     try:
         if opened_here:
-            apply_controls(state, src)  # 1.2.0: exposure, gain och auto varje gång kameran öppnas
+            apply_controls(state, src)  # exposure, gain och auto varje gång kameran öppnas
         return funktion(src)
     finally:
         if opened_here:
@@ -205,7 +196,7 @@ def _read_frames(src, n, show):
 
 
 def apply_controls(state, src):
-    """Sätter exposure, gain och auto som du valt (state["controls"]; None hoppas över) i en nyöppnad kamera. 1.2.0.
+    """Sätter exposure, gain och auto som du valt (state["controls"]; None hoppas över) i en nyöppnad kamera.
 
     auto först: på många kameror går exponeringen bara att sätta när auto är av. Varnar för det drivrutinen inte tar
     emot.

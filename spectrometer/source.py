@@ -1,7 +1,5 @@
-"""Bildkällan: en bildfil eller en webbkamera, lämnad som en ordbok. Filen räknar inte.
+"""Bildkällan: en bildfil eller en webbkamera, lämnad som en ordbok. Bilden är (H, W, 3) uint8 i BGR. Räknar inte."""
 
-Används av main.py. Bilden lämnas som den är, (H, W, 3) uint8 i BGR.
-"""
 import sys
 import time
 from pathlib import Path
@@ -16,14 +14,10 @@ MAX_MPIXEL = 40  # största bildfil i miljoner pixlar; float64 × 3 kanaler är 
 
 
 def open_source(kind, value):
-    """Öppnar en bildkälla.
+    """Öppnar en bildkälla: kind "file" (value: bildfil eller mapp) eller "camera" (value: kamerans nummer).
 
-    Parametrar: kind: "file" eller "camera"; value: sökvägen till bildfilen (str eller Path),
-    eller kamerans nummer N (int): N i /dev/videoN på Linux, 0 för första kameran på Windows.
-    Returnerar: källan som en ordbok: {"kind": "file", "image": (H, W, 3) uint8} eller
-    {"kind": "camera", "cap": VideoCapture}.
-    Fel: ValueError med input.invalid_argument för okänd sort; RuntimeError med camera.open_failed om kameran eller
-    filen inte går att öppna, filen inte är en bild eller inte har 8 bitar per kanal och formen (H, W, 3).
+    Kamerans nummer N är /dev/videoN på Linux och 0 för första kameran på Windows. Ger {"kind": "file", "image": ...}
+    eller {"kind": "camera", "cap": VideoCapture}.
     """
     if kind == "camera":
         return _open_camera(value)
@@ -68,7 +62,7 @@ def _open_camera(number):
 
 
 def _read_image_file(path):
-    """Bildfilen som (H, W, 3) uint8 i BGR; grå och BGRA görs om till BGR. Fel: som open_source."""
+    """Bildfilen som (H, W, 3) uint8 i BGR; grå och BGRA görs om till BGR."""
     data = np.fromfile(path, np.uint8)  # imdecode i stället för imread: klarar åäö i Windows-sökvägar
     img = cv2.imdecode(data, cv2.IMREAD_UNCHANGED) if data.size else None
     if img is None:
@@ -89,11 +83,7 @@ def _read_image_file(path):
 
 
 def read_frame(src):
-    """Ger en bild ur källan: en ny bild från kameran, eller en kopia av filens bild.
-
-    Returnerar: bilden, (H, W, 3) uint8 i BGR och counts.
-    Fel: RuntimeError med camera.read_failed om kameran inte ger någon bild.
-    """
+    """Ger en bild ur källan, (H, W, 3) uint8 i BGR och counts: en ny från kameran eller en kopia av filens bild."""
     if src["kind"] == "camera":
         return _read_camera(src["cap"])
     if src["kind"] == "file":
@@ -124,11 +114,7 @@ def close_source(src):
 
 
 def warm_up(src):
-    """Läser och kastar WARMUP_FRAMES bilder direkt efter att kameran öppnats (de första kan vara mörkare).
-
-    Returnerar: src. Fel: RuntimeError med camera.open_failed, och kameran släppt, om den inte ger någon bild
-    (open_source fångar felet och provar nästa backend).
-    """
+    """Läser och kastar WARMUP_FRAMES bilder direkt efter att kameran öppnats (de första kan vara mörkare); ger src."""
     for _ in range(WARMUP_FRAMES):
         try:
             read_frame(src)
@@ -141,7 +127,7 @@ def warm_up(src):
 
 
 def read_frames(src, n):
-    """n bilder i rad ur en öppen källa, som en lista. Fel: som read_frame."""
+    """n bilder i rad ur en öppen källa, som en lista."""
     return [read_frame(src) for _ in range(n)]
 
 
@@ -170,10 +156,7 @@ def describe(src):
 
 
 def probe(max_index=4):
-    """Provar kamera 0 till max_index: öppnar, läser en bild och stänger.
-
-    Ger [(index, bredd, höjd)] för de kameror som ger en bild.
-    """
+    """Provar kamera 0 till max_index: öppnar, läser en bild, stänger. Ger [(index, bredd, höjd)] för de med bild."""
     found = []
     for index in range(max_index + 1):
         try:
@@ -191,10 +174,7 @@ def probe(max_index=4):
 
 
 def open_folder(folder):
-    """En mapp med bilder som källa: sorterade *.png och *.jpg, en bild per read_frame (döp dem 001.png, 002.png ...).
-
-    Fel: RuntimeError med camera.open_failed om mappen inte har några png- eller jpg-bilder.
-    """
+    """En mapp med bilder som källa: sorterade *.png och *.jpg, en bild per read_frame (t.ex. 001.png, 002.png)."""
     paths = sorted(p for p in Path(folder).iterdir() if p.suffix.lower() in (".png", ".jpg", ".jpeg"))
     if not paths:
         raise RuntimeError(f"camera.open_failed: inga png- eller jpg-bilder i mappen {folder}")
@@ -202,10 +182,7 @@ def open_folder(folder):
 
 
 def next_in_folder(src):
-    """Nästa bild i mappen, kontrollerad som en bildfil.
-
-    Fel: RuntimeError med camera.read_failed när bilderna är slut.
-    """
+    """Nästa bild i mappen, kontrollerad som en bildfil."""
     if src["next"] >= len(src["paths"]):
         raise RuntimeError(f"camera.read_failed: slut på bilderna i mappen ({len(src['paths'])} st)")
     path = src["paths"][src["next"]]
@@ -221,8 +198,7 @@ AUTO_OTHER = (0.25, 0.75)  # DirectShow och övriga: OpenCV:s gamla skala (antag
 def set_control(src, name, value):
     """Sätter ett reglage i en öppen kamera: exposure och gain med drivrutinens tal, auto med True eller False.
 
-    En bildfil (eller en kamera utan reglage) har inget att sätta.
-    Returnerar: False om drivrutinen sa nej, annars True.
+    En bildfil (eller en kamera utan reglage) har inget att sätta. Ger False om drivrutinen sa nej, annars True.
     """
     cap = src.get("cap")
     if src["kind"] != "camera" or not hasattr(cap, "set"):

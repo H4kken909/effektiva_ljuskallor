@@ -1,9 +1,8 @@
-"""Vad fönstret ska visa, räknat ur state: rubrik, varningar, referens, jämförelser, kamerabild, analyspanel,
-tangenter.
+"""Vad fönstret ska visa, räknat ur state. Ritar inget själv: resultatet läggs i fönstrets ordbok (win), plot.py ritar.
 
-Ritar inget själv: resultatet läggs i fönstrets ordbok (win) och plot.py ritar. Allt här är bara visning;
-sparade värden ändras aldrig (normering och frusen kurva finns bara i fönstret). Analyspanelerna colour, rgb, droop,
-edge och performance (1.2.16) visar det kommandona senast räknade (remember), aldrig en ny beräkning.
+Rubrik, varningar, referens, jämförelser, kamerabild, analyspanel och tangenter. Allt är bara visning: sparade värden
+ändras aldrig (normering och frusen kurva finns bara i fönstret). Analyspanelerna colour, rgb, droop, edge och
+performance visar det kommandona senast räknade (remember), aldrig en ny beräkning.
 """
 
 import time
@@ -19,10 +18,7 @@ PANELS = ("peaks", "calibration", "transmission", "response", "colour", "rgb", "
 
 
 def window_info(state):
-    """Det som står still under en live-körning.
-
-    Fönstertitel, rubrikens första rad, vyn, referens och jämförelser.
-    """
+    """Det som står still under en live-körning: fönstertitel, rubrikens första rad, vyn, referens och jämförelser."""
     kind, value = state["settings"]["source"]
     return {
         "name": f"spektro - {kind} {value} - {state['mode']}",
@@ -147,10 +143,7 @@ def save_png(state, folder):
 
 
 def _top_five(values):
-    """Index för de fem högsta topparna i kurvan, högst först.
-
-    Bara för visning (linjebredd och area ger kommandot fwhm).
-    """
+    """Index för de fem högsta topparna i kurvan, högst först (bara för visning; linjebredd och area ger fwhm)."""
     y = np.where(np.isfinite(values), values, -np.inf)
     half = max(2, len(y) // 20)  # en topp är störst inom ±5 % av kurvans längd och över 5 % av största värdet
     local = np.lib.stride_tricks.sliding_window_view(np.pad(y, half, constant_values=-np.inf), 2 * half + 1)
@@ -208,10 +201,10 @@ def panel(state, name, spectrum, values):
 
 
 def remember(state, name, result):
-    """Sparar ett analysresultat för panelen name (en nyckel i RESULT_PANELS) i state["view"]. 1.2.16.
+    """Sparar ett analysresultat för panelen name (en nyckel i RESULT_PANELS) i state["view"].
 
-    Kommandot (RESULT_PANELS) räknar och lämnar resultatet här; panelen visar det senaste
-    utan att räkna om. Bara visning: undo och mätningarna rör det inte, reset tar bort det.
+    Kommandot räknar och lämnar resultatet här; panelen visar det utan att räkna om. Bara visning: undo och
+    mätningarna rör det inte, reset tar bort det.
     """
     state["view"].setdefault("results", {})[name] = result
 
@@ -231,10 +224,7 @@ def _colour(found):
 
 
 def _rgb(found):
-    """rgb: de tre LED:erna, triangeln de spänner och blandningen (eller målfärgerna i --sweep).
-
-    Vikterna står i tabellen.
-    """
+    """rgb: de tre LED:erna, triangeln de spänner och blandningen (eller målfärgerna i --sweep); vikterna i tabellen."""
     corners = found["corners"]
     xs, ys = [c[0] for c in corners], [c[1] for c in corners]
     tx, ty = _closed(xs, ys)

@@ -9,7 +9,7 @@ import numpy as np
 
 from spectrometer import calc, out
 
-SATURATION = 255  # högsta värdet i en 8-bitarsbild; sänk om riggen visar att kameran klipper tidigare (LOG-11)
+SATURATION = 255  # högsta värdet i en 8-bitarsbild; sänk om riggen visar att kameran klipper tidigare
 
 
 def crop(image, roi):
@@ -61,6 +61,6 @@ def changed_controls(now, then):
 
 
 def warn_changed(now, then, what, command):
-    """Varnar för varje reglage som ändrats sedan what (mörkret, referensen) togs, och vilket kommando som hjälper."""
+    """Varnar för varje reglage som ändrats sedan what togs, och säger vilket kommando som hjälper."""
     for name, value, old in changed_controls(now, then):
         out.warn(f"{name} är {value:g} men {what} togs vid {old:g}. Kör {command} igen.")

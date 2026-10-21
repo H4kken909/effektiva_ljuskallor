@@ -1,4 +1,4 @@
-"""exposure, gain och auto: kamerans reglage som du väljer. Krav 18 och 21 (serier) kräver fast exponering. 1.2.0.
+"""exposure, gain och auto: kamerans reglage som du väljer. Krav 18 och 21 (serier) kräver fast exponering.
 
 Talen är drivrutinens egna, utan enhet (V4L2 och DirectShow räknar olika). Valet står i state["controls"], sätts
 varje gång kameran öppnas (step, start, dark ...) och sparas i settings.json. info visar vad drivrutinen säger.
@@ -10,10 +10,7 @@ from spectrometer import measure, out, registry, session, source
 
 
 def _number(name, text):
-    """Ett ändligt tal; får vara negativt (DirectShow har exponering som -6).
-
-    Fel: ValueError med input.invalid_argument.
-    """
+    """Ett ändligt tal; får vara negativt (DirectShow har exponering som -6)."""
     try:
         value = float(text)
     except ValueError as error:
@@ -24,9 +21,9 @@ def _number(name, text):
 
 
 def _choose(state, name, value):
-    """Sparar valet (en ny ordbok, så att undo fungerar) och glömmer mätningen.
+    """Sparar valet (en ny ordbok, så att undo fungerar), glömmer mätningen.
 
-    Med kameran som källa provas valet direkt.
+    Bara när källan är en kamera provas valet direkt (öppnar, sätter, läser tillbaka).
     """
     state["controls"] = state["controls"] | {name: value}
     state["spectrum"] = None

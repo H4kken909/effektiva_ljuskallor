@@ -1,7 +1,4 @@
-"""source, roi, channel, axis och frames: var bilden kommer ifrån och vilken del som mäts.
-
-Sist kommandon som tittar på källan.
-"""
+"""source, roi, channel, axis och frames, sist info, cameras, snap och image: källan och vilken del som mäts."""
 
 from spectrometer import calc, files, measure, out, registry, session, source
 

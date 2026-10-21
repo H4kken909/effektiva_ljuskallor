@@ -63,12 +63,12 @@ def cmd_show(state, args):
     out.say(f"referens: {out.YES[state['reference'] is not None]}{_age(state, 'reference')}")
     out.say(f"mode: {state['mode']}")
     out.say(_describe("mätning", state["spectrum"]))
-    for line in session.extra_lines(state):  # 1.2.x: bara det du valt (kamera, serie, anteckning)
+    for line in session.extra_lines(state):  # bara det du valt (kamera, serie, anteckning)
         out.say(line)
 
 
 def _next_step(state):
-    """Nästa steg i kedjan dark, calibrate, response build, reference; step när allt finns. Ren funktion."""
+    """Nästa steg i kedjan dark, calibrate, response build, reference; step när allt finns."""
     if state["dark"] is None:
         return "dark (blockera ljusvägen)"
     if state["coefficients"] is None:

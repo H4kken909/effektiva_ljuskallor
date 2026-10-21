@@ -19,9 +19,7 @@ def find_peaks(values, mask, min_height, min_distance):
     En topp är v[i] > v[i-1] och v[i] >= v[i+1], minst min_height; utanför kanten räknas som lägre, så första och
     sista positionen kan vara toppar. En platå (mättad topp, samma värde flera positioner i rad) ger en topp i mitten.
     Toppar närmare än min_distance positioner slås ihop till den högsta.
-    Parametrar: values: spektrumet, (P,) float64; mask: (P,) bool, True där värdet duger;
-    min_height: lägsta topphöjd, samma enhet som values; min_distance: minsta avstånd i positioner (heltal).
-    Returnerar: lista med index (int), högsta först; tom lista om ingen topp finns.
+    values är (P,) float64, mask (P,) bool (True där värdet duger); min_height har samma enhet som values.
     """
     v = np.where(mask, values, np.nan)  # NaN jämför alltid falskt: ogiltiga positioner blir aldrig toppar
     found = []
@@ -47,9 +45,8 @@ def find_peaks(values, mask, min_height, min_distance):
 def refine_peak(values, i):
     """Toppläget som flyttal: en parabel genom positionerna i-1, i och i+1.
 
-    En platå (mättad topp), en kant eller en ogiltig granne ger i som det är, utan parabel.
-    Parametrar: values: spektrumet, (P,) float64 (NaN där det är ogiltigt); i: toppens index från find_peaks.
-    Returnerar: läget som float, i positioner (index), mellan i - 0.5 och i + 0.5.
+    En platå (mättad topp), en kant eller en ogiltig granne (NaN) ger i som det är, utan parabel.
+    Läget är i positioner, mellan i - 0.5 och i + 0.5.
     """
     if i <= 0 or i >= len(values) - 1:
         return float(i)
@@ -65,9 +62,9 @@ def match_peaks(peak_pixels, line_nm):
 
     Med 4 toppar och 5 linjer prövas 5 val (en linje utelämnas i taget), till exempel när gula dubbletten
     576.960 och 579.066 nm smälter ihop till en topp. Båda sorteras stigande, så spridningen (nm per pixel) är positiv.
-    Parametrar: peak_pixels: topparnas pixlar i hela bilden, (K,); line_nm: linjernas våglängder i nm, (L,), K <= L.
-    Returnerar: (chosen, rms, next_rms): chosen, (K,) float64, linjen i nm för varje topp i stigande pixel;
-    rms: bästa valets rms-avvikelse i nm; next_rms: näst bästa valets (inf om det bara fanns ett val).
+    peak_pixels är topparnas pixlar i hela bilden, (K,); line_nm linjernas våglängder i nm, (L,), K <= L.
+    Ger (chosen, rms, next_rms): linjen i nm för varje topp i stigande pixel, bästa valets rms-avvikelse i nm och
+    näst bästa valets (inf om det bara fanns ett val).
     """
     pixels = np.sort(np.asarray(peak_pixels, dtype=np.float64))
     lines = np.sort(np.asarray(line_nm, dtype=np.float64))

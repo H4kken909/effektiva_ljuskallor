@@ -54,10 +54,7 @@ def cmd_response_save(state, args):
 
 
 def _load(path):
-    """Arrayerna i en .npz från response save, lästa utan pickle (allow_pickle=False: filen kan inte köra kod).
-
-    Fel: ValueError med input.invalid_argument om filen inte är en .npz med NEEDED; OSError om den inte går att läsa.
-    """
+    """Arrayerna i en .npz från response save, lästa utan pickle (allow_pickle=False: filen kan inte köra kod)."""
     wrong = f"input.invalid_argument: {Path(path).name} är ingen responsfil från response save"
     try:
         with np.load(path, allow_pickle=False) as data:
@@ -119,11 +116,7 @@ def cmd_dark_save(state, args):
 
 
 def _load_dark(path):
-    """Mörkret i en .npy från dark save som float64, läst utan pickle (allow_pickle=False: filen kan inte köra kod).
-
-    Fel: ValueError med input.invalid_argument om filen saknas eller inte är ett mörker (H, W, 3) med ändliga tal;
-    OSError om den inte går att läsa.
-    """
+    """Mörkret i en .npy från dark save som float64, läst utan pickle (filen kan inte köra kod)."""
     if not Path(path).is_file():
         raise ValueError(f"input.invalid_argument: {Path(path).as_posix()} finns inte")
     wrong = f"input.invalid_argument: {Path(path).name} är inget mörker från dark save"

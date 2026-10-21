@@ -29,7 +29,6 @@ def cmd_dark(state, args):
         return total, source.describe(s)
 
     total, camera = measure._with_source(state, total_of)
-    # Mörkret är medlet av N bilder, pixel för pixel och kanal för kanal. Se rev7, RX03.
     state["dark"] = total / n
     state["dark_frames"] = n
     session.mark_taken(state, "dark")

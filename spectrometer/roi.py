@@ -1,7 +1,4 @@
-"""ROI-hjälp ur en bild: profilen tvärs spektrumet, bandet, ett ROI-förslag och riktningen.
-
-Ren NumPy; vet inget om state.
-"""
+"""ROI-hjälp ur en bild: profilen tvärs spektrumet, bandet, ett ROI-förslag och riktningen. Ren NumPy."""
 
 import numpy as np
 
@@ -25,9 +22,9 @@ def _half_level(low, peak):
 
 
 def find_band(profile):
-    """Sammanhängande stycke runt största värdet där profilen är över bakgrund + halva (topp - bakgrund).
+    """Bandet som (start, längd) i index: stycket runt största värdet över bakgrund + halva (topp - bakgrund).
 
-    Returnerar: (start, längd) i index, eller None när profilen är platt (inget band).
+    None när profilen är platt (inget band).
     """
     i = int(np.argmax(profile))
     low = background(profile)

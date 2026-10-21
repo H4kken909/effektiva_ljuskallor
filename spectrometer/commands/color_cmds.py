@@ -1,6 +1,6 @@
 """color och mix: färgen i senaste mätningen (Krav 17b, 19a) och RGB-blandning av tre LED (Krav 19). Relativt.
 
-1.2.16: resultaten lämnas till panelerna colour och rgb (display.remember); view analysis colour visar dem.
+Resultaten lämnas till panelerna colour och rgb (display.remember); view analysis colour visar dem.
 """
 
 import numpy as np
@@ -28,19 +28,14 @@ def cmd_color(state, args):
     cct, duv, limit = color.cct_duv(x, y)
     meaningful = not limit and abs(duv) <= color.DUV_MAX
     display.remember(state, "colour", {"xy": (x, y), "cct": cct if meaningful else None, "duv": duv,
-                                       "locus": _locus(), "planck": color.planck_locus()[1:]})
-
-
-def _locus():
-    """Hästskon (x, y) till panelerna colour och rgb. 1.2.16."""
-    return color.locus()[1:]
+                                       "locus": color.locus()[1:], "planck": color.planck_locus()[1:]})
 
 
 SAME = ("roi", "channel", "axis", "frames", "coefficients")  # ska vara lika i de tre LED-mätningarna
 
 
 def _setting(led, key):
-    """Inställningen key i en sparad mätning som text; roi full (null) blir hela bildens yta ur image_size. 1.2.13."""
+    """Inställningen key i en sparad mätning som text; roi full (null) blir hela bildens yta ur image_size."""
     value = led["settings"].get(key)
     if key == "roi" and value is None and led["settings"].get("image_size"):
         width, height = led["settings"]["image_size"]
@@ -49,25 +44,20 @@ def _setting(led, key):
 
 
 def _target(words):
-    """Målfärgen (x, y) ur två ord. Fel: ValueError med input.invalid_argument om det inte är en färg."""
+    """Målfärgen (x, y) ur två ord."""
     x, y = registry.to_float("X", words[0], 0), registry.to_float("Y", words[1], 0)
     if x + y >= 1:
         raise ValueError("input.invalid_argument: X + Y ska vara mindre än 1")
     return x, y
 
 
-def _weights_text(w):
-    """Vikterna på en rad, relativa med största 1."""
-    return f"R {w[0]:.3f}  G {w[1]:.3f}  B {w[2]:.3f}"
-
-
 def _blend(primaries, target):
     """--target och --cct: vikterna och blandningens färg, eller att tre LED inte räcker (negativ vikt).
 
-    Ger vikterna och blandningens (x, y) (None när en vikt är negativ) till rgb-panelen (1.2.16).
+    Ger vikterna och blandningens (x, y) (None när en vikt är negativ) till rgb-panelen.
     """
     w = color.weights(primaries, target)
-    out.say(f"vikter (relativa, största 1): {_weights_text(w)}")
+    out.say(f"vikter (relativa, största 1): R {w[0]:.3f}  G {w[1]:.3f}  B {w[2]:.3f}")
     if np.any(w < 0):
         out.warn("negativ vikt: målet ligger utanför triangeln, de tre LED:erna räcker inte")
         return {"weights": w, "blend": None}
@@ -80,7 +70,7 @@ def _blend(primaries, target):
 def _sweep(primaries):
     """--sweep: vikterna för varje färg i color.TARGETS och om tre LED räcker (ingen negativ vikt).
 
-    Ger [(namn, x, y, räcker)] till rgb-panelen (1.2.16).
+    Ger [(namn, x, y, räcker)] till rgb-panelen.
     """
     out.say("färg        x       y       R       G       B       räcker")
     found = []
@@ -126,7 +116,7 @@ def cmd_mix(state, args):
     corners = [color.xy(*primaries[:, k]) for k in range(3)]
     for name, (x, y) in zip("RGB", corners):
         out.say(f"{name}: x {x:.4f}  y {y:.4f}")
-    result = {"corners": corners, "locus": _locus()}  # 1.2.16: till rgb-panelen
+    result = {"corners": corners, "locus": color.locus()[1:]}  # till rgb-panelen
     if option == "--target":
         registry.need(rest, ("X", "Y"), "mix --target")
         result.update(_blend(primaries, _target(rest)))

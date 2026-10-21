@@ -33,19 +33,18 @@ def cmd_step(state, args):
         raise ValueError("input.missing_data: ingen giltig position i spektrumet "
                          "(alla under tröskeln eller utanför kalibreringen)")
     i = int(np.nanargmax(calc.masked_values(spectrum)))
-    bilder_text = registry.plural(state["settings"]["frames"], "bild", "bilder")
     out.say(f"Topp {out.fmt(spectrum['values'][i])} vid {spectrum['x_label']} {out.fmt(spectrum['x'][i])} "
-            f"({bilder_text})")
+            f"({registry.plural(state['settings']['frames'], 'bild', 'bilder')})")
     _warn_after_step(state, spectrum, i)
 
 
 def _warn_after_step(state, spectrum, i):
     """Varningarna efter step: mättnad, auto-exponering, ändrade reglage, gammalt mörker, mörkret som inte passar."""
     quality.warn_saturated(spectrum["saturated_px"])
-    if source.auto_on(spectrum["camera"]):  # 1.2.0: KRV-03
+    if source.auto_on(spectrum["camera"]):  # KRV-03
         out.warn("auto-exponering är på: kameran ändrar exponeringen själv mellan mätningarna. Kör auto off.")
     quality.warn_changed(spectrum["camera"], state["dark_camera"], "mörkret", "dark")
-    session.warn_old_dark(state)  # PRO-12
+    session.warn_old_dark(state)
     if state["reference"] is not None:
         quality.warn_changed(spectrum["camera"], state["reference"]["camera"], "referensen", "reference")
     if state["dark"] is not None and state["mode"] == "direct" and not state["use_response"]:
@@ -70,7 +69,7 @@ def _warn_after_step(state, spectrum, i):
                   "save [DIR] [--excel]")
 def cmd_save(state, args):
     """Kommandot save [DIR]: sparar senaste mätningen i en ny mätmapp under DIR eller output_dir."""
-    excel = "--excel" in args  # 1.2.2
+    excel = "--excel" in args
     args = [word for word in args if word != "--excel"]
     registry.at_most_one(args, "save", "DIR")
     spectrum = state["spectrum"]
@@ -80,7 +79,7 @@ def cmd_save(state, args):
         raise ValueError(
             f"input.invalid_argument: mätningen kommer från load {spectrum['loaded_from']}, den är redan sparad"
         )
-    if state["series"] is not None and spectrum["saturated_px"]:  # 1.2.1
+    if state["series"] is not None and spectrum["saturated_px"]:
         raise ValueError("input.invalid_argument: mätningen är mättad och sparas inte i serien. "
                          "Sänk exposure eller strömmen")
     default_parent = state["settings"]["output_dir"] if state["series"] is None else state["series"]["folder"]
@@ -93,7 +92,7 @@ def cmd_save(state, args):
     except (ValueError, RuntimeError, OSError) as error:
         out.warn(f"spectrum.png kunde inte ritas ({error}). Mätningen är sparad ändå.")
     out.say(f"Sparad i {folder.as_posix()}")
-    if state["series"] is not None:  # 1.2.1: en rad per mätning i serie.csv
+    if state["series"] is not None:  # en rad per mätning i serie.csv
         rows = series.add_row(state["series"]["file"], folder, saved, spectrum)
         out.say(f"serie {state['series']['name']}: rad {rows} i {state['series']['file']}")
     if excel:
@@ -112,15 +111,15 @@ def _settings_to_save(state, spectrum):
     saved["dark"] = state["dark"] is not None
     saved["use_response"] = state["use_response"]
     saved["mode"] = state["mode"]
-    # Programversion, tid, git, bibliotek, profiler och settings_id, före coefficients. 1.0.32.
+    # Programversion, tid, git, bibliotek, profiler och settings_id, före coefficients.
     saved = meta.with_metadata(state, saved)
     saved = meta.put_before(saved, "taken", session.taken_text(state))  # när profilerna togs. PRO-10
     if state["rigg"] is None and sys.stdout.isatty():
         out.warn("ingen rigg angiven (rigg rigg.json), uppställningens data saknas i settings.json")  # DOK-32
     saved = meta.put_before(saved, "rigg", state["rigg"])  # Krav 9, DOK-31
-    saved = meta.put_before(saved, "controls", state["controls"])  # 1.2.0: exposure, gain och auto som du valde
-    saved = meta.put_before(saved, "note", state["note"])  # 1.2.1
-    saved = meta.put_before(saved, "annotations", state["annotations"])  # 1.2.1: ström, spänning, LED, prov
+    saved = meta.put_before(saved, "controls", state["controls"])  # exposure, gain och auto som du valde
+    saved = meta.put_before(saved, "note", state["note"])
+    saved = meta.put_before(saved, "annotations", state["annotations"])  # ström, spänning, LED, prov
     saved = meta.put_before(saved, "series", None if state["series"] is None else state["series"]["name"])
     # Id sist, när rigg, reglage och serie finns med; note och annotations undantas av meta.NOT_IN_ID, taken är en tid.
     counted = {key: value for key, value in saved.items() if key not in ("settings_id", "taken")}
@@ -144,15 +143,14 @@ def cmd_start(state, args):
     before = state["spectrum"]  # kurvan före live; measure lägger en ny i state varje varv
     try:
         src = source.open_source(kind, value)
-        measure.apply_controls(state, src)  # 1.2.0
+        measure.apply_controls(state, src)
         win = plot.open_plot()
         win.update(display.window_info(state))
         begun = time.perf_counter()
         while plot.is_open(win) and (seconds is None or time.perf_counter() - begun < seconds):
             started = time.perf_counter()
             spectrum = measure.measure(state, src)
-            masked = calc.masked_values(spectrum)
-            if not _live_frame(state, win, spectrum, masked):
+            if not _live_frame(state, win, spectrum, calc.masked_values(spectrum)):
                 break
             plot.pause(max(0.001, LIVE_INTERVAL - (time.perf_counter() - started)))
         out.say("live stoppad")

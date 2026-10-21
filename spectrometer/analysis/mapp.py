@@ -15,10 +15,9 @@ def read(path):
     x är kolumnen x_nm när den finns och är ifylld, annars x_px (x_label "nm" eller "pixel"). values är kolumnen
     value med NaN i en tom cell; mask är sann där valid är true och värdet finns. columns har varje kolumn med tal
     (till exempel absorbance). settings är settings.json bredvid; saknas den blir det en tom ordbok och en varning.
-    Fel: ValueError med input.invalid_argument om x_px/x_nm, value eller valid saknas; OSError om spectrum.csv saknas.
     """
     path = Path(path)
-    # 1.2.13: en mapp utan spectrum.csv, eller en sökväg som inte finns, ger en Fel-rad i stället för [Errno 2]
+    # en mapp utan spectrum.csv, eller en sökväg som inte finns, ger en Fel-rad i stället för [Errno 2]
     csv_path = files.measurement_folder(path) if path.is_dir() or not path.exists() else path
     with open(csv_path, newline="", encoding="utf-8-sig") as f:  # newline="": både CRLF och LF går
         reader = csv.reader(f)
@@ -66,10 +65,7 @@ def unit(settings):
 
 
 def require(saved, mode):
-    """Fel om mätningen ur read inte är kalibrerad eller inte sparades i mode; "direct" kräver response on också.
-
-    Fel: ValueError med input.missing_data som säger vad som saknas.
-    """
+    """Fel om mätningen ur read inte är kalibrerad eller inte sparades i mode; "direct" kräver response on också."""
     folder, settings = saved["folder"], saved["settings"]
     if saved["x_label"] != "nm":
         raise ValueError(f"input.missing_data: {folder}: ingen kalibrering (x är pixlar)")
@@ -80,10 +76,7 @@ def require(saved, mode):
 
 
 def read_required(folder, mode):
-    """En sparad mätmapp ur read, kontrollerad av require: kalibrerad och sparad i mode (transmission eller direct).
-
-    Fel: ValueError med input.missing_data om mätningen saknar kalibrering eller inte passar mode.
-    """
+    """En sparad mätmapp ur read, kontrollerad av require: kalibrerad och sparad i mode (transmission eller direct)."""
     saved = read(folder)
     require(saved, mode)  # kontrollen delas av prompten och analysskriptet
     return saved

@@ -1,14 +1,11 @@
-"""bandgap: bandgapet i eV ur absorptionskanten i en transmissionsmätning (Krav 22). 1.2.16: edge-panelen."""
+"""bandgap: bandgapet i eV ur absorptionskanten i en transmissionsmätning (Krav 22)."""
 
 from spectrometer import display, out, registry
 from spectrometer.analysis import bandgap, mapp
 
 
 def _transmission(state, args):
-    """(x i nm, transmission, mask) ur mätmappen args[0], eller ur senaste mätningen i mode transmission.
-
-    Fel: ValueError med input.missing_data utan mätning, kalibrering eller transmission.
-    """
+    """(x i nm, transmission, mask) ur mätmappen args[0], eller ur senaste mätningen i mode transmission."""
     if args:
         saved = mapp.read_required(args[0], "transmission")
         return saved["x"], saved["values"], saved["mask"]
@@ -26,7 +23,7 @@ def cmd_bandgap(state, args):
     """Kommandot bandgap [MAPP] [--anpassa]: E_g i eV och nm, om kanten ligger i fönstret 366–766 nm, och osäkerheten.
 
     A = −log10(T) och E = 1239,84/λ. Utan --anpassa: brantaste lutningen i A mot E, extrapolerad till A = 0; osäkerheten
-    är ±0,5 pixelsteg omräknat till eV. Med --anpassa (1.2.15): två sammanhängande räta linjer med brytpunkt, som rev7,
+    är ±0,5 pixelsteg omräknat till eV. Med --anpassa: två sammanhängande räta linjer med brytpunkt, som rev7,
     med 3-standardfelsregeln och ändpunktskontrollen. Kalibrering, reflektion och spridning ingår inte.
 
     Fel: ValueError med input.invalid_argument vid fler ord, med input.missing_data utan transmissionsmätning eller
@@ -38,7 +35,7 @@ def cmd_bandgap(state, args):
     report = bandgap.fit_report if fit else bandgap.report
     x, values, mask = _transmission(state, words)
     out.say_all(report(x, values, mask))
-    E, A, line, eg = bandgap.edge_lines(x, values, mask, fit)  # 1.2.16: till edge-panelen (view analysis edge)
+    E, A, line, eg = bandgap.edge_lines(x, values, mask, fit)  # till edge-panelen (view analysis edge)
     point = (line[0][1], line[1][1]) if fit else (eg, 0.0)  # brytpunkten, eller där linjen når A = 0
     display.remember(state, "edge", {"E": E, "A": A, "line": line, "eg": eg, "nm": bandgap.HC / eg, "point": point,
                                      "method": "två räta linjer" if fit else "brantaste lutningen"})

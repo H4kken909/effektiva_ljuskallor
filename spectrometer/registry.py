@@ -2,7 +2,6 @@
 
 help byggs ur registret i FEATURES-ordning och sedan i den ordning funktionerna står i sina filer
 (facit_04 jämför help rad för rad). need() och to_int() är argumentkontrollerna som alla kommandon delar.
-Hjälparna masked_values och roi_or_whole, som kommandona delar, ligger i calc.py.
 """
 
 import difflib
@@ -22,7 +21,7 @@ class Command:
     name: str
     text: str
     run: Callable
-    usage: str = ""  # syntaxen (help KOMMANDO visar den från 1.0.40), tom om den saknas
+    usage: str = ""  # syntaxen som help KOMMANDO visar, tom om den saknas
 
 
 COMMANDS: dict[str, Command] = {}
@@ -58,10 +57,7 @@ def help_lines():
 
 
 def lookup(name):
-    """Kommandot name i registret.
-
-    Fel: ValueError med input.invalid_argument om kommandot inte finns.
-    """
+    """Kommandot name i registret; ett okänt namn ger ett fel med förslag."""
     if name not in COMMANDS:
         close = difflib.get_close_matches(name, COMMANDS, n=1)
         hint = f" Menade du {close[0]}?" if close else ""
@@ -70,7 +66,7 @@ def lookup(name):
 
 
 def help_for(name):
-    """Raderna för help KOMMANDO (från 1.0.40): samma rad som help, och Användning: om kommandot har en syntax."""
+    """Raderna för help KOMMANDO: samma rad som help, och Användning: om kommandot har en syntax."""
     cmd = lookup(name)
     lines = [f"{cmd.name} {cmd.text}"]
     if cmd.usage:
@@ -79,11 +75,7 @@ def help_for(name):
 
 
 def run_command(state, line):
-    """Delar en rad i ord och kör kommandot.
-
-    Returnerar: kommandots svar: True från quit, annars None (också för en tom rad).
-    Fel: ValueError med input.invalid_argument vid citattecken utan slut eller okänt kommando; kommandots egna fel.
-    """
+    """Delar en rad i ord och kör kommandot. Ger True från quit, annars None (också för en tom rad)."""
     if os.name == "nt":
         line = line.replace("\\", "\\\\")  # Windows: annars tar shlex bort bakåtsnedstrecken i C:\bilder\a.png
     try:
@@ -101,10 +93,7 @@ def run_command(state, line):
 
 
 def need(args, names, name):
-    """Kontrollerar att kommandot name fick lika många ord som names.
-
-    Fel: ValueError med input.invalid_argument när ett ord saknas (felet säger vilket) eller när orden är för många.
-    """
+    """Kontrollerar att kommandot name fick lika många ord som names; felet säger vilket ord som saknas."""
     if len(args) < len(names):
         raise ValueError(f"input.invalid_argument: {name}: {names[len(args)]} saknas")
     if len(args) > len(names):
@@ -112,10 +101,7 @@ def need(args, names, name):
 
 
 def to_int(name, text, smallest):
-    """Gör om ett ord till ett heltal som är minst smallest.
-
-    Fel: ValueError med input.invalid_argument om ordet inte är ett heltal eller är mindre än smallest.
-    """
+    """Gör om ett ord till ett heltal som är minst smallest."""
     try:
         number = int(text)
     except ValueError as error:
@@ -126,11 +112,7 @@ def to_int(name, text, smallest):
 
 
 def to_float(name, text, above):
-    """Gör om ett ord till ett ändligt tal som är större än above.
-
-    Fel: ValueError med input.invalid_argument om ordet inte är ett tal, är inf eller nan, eller inte är större än
-    above.
-    """
+    """Gör om ett ord till ett ändligt tal som är större än above."""
     try:
         number = float(text)
     except ValueError as error:
@@ -147,8 +129,7 @@ def run_line(state, line):
     """Kör en rad som skrevs vid prompten: som run_command, men raden sparas i state["history"] och kan ångras.
 
     Ändrade raden något (session.changed) läggs state från före raden sist i state["undo"], högst UNDO_STEPS.
-    En hel run FIL är en rad: undo ångrar hela filen.
-    Returnerar: som run_command. Fel: som run_command; raden sparas då med status fel.
+    En hel run FIL är en rad: undo ångrar hela filen. Raden sparas med status fel om den kastar.
     """
     history = state.setdefault("history", [])
     steps = state.setdefault("undo", [])
@@ -171,10 +152,7 @@ MAX_FRAMES = 1000  # högst så många bilder i frames, dark och reference; 1000
 
 
 def to_frames(text):
-    """Antalet bilder N ur ett ord: ett heltal från 1 till MAX_FRAMES. KOM-39.
-
-    Fel: ValueError med input.invalid_argument om ordet inte är ett heltal, är mindre än 1 eller större än MAX_FRAMES.
-    """
+    """Antalet bilder N ur ett ord: ett heltal från 1 till MAX_FRAMES. KOM-39."""
     n = to_int("N", text, 1)
     if n > MAX_FRAMES:
         raise ValueError(f"input.invalid_argument: N ska vara högst {MAX_FRAMES}")
@@ -182,10 +160,7 @@ def to_frames(text):
 
 
 def at_most_one(args, name, what):
-    """Fel om kommandot name fick fler än ett ord. what är ordets namn i felraden, till exempel N.
-
-    Fel: ValueError med input.invalid_argument.
-    """
+    """Fel om kommandot name fick fler än ett ord. what är ordets namn i felraden, till exempel N."""
     if len(args) > 1:
         raise ValueError(f"input.invalid_argument: {name} tar högst ett ord ({what})")
 
@@ -207,7 +182,7 @@ def ready(state, prompt):
 
 
 def need_spectrum(state):
-    """Senaste mätningen. Fel: ValueError med input.missing_data om det inte finns någon."""
+    """Senaste mätningen; fel om det inte finns någon."""
     spectrum = state["spectrum"]
     if spectrum is None:
         raise ValueError("input.missing_data: Ingen mätning än. Kör step först.")
@@ -215,10 +190,9 @@ def need_spectrum(state):
 
 
 def open_new(path, mode, name, **options):
-    """Öppnar path för skrivning, bara om filen inte finns. mode är "x" (text) eller "xb" (bytes).
+    """Öppnar path för skrivning, bara om filen inte finns (felraden nämner kommandot name).
 
-    "x" och en öppen fil gör också att np.save och np.savez inte lägger till .npy eller .npz själva.
-    Fel: ValueError med input.invalid_argument om filen redan finns; name säger vilket kommando som inte skriver över.
+    mode är "x" (text) eller "xb" (bytes). En öppen fil gör att np.save och np.savez inte lägger till .npy eller .npz.
     """
     try:
         return open(path, mode, **options)

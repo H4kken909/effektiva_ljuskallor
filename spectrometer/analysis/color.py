@@ -16,8 +16,8 @@ _Z = np.array([0.0065, 0.0201, 0.0679, 0.2074, 0.6456, 1.3856, 1.7471, 1.7721, 1
                0.1582, 0.0782, 0.0422, 0.0203, 0.0087, 0.0039, 0.0021, 0.0017, 0.0011, 0.0008, 0.0003, 0.0002, 0.0000,
                0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,
                0.0000, 0.0000])
-WARM_WHITE = (0.45, 0.41)  # SUB1: varmt vitt
-COOL_WHITE = (0.31, 0.32)  # SUB1: kallt vitt
+WARM_WHITE = (0.45, 0.41)  # varmt vitt
+COOL_WHITE = (0.31, 0.32)  # kallt vitt
 
 
 def xyz(x_nm, values, mask):
@@ -66,12 +66,12 @@ def uv(x, y):
     return 4 * x / d, 6 * y / d
 
 
-CCT_K = (1000.0, 20000.0)  # 1.2.15: sökområdet längs svartkroppskurvan (Ohno 2014 räknar 1000–20000 K)
-DUV_MAX = 0.01  # 1.2.15: projektets regel (rev7): |Duv| över 0,01 ger ingen CCT
+CCT_K = (1000.0, 20000.0)  # sökområdet längs svartkroppskurvan (Ohno 2014 räknar 1000–20000 K)
+DUV_MAX = 0.01  # projektets regel (rev7): |Duv| över 0,01 ger ingen CCT
 
 
 def cct_duv(x, y):
-    """CCT och Duv: närmaste punkten på svartkroppskurvan i CIE 1960 (u, v), sökt längs temperaturen. 1.2.15.
+    """CCT och Duv: närmaste punkten på svartkroppskurvan i CIE 1960 (u, v), sökt längs temperaturen.
 
     Samma idé som Ohno (2014) i rev7: avståndet i uv till Planck-kurvan minimeras över T. Sökningen går i 200 jämna
     steg i 1/T (mired) över CCT_K och förfinas tre gånger runt bästa steget. Duv är avståndet, positivt ovanför
@@ -94,7 +94,7 @@ def cct_duv(x, y):
 def cct_line(x, y):
     """Raden om färgtemperaturen: CCT och Duv ur cct_duv, eller ingen när |Duv| > DUV_MAX eller vid sökgränsen.
 
-    1.2.15: som rev7 (närmaste punkt med Duv) i stället för bara McCamy; McCamy står inom parentes för jämförelsen.
+    McCamy står inom parentes bara som jämförelse med närmaste punkt på kurvan, inte som huvudvärde.
     """
     cct, duv, limit = cct_duv(x, y)
     duv = round(duv, 4) + 0.0  # -0.0 blir 0.0
@@ -120,9 +120,9 @@ def coverage(x_nm, mask):
 
 
 def report(x_nm, values, mask):
-    """Raderna som color skriver: xy, färgtemperatur, avstånd till SUB1:s vitpunkter, täckning och ljusstyrka.
+    """Raderna som color skriver: xy, färgtemperatur, avstånd till vitpunkterna, täckning och ljusstyrka.
 
-    En rad som börjar med "Varning: " är en varning. Fel: ValueError med input.missing_data (ur xyz och xy).
+    En rad som börjar med "Varning: " är en varning.
     """
     X, Y, Z = xyz(x_nm, values, mask)
     x, y = xy(X, Y, Z)
@@ -137,7 +137,7 @@ def report(x_nm, values, mask):
     return lines
 
 
-# mix --sweep: sRGB:s hörn (IEC 61966-2-1, D65), deras blandningar två och två, och SUB1:s vitpunkter
+# mix --sweep: sRGB:s hörn (IEC 61966-2-1, D65), deras blandningar två och två, och vitpunkterna
 TARGETS = {"röd": (0.64, 0.33), "gul": (0.4193, 0.5053), "grön": (0.30, 0.60), "cyan": (0.2247, 0.3287),
            "blå": (0.15, 0.06), "magenta": (0.3209, 0.1542), "varmt vitt": WARM_WHITE, "kallt vitt": COOL_WHITE}
 
@@ -167,7 +167,7 @@ def triangle_area(points):
 
 
 def locus():
-    """Spektralkurvan (hästskon) ur tabellen: (nm, x, y) 380–700 nm i steg om 10 nm. 1.2.16.
+    """Spektralkurvan (hästskon) ur tabellen: (nm, x, y) 380–700 nm i steg om 10 nm.
 
     Över 700 nm står punkten nästan still, och tabellens fyra decimaler gör den bara brusig; därför slutar kurvan där.
     """
@@ -177,7 +177,7 @@ def locus():
 
 
 def planck_locus(kelvins=None):
-    """Planck-kurvan i xy: (T, x, y) för temperaturerna kelvins, utan dem 40 st jämnt i log mellan CCT_K. 1.2.16."""
+    """Planck-kurvan i xy: (T, x, y) för temperaturerna kelvins, utan dem 40 st jämnt i log mellan CCT_K."""
     kelvins = np.geomspace(*CCT_K, 40) if kelvins is None else np.asarray(kelvins, dtype=np.float64)
     points = np.array([planck_xy(kelvin) for kelvin in kelvins])
     return kelvins, points[:, 0], points[:, 1]

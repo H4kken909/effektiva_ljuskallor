@@ -19,12 +19,7 @@ def inside(x, y, vertices):
 
 
 def render(style, width, height):
-    """Prismat som en lista rader med färgkoder (style används inte)."""
-    return geometric(width, height)
-
-
-def geometric(width, height):
-    """Rita prismat på ett rutnät width x height och ge raderna som text med ANSI-färger."""
+    """Rita prismat på ett rutnät width x height och ge raderna som text med ANSI-färger (style används inte)."""
     canvas = [[' '] * width for _ in range(height)]
     colors = [[GLASS] * width for _ in range(height)]
 

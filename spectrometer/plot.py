@@ -1,7 +1,4 @@
-"""Fönstret: öppnar, ritar, väntar och stänger. Räknar inte.
-
-Den enda modulen i programmet som använder matplotlib.
-"""
+"""Fönstret: öppnar, ritar, väntar och stänger. Räknar inte. Den enda modulen i programmet som använder matplotlib."""
 
 import time
 
@@ -163,10 +160,7 @@ def _themed_legend(ax, colors, loc, fontsize):
 
 
 def _due(win, key, every):
-    """Sant om det gått minst every sekunder sedan förra gången; då sparas tiden i win[key].
-
-    Första gången är den sant.
-    """
+    """Sant om det gått minst every sekunder sedan förra gången (alltid första gången); då sparas tiden i win[key]."""
     now = time.perf_counter()
     if now - win.get(key, -every) < every:
         return False
@@ -174,7 +168,7 @@ def _due(win, key, every):
     return True
 
 
-CAMERA_EVERY = 0.25  # sekunder mellan två kamerabilder i fönstret: begränsat i tid, inte var N:e varv (rev7 L1621)
+CAMERA_EVERY = 0.25  # sekunder mellan två kamerabilder i fönstret: begränsat i tid, inte var N:e varv
 
 
 def _areas(win):
@@ -234,10 +228,7 @@ def _show_image(win, key, rgb, extent):
 
 
 def _keys(win):
-    """Tangentkön: varje tangent i fönstret hamnar i win["keys"], som start läser.
-
-    Matplotlibs egna tangenter stängs av.
-    """
+    """Tangentkön: varje tangent i fönstret hamnar i win["keys"], som start läser. Matplotlibs egna stängs av."""
     for name in [key for key in plt.rcParams if key.startswith("keymap.")]:
         plt.rcParams[name] = []
     win["keys"] = []
@@ -279,10 +270,7 @@ def _report_figure(width, height):
 
 
 def save_png(path, x, values, x_label, y_label, title):
-    """Rapportfigur som PNG: ljust tema, 200 dpi, topp markerad.
-
-    values har NaN där mätningen är ogiltig (luckor i kurvan).
-    """
+    """Rapportfigur som PNG: ljust tema, 200 dpi, topp markerad. values har NaN där mätningen är ogiltig (luckor)."""
     fig = _report_figure(8, 4.5)
     ax = fig.add_subplot()
     colors = theme.apply(fig, ax, "light")
@@ -310,7 +298,7 @@ def _panel(win):
     theme.apply(win["fig"], ax, win["themed"])
     ax.tick_params(labelsize=7)
     ax.set_title(panel["title"], loc="left", fontsize=8, color=colors["fg"])
-    palette = (colors["line"], colors["ref"], colors["fg"], colors["warn"])  # 1.2.16: fler kurvor (droop)
+    palette = (colors["line"], colors["ref"], colors["fg"], colors["warn"])
     for k, (x, y, label) in enumerate(panel["lines"]):
         ax.plot(x, y, color=palette[k % len(palette)], linewidth=1.0, label=label)
     if panel["points"] is not None:
@@ -355,7 +343,7 @@ def _spectra(fig, curves, x_label, y_label):
     ax = fig.add_subplot()
     theme.apply(fig, ax, "light")
     for k, (x, y, name) in enumerate(curves):
-        marker = "o" if len(x) <= 30 else None  # 1.2.6: serier har få punkter, och de ska synas
+        marker = "o" if len(x) <= 30 else None  # serier har få punkter, och de ska synas
         ax.plot(x, y, linestyle=STYLES[k % len(STYLES)], color=PALETTE[k % len(PALETTE)], linewidth=1.2, label=name,
                 marker=marker, markersize=4)
     _set_labels(ax, x_label, y_label)
@@ -376,7 +364,7 @@ def show_spectra(curves, x_label, y_label):
 def save_figure(path, curves, x_label, y_label, xlim=None, log=False):
     """figure: rapportfigur utan fönster: 16 x 9 cm, 200 dpi, ingen titel; PNG eller SVG efter ändelsen.
 
-    Legend bara när kurvorna är fler än en. xlim: (min, max) eller None; log: logaritmisk y-axel.
+    Legend bara när kurvorna är fler än en. xlim: (min, max) eller None.
     """
     fig = _report_figure(16 / 2.54, 9 / 2.54)
     ax = _spectra(fig, curves, x_label, y_label)
@@ -393,11 +381,11 @@ CIE_NM = (460, 480, 500, 520, 540, 560, 580, 600, 620)  # våglängderna som få
 
 
 def save_cie(path, locus, planck, marks, points):
-    """figure --cie: kromaticitetsdiagram (CIE 1931 xy) utan fönster, ljust tema, 12 x 12 cm, 200 dpi. 1.2.16.
+    """figure --cie: kromaticitetsdiagram (CIE 1931 xy) utan fönster, ljust tema, 12 x 12 cm, 200 dpi.
 
     locus: (nm, x, y) för spektralkurvan ur tabellen; planck: (T, x, y) för Planck-kurvan; marks: (T, x, y) för
     temperaturerna som får en etikett; points: [(x, y, namn)], en punkt per mätning. Tre punkter får triangeln de
-    spänner (vad tre LED kan blanda). Egen bild ur programmets tabell, inga upphovsrättsproblem (W27).
+    spänner (vad tre LED kan blanda). Egen bild ur programmets tabell, inga upphovsrättsproblem.
     """
     fig = _report_figure(12 / 2.54, 12 / 2.54)
     ax = fig.add_subplot()

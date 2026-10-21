@@ -45,17 +45,17 @@ def edge(x_nm, absorb, step_nm):
 
 
 WINDOW_NM = (366.0, 766.0)  # Krav 22: kanten ska ligga här med KO-kalibreringen (3,39–1,62 eV)
-EDGE_MARGIN_NM = 30.0  # kanten närmare än så från mätningens kant: varning (ANA-50)
+EDGE_MARGIN_NM = 30.0  # kanten närmare än så från mätningens kant: varning
 T_MIN = 0.05  # transmission under 5 % räknas inte: där är kvoten mest brus och −log10(T) skenar
-MIN_RISE = 0.1  # 1.2.13: så mycket ska absorbansen stiga från låg till hög energi för en kant (T faller till ca 80 %)
-END_SHARE = 0.05  # 1.2.13: andelen giltiga punkter i var ände (minst 3) som rise jämför
+MIN_RISE = 0.1  # så mycket ska absorbansen stiga från låg till hög energi för en kant (T faller till ca 80 %)
+END_SHARE = 0.05  # andelen giltiga punkter i var ände (minst 3) som rise jämför
 
 
 def rise(x_nm, absorb):
     """Hur mycket absorbansen stiger över mätningen: medianen i högenergiänden minus medianen i lågenergiänden.
 
     Ändarna är END_SHARE av de giltiga punkterna (minst 3), sorterade efter energi. Brus kring en platt T (T ≈ 1)
-    ger nära 0, en verklig kant tiondelar eller mer. Medianen gör att enstaka brusiga punkter inte räcker. 1.2.13.
+    ger nära 0, en verklig kant tiondelar eller mer. Medianen gör att enstaka brusiga punkter inte räcker.
     """
     A = _by_energy(x_nm, absorb)[1]
     k = max(3, round(END_SHARE * A.size))
@@ -65,7 +65,7 @@ def rise(x_nm, absorb):
 def _require_rise(x_nm, absorb):
     """Fel (input.missing_data) när absorbansen inte stiger minst MIN_RISE från låg till hög energi (rise)."""
     gain = rise(x_nm, absorb)
-    if gain < MIN_RISE:  # 1.2.13: brus kring T ≈ 1 gav förut ett värde (2,03 eV), nu ingen kant
+    if gain < MIN_RISE:  # brus kring T ≈ 1 gav förut ett värde (2,03 eV), nu ingen kant
         raise ValueError(f"input.missing_data: ingen absorptionskant: absorbansen stiger bara {gain:.3f} från lägsta "
                          f"till högsta energin, minst {MIN_RISE:g} behövs (T ska falla under ca 80 %)")
 
@@ -94,21 +94,20 @@ def _edge_notes(lam, x_nm, transmission, mask):
 def report(x_nm, transmission, mask):
     """Raderna som bandgap skriver ur ett transmissionsspektrum: E_g i eV och nm, fönstret och osäkerheten.
 
-    Brantaste lutningen i A = −log10(T) mot E, extrapolerad till A = 0 (planen; rev7 anpassar två räta linjer),
-    bara där T är minst T_MIN.
-    En rad som börjar med "Varning: " är en varning. Fel: ValueError med input.missing_data utan en kant.
+    Brantaste lutningen i A = −log10(T) mot E, extrapolerad till A = 0, bara där T är minst T_MIN (rev7 anpassar två
+    räta linjer, se fit_report). En rad som börjar med "Varning: " är en varning.
     """
     absorb, eg, unc, _ = _find_edge(x_nm, transmission, mask)
     if not np.isfinite(eg) or eg <= 0:
         raise ValueError("input.missing_data: ingen absorptionskant (absorbansen stiger inte mot högre energi)")
     _require_rise(x_nm, absorb)
     lam = HC / eg
-    return [f"bandgap: {out.pm(eg, unc, 'eV')}, kanten vid {lam:.1f} nm",  # 1.2.14: avrundat efter osäkerheten
+    return [f"bandgap: {out.pm(eg, unc, 'eV')}, kanten vid {lam:.1f} nm",  # avrundat efter osäkerheten
             *_edge_notes(lam, x_nm, transmission, mask),
             "osäkerheten är bara ±0,5 pixelsteg; kalibrering, reflektion och spridning ingår inte"]
 
 
-MIN_POINTS = 8  # 1.2.15, rev7: minst åtta punkter i anpassningen med två räta linjer
+MIN_POINTS = 8  # rev7: minst åtta punkter i anpassningen med två räta linjer
 SIDE_POINTS = 3  # rev7: minst tre punkter på var sida om brytpunkten
 SE_RULE = 3.0  # rev7: lutningsökningen ska vara större än tre uppskattade standardfel (en brusregel, inget bevis)
 
@@ -135,12 +134,12 @@ def _hinge(E, A, ec):
 
 
 def two_lines(E, A):
-    """Två sammanhängande räta linjer i A mot E med brytpunkten i en mätpunkt (rev7, ANA-48). E stigande. 1.2.15.
+    """Två sammanhängande räta linjer i A mot E med brytpunkten i en mätpunkt (rev7). E stigande.
 
     Varje punkt med minst SIDE_POINTS punkter på var sida provas som brytpunkt ec. En kandidat måste ha d > 0 (brantare
     efter brytpunkten) och b + d > 0 (absorbansen stiger efter den); den med minst kvadratsumma vinner.
     Ger en ordbok: ec, index, a, b, d, se_d ur s²·(XᵀX)⁻¹ med s² = SSE/(n − 3), och se_ec ur samma modell med ec som
-    fjärde parameter (Jacobianen, s² = SSE/(n − 4)). Fel: ValueError med input.missing_data utan kandidat.
+    fjärde parameter (Jacobianen, s² = SSE/(n − 4)).
     """
     best = None
     for k in range(SIDE_POINTS, E.size - SIDE_POINTS):
@@ -159,10 +158,7 @@ def two_lines(E, A):
 
 
 def fit_points(x_nm, transmission, mask):
-    """(E, A) stigande i E för två räta linjer: det längsta sammanhängande intervallet med T minst T_MIN. 1.2.15.
-
-    Fel: ValueError med input.missing_data vid färre än MIN_POINTS punkter eller när absorbansen inte stiger (rise).
-    """
+    """(E, A) stigande i E för två räta linjer: det längsta sammanhängande intervallet med T minst T_MIN."""
     run = longest_run(mask & np.isfinite(transmission) & (transmission >= T_MIN))
     if run.size < MIN_POINTS:
         raise ValueError(f"input.missing_data: för få punkter för två räta linjer ({run.size}, minst {MIN_POINTS})")
@@ -173,11 +169,11 @@ def fit_points(x_nm, transmission, mask):
 
 
 def fit_report(x_nm, transmission, mask):
-    """Raderna som bandgap --anpassa skriver: brytpunkten mellan två räta linjer (rev7 L3645–3667, ANA-48/49). 1.2.15.
+    """Raderna som bandgap --anpassa skriver: brytpunkten mellan två räta linjer (rev7).
 
     Kanten avvisas (ingen kant) när lutningsökningen d är mindre än SE_RULE standardfel eller när brytpunkten hamnar
     vid intervallets gräns. Ändpunktskontrollen anpassar igen utan första och utan sista punkten (rev7 steg 5).
-    En rad som börjar med "Varning: " är en varning. Fel: ValueError med input.missing_data.
+    En rad som börjar med "Varning: " är en varning.
     """
     E, A = fit_points(x_nm, transmission, mask)
     fit = two_lines(E, A)
@@ -203,7 +199,7 @@ def fit_report(x_nm, transmission, mask):
 
 
 def edge_lines(x_nm, transmission, mask, fit=False):
-    """Absorbansen mot energin och kanten som report eller fit_report (fit) fann, till edge-panelen. 1.2.16.
+    """Absorbansen mot energin och kanten som report eller fit_report (fit) fann, till edge-panelen.
 
     Ger (E, A, (E_linje, A_linje), E_g) med E stigande: med fit de två räta linjerna, annars linjen genom brantaste
     punkten från A = 0 upp till största absorbansen. Samma räkning som utskriften; panelen räknar inget själv.
