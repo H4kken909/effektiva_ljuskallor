@@ -12,7 +12,7 @@ frames N: bilder per mätning
 info källan: storlek, format och kamerans reglage
 cameras prova kamera 0 till 4 och skriv vilka som ger bild
 snap [N]: spara N råbilder (1) ur källan som PNG i output_dir, utan att mäta
-image [FIL]: spara en bild ur källan med ROI:n inritad (bild.png)
+image [FIL]: spara en bild ur källan med ROI:n inritad (utan FIL: bild-ÅÅÅÅMMDD-HHMMSS.png i output_dir)
 step mät och skriv toppen
 save [DIR] [--excel]: spara senaste mätningen (--excel: också spectrum_sv.csv för svensk Excel)
 start [SEKUNDER]: live med kameran tills Ctrl+C, q eller SEKUNDER; i fönstret: s spara, p paus, f frys, c rensa, y skala, n normera, h hjälp

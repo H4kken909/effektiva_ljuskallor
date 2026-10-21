@@ -83,7 +83,8 @@ def cmd_response(state, args):
         if state["response"] is None:
             raise ValueError("input.missing_data: ingen respons, kör response build först")
         response = state["response"]
-        files.save_response(args[1], response["x"], response["values"])
+        with registry.open_new(args[1], "x", "response export", newline="", encoding="utf-8") as f:
+            files.write_response(f, response["x"], response["values"])
         out.say(f"respons: sparad i {args[1]}")
     elif args[0] == "on":
         if state["response"] is None:

@@ -92,3 +92,48 @@ def test_clear_all_takes_only_the_chain(tmp_path, capsys):
     assert state["controls"]["exposure"] == -6
     assert (state["view"]["theme"], state["view"]["normalize"]) == ("dark", True)
     assert state["image"] is not None
+
+
+def test_response_export_never_overwrites(tmp_path, capsys):
+    """B12 (BESLUT 10): response export vägrar om filen finns, som de andra sparkommandona."""
+    from test_responsen import calibrated
+
+    state, _ = calibrated(tmp_path)
+    known = tmp_path / "kand.csv"
+    known.write_text("wavelength_nm,relative_power_per_nm\n500,1\n510,1\n520,2\n", encoding="utf-8")
+    registry.run_command(state, f"response build {known.as_posix()} 1")
+    target = tmp_path / "respons.csv"
+    registry.run_command(state, f"response export {target.as_posix()}")
+    first = target.read_text(encoding="utf-8")
+    text = error_text(state, f"response export {target.as_posix()}")
+    assert text == f"input.invalid_argument: {target.as_posix()} finns redan, response export skriver inte över"
+    assert target.read_text(encoding="utf-8") == first
+
+
+def test_image_without_file_goes_to_output_dir_with_a_stamp(tmp_path, monkeypatch, capsys):
+    """B17 (BESLUT 10): image utan FIL sparar bild-ÅÅÅÅMMDD-HHMMSS.png i output_dir och skriver aldrig över."""
+    monkeypatch.chdir(tmp_path)
+    cv2.imwrite("bild_in.png", line_image())
+    state = new_state()
+    registry.run_command(state, "source file bild_in.png")
+    registry.run_command(state, "roi 10 0 5 10")
+    registry.run_command(state, "image")
+    registry.run_command(state, "image")
+    saved = sorted((tmp_path / "data").glob("bild-*.png"))
+    assert len(saved) == 2 and saved[1].stem.endswith("-2")
+    assert capsys.readouterr().out.count("Sparad: data/bild-") == 2
+    framed = cv2.imread(str(saved[0]))
+    assert tuple(framed[0, 10]) == (0, 255, 0)
+    assert not (tmp_path / "bild.png").exists()
+
+
+def test_image_with_file_refuses_to_overwrite(tmp_path, monkeypatch):
+    """B17 (BESLUT 10): image FIL vägrar om filen finns; den gamla filen rörs inte."""
+    monkeypatch.chdir(tmp_path)
+    cv2.imwrite("bild_in.png", line_image())
+    state = new_state()
+    registry.run_command(state, "source file bild_in.png")
+    registry.run_command(state, "image ram.png")
+    before = (tmp_path / "ram.png").read_bytes()
+    assert error_text(state, "image ram.png") == "input.invalid_argument: ram.png finns redan, image skriver inte över"
+    assert (tmp_path / "ram.png").read_bytes() == before
