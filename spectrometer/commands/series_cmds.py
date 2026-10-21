@@ -132,7 +132,8 @@ def cmd_series_plot(state, args):
             out.say(f"  droop: {100 * (1 - eff[-1]):.0f} % lägre area/I vid {out.fmt(xs[-1])} mA än vid max "
                     "(relativt, inte verkningsgrad)")
         if counts.max(initial=0) > 1:
-            out.say("  ± är spridningen mellan upprepade mätningar vid samma ström; total osäkerhet ej kvantifierad")
+            same = "ström" if axis == "current" else "spänning"
+            out.say(f"  ± är spridningen mellan upprepade mätningar vid samma {same}; total osäkerhet ej kvantifierad")
         curves.append((xs, eff if droop else areas, name))
         found.append((name, xs, areas, eff))
     display.remember(state, "droop", {"curves": found, "x_label": x_label})  # 1.2.16: view analysis droop

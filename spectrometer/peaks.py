@@ -13,21 +13,22 @@ from spectrometer import calc
 def find_peaks(values, mask, min_height, min_distance):
     """Index för lokala maxima bland giltiga positioner, högsta toppen först.
 
-    En topp är v[i] > v[i-1] och v[i] >= v[i+1], minst min_height. En platå (mättad topp, samma värde flera
-    positioner i rad) ger en topp i mitten. Toppar närmare än min_distance positioner slås ihop till den högsta.
+    En topp är v[i] > v[i-1] och v[i] >= v[i+1], minst min_height; utanför kanten räknas som lägre, så första och
+    sista positionen kan vara toppar. En platå (mättad topp, samma värde flera positioner i rad) ger en topp i mitten.
+    Toppar närmare än min_distance positioner slås ihop till den högsta.
     Parametrar: values: spektrumet, (P,) float64; mask: (P,) bool, True där värdet duger;
     min_height: lägsta topphöjd, samma enhet som values; min_distance: minsta avstånd i positioner (heltal).
     Returnerar: lista med index (int), högsta först; tom lista om ingen topp finns.
     """
     v = np.where(mask, values, np.nan)  # NaN jämför alltid falskt: ogiltiga positioner blir aldrig toppar
     found = []
-    i = 1
-    while i < len(v) - 1:
-        if v[i] > v[i - 1] and v[i] >= min_height:
+    i = 0
+    while i < len(v):
+        if (i == 0 or v[i] > v[i - 1]) and v[i] >= min_height:
             j = i
             while j + 1 < len(v) and v[j + 1] == v[i]:
                 j += 1  # platå: samma värde i rad
-            if j + 1 < len(v) and v[j + 1] < v[i]:
+            if (j + 1 == len(v) and i > 0) or (j + 1 < len(v) and v[j + 1] < v[i]):  # helt platt kurva: ingen topp
                 found.append((i + j) // 2)
             i = j + 1
         else:

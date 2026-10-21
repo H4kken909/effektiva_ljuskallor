@@ -16,6 +16,9 @@ PANES = ("camera", "roi", "spectrum")  # kamerabilden med ROI-rutan, ROI-remsan 
 @registry.command("theme", "light|dark: fönstrets färger")
 def cmd_theme(state, args):
     """Kommandot theme light eller theme dark: färgerna i nästa fönster (start, graf)."""
+    if not args:
+        out.say(f"theme: {state['view']['theme']}")
+        return
     if len(args) != 1 or args[0] not in theme.THEMES:
         raise ValueError("input.invalid_argument: theme tar ett ord, light eller dark")
     state["view"]["theme"] = args[0]

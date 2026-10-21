@@ -9,7 +9,7 @@ import time
 
 import numpy as np
 
-from spectrometer import calc, plot, quality, session
+from spectrometer import calc, plot, session
 
 COUNTS_TOP = {"sum": 800.0}  # fast y-skala för counts: 0-270 (255 plus marginal), summan av tre kanaler 0-800
 YSCALES = ("fast", "auto", "zoom")  # tangenten y växlar i den här ordningen
@@ -61,7 +61,7 @@ def frame_info(state, win, spectrum, values):
     laps.append(time.perf_counter())
     del laps[:-11]  # 11 tider ger 10 varv
     x = spectrum["x"]
-    full = saturated(state)
+    full = spectrum.get("saturated_px", 0) > 0  # flest mättade ROI-pixlar i någon bild i mätningen (measure.compute)
     warnings = ["MÄTTAD - sänk exponeringen"] if full else []
     transmission = spectrum["y_label"] == "transmission (kvot)"
     if transmission:
@@ -96,15 +96,6 @@ def fixed_y(state, y_label):
     if y_label == "normerad (relativ)":
         return (0.0, 1.1)
     return None
-
-
-def saturated(state):
-    """Sant när en kanal som bidrar till spektrumet är mättad i ROI:n: samma regel som step (quality.saturated_count)."""
-    image = state["image"]
-    if image is None:
-        return False
-    part = quality.crop(image, state["settings"]["roi"])
-    return quality.saturated_count(part, state["settings"]["channel"]) > 0
 
 
 def shown(win, values, y_label):
@@ -165,7 +156,7 @@ def panel(state, name, spectrum, values):
         local = np.lib.stride_tricks.sliding_window_view(np.pad(y, half, constant_values=-np.inf), 2 * half + 1)
         first = y > np.concatenate(([-np.inf], y[:-1]))  # bara första punkten på en platå
         top = np.flatnonzero((y == local.max(axis=1)) & first & np.isfinite(y) & (y >= 0.05 * y.max()))
-        top = top[np.argsort(-y[top])][:5]  # de fem högsta, bara för visning (analysen kommer i 1.2.x)
+        top = top[np.argsort(-y[top])][:5]  # de fem högsta, bara för visning (linjebredd och area ger kommandot fwhm)
         rows = "\n".join(f"{x[i]:>8.5g} {values[i]:>8.4g}" for i in top) or "inga toppar"
         return {"title": "peaks: toppar i kurvan", "x_label": spectrum["x_label"], "lines": [(x, values, "kurvan")],
                 "points": (x[top], values[top]), "text": f"{'x':>8} {'värde':>8}\n{rows}"}

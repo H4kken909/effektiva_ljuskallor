@@ -47,7 +47,6 @@ VIT = "\x1b[1;97m"  # fet vit: Elias och Adrian
 GRA = "\x1b[38;5;247m"  # grå: versionen, övriga i teamet och help-tipset
 NOLL = "\x1b[0m"  # tillbaka till terminalens färger
 
-VERSION = "v1.0.0"
 PROJEKT = "Grupp GRYb1  ·  Effektiva ljuskällor  ·  TFYY51 Ingenjörsprojekt, HT 2026"
 TEAM = [
     ("Elias Holmberg", "Programmeringsansvarig", True),

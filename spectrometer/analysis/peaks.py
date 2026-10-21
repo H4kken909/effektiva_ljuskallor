@@ -11,8 +11,11 @@ def find_peaks(y, mask):
     yy = np.where(mask, y, -np.inf)
     top = np.nanmax(yy[np.isfinite(yy)]) if np.any(np.isfinite(yy)) else 0.0
     hits = []
-    for i in range(1, len(yy) - 1):
-        if yy[i] >= yy[i - 1] and yy[i] > yy[i + 1] and yy[i] >= MIN_FRACTION * top and np.isfinite(yy[i]):
+    if len(yy) and np.all(yy == yy[0]):
+        return []  # helt platt kurva: ingen topp, inte heller i sista pixeln
+    around = np.pad(yy, 1, constant_values=-np.inf)  # utanför kanten räknas som lägre: första och sista pixeln kan vara toppar
+    for i in range(len(yy)):
+        if around[i + 1] >= around[i] and around[i + 1] > around[i + 2] and yy[i] >= MIN_FRACTION * top and np.isfinite(yy[i]):
             hits.append(i)
     hits.sort(key=lambda i: -yy[i])
     kept = []

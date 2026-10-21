@@ -1,4 +1,4 @@
-"""Felkatalog, steg 1 (utkast): varje raise med en text i spectrometer/ som en tabell i docs/felkatalog.md.
+"""Felkatalog, steg 1: varje raise med en text i spectrometer/ som en tabell i docs/felkatalog.md.
 
 Kör från repots rot: python tools/felkatalog.py (eller med en annan målfil: python tools/felkatalog.py UT.md).
 Felkoden är det som står före första kolon, t.ex. input.invalid_argument; {namn} fylls i när felet händer.
@@ -21,7 +21,9 @@ def text_of(node):
             if isinstance(part, ast.Constant):
                 parts.append(part.value)
             else:
-                parts.append("{" + ast.unparse(part.value) + "}")
+                conversion = f"!{chr(part.conversion)}" if part.conversion > 0 else ""
+                spec = f":{text_of(part.format_spec)}" if part.format_spec is not None else ""
+                parts.append("{" + ast.unparse(part.value) + conversion + spec + "}")
         return "".join(parts)
     return None
 
@@ -37,10 +39,11 @@ def split_code(text):
 def raises(path):
     """Varje raise X("...") i filen, i filordning, som (funktion, undantag, felkod, text).
 
-    raise X(message) räknas också när message = "..." står tidigare i samma funktion (som i source.open_source).
+    raise X(message) räknas också när message = "..." står tidigare i samma funktion (som i source.open_source);
+    får variabeln olika texter i flera grenar ger raisen en rad per text.
     """
     found = []
-    named = {}  # (funktion, variabel): text
+    named = {}  # (funktion, variabel): alla texter variabeln får i funktionen, i ordning
 
     def visit(node, func):
         """Går igenom noden; func är namnet på den närmaste funktionen runt den."""
@@ -51,11 +54,17 @@ def raises(path):
             if isinstance(child, ast.Assign) and len(child.targets) == 1 and isinstance(child.targets[0], ast.Name):
                 text = text_of(child.value)
                 if text is not None:
-                    named[(func, child.targets[0].id)] = text
+                    texts = named.setdefault((func, child.targets[0].id), [])
+                    if text not in texts:
+                        texts.append(text)
             if isinstance(child, ast.Raise) and isinstance(child.exc, ast.Call) and child.exc.args:
                 arg = child.exc.args[0]
-                text = named.get((func, arg.id)) if isinstance(arg, ast.Name) else text_of(arg)
-                if text is not None:
+                if isinstance(arg, ast.Name):
+                    texts = named.get((func, arg.id), [])
+                else:
+                    direct = text_of(arg)
+                    texts = [] if direct is None else [direct]
+                for text in texts:
                     found.append((func, ast.unparse(child.exc.func), *split_code(text)))
             visit(child, func)
 
@@ -72,7 +81,7 @@ def main():
             text = text.replace("|", "\\|")  # | delar kolumnerna i en Markdown-tabell
             rows.append(f"| {path.relative_to(ROT).as_posix()} | {func} | {exc} | {code} | {text} |")
     lines = [
-        "# Felkatalog (utkast)",
+        "# Felkatalog",
         "",
         "Skapad av `python tools/felkatalog.py` ur koden. Ändra inte för hand: kör skriptet igen efter en ändring.",
         "På skärmen står felet som `Fel: felkod: text`; `{namn}` fylls i när felet händer.",
