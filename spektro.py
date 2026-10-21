@@ -3,6 +3,10 @@
 Körs i projektmappen. Första gången byggs .venv här och requirements.txt installeras; när requirements.txt ändras
 installeras den igen. Sedan körs programmet alltid i den miljön, utan att någon aktiverar den.
 
+Paketen installeras bara som färdiga paket (wheels), aldrig genom att kompilera. Saknar Pythonen som startade
+spektro färdiga paket (32-bitars, ARM, free-threaded eller för ny version) letar startaren upp en annan installerad
+Python som har dem och bygger .venv med den; finns ingen säger den vad som ska installeras.
+
 Utan flaggor: maximerat fönster, gul text medan modulerna laddas, färgprismat ur startskarm/prisma.py och sedan
 prompten. --windowed lämnar fönstret som det är, --no-splash går direkt till prompten, --delay ändrar pausen mellan
 raderna. Övriga flaggor skickas till spectrometer.main. Utan terminal (omdirigerad in- eller utmatning, som i jamfor
@@ -14,6 +18,7 @@ import builtins
 import hashlib
 import importlib
 import io
+import re
 import runpy
 import shutil
 import subprocess
@@ -30,6 +35,15 @@ VENV = ROT / ".venv"
 VENV_PY = VENV / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
 KRAV = ROT / "requirements.txt"
 MARKOR = VENV / ".spektro-krav"
+
+# Körs med en annan Python: skriver versionen ("3.12") om den kan få färdiga paket, det vill säga 64-bitars, inte
+# free-threaded och på Windows x64-bygget. Om just den versionen har färdiga paket avgör pip (--only-binary).
+KOLLA = (
+    "import sys, sysconfig\n"
+    "ok = sys.maxsize > 2**32 and not sysconfig.get_config_var('Py_GIL_DISABLED')\n"
+    "ok = ok and (sys.platform != 'win32' or sysconfig.get_platform() == 'win-amd64')\n"
+    "print('%d.%d' % sys.version_info[:2] if ok else '')\n"
+)
 
 # Startskärmen: ändra här.
 TEXT = ["Inget prat", "Inget spring", "Inget fniss", "Inget alls!"]
@@ -83,19 +97,92 @@ def las_flaggor():
     return tolk.parse_known_args()
 
 
-def ordna_miljon():
-    """Bygg .venv om den saknas och installera requirements.txt när den ändrats."""
+def kor_tyst(kommando):
+    """Kör kommando och fånga utskriften; text som inte går att avkoda blir ersättningstecken."""
+    return subprocess.run([str(d) for d in kommando], capture_output=True, text=True, errors="replace")
+
+
+def python_version(py):
+    """Versionen ("3.12") om py går att köra och kan få färdiga paket, annars None."""
     try:
-        if not VENV_PY.exists():
-            print("Första gången: bygger miljön i .venv ...")
-            subprocess.run([sys.executable, "-m", "venv", str(VENV)], check=True)
+        return kor_tyst([py, "-c", KOLLA]).stdout.strip() or None
+    except OSError:
+        return None
+
+
+def andra_pythons():
+    """Andra installerade Python, nyaste först: py-launchern på Windows, python3.N i PATH annars."""
+    if sys.platform == "win32":
+        try:
+            lista = kor_tyst(["py", "--list-paths"]).stdout
+        except OSError:
+            return []  # Python installerad utan py-launchern
+        return re.findall(r"([A-Za-z]:\\.*?python\.exe)\s*$", lista, re.IGNORECASE | re.MULTILINE)
+    namn = [f"python3.{n}" for n in range(20, 8, -1)] + ["python3"]
+    return [sokvag for sokvag in map(shutil.which, namn) if sokvag]
+
+
+def installera(summa):
+    """Installera requirements.txt i .venv, bara färdiga paket. None om det gick, annars pips rad om paketet som
+    saknar färdig version för den här Pythonen. Andra fel (till exempel inget nät) avslutar."""
+    print("Installerar paketen i requirements.txt ...")
+    svar = kor_tyst([VENV_PY, "-m", "pip", "install", "-q", "--disable-pip-version-check", "--only-binary=:all:",
+                     "-r", KRAV])
+    if svar.returncode == 0:
+        MARKOR.write_text(summa)
+        return None
+    saknas = [rad.strip() for rad in svar.stderr.splitlines() if "No matching distribution" in rad]
+    if saknas:
+        return saknas[-1]
+    sys.exit(f"Kunde inte installera paketen i {VENV}:\n{svar.stderr.strip()}")
+
+
+def ordna_miljon():
+    """Se till att .venv finns, är byggd med en Python som kan få färdiga paket och har requirements.txt."""
+    try:
         summa = hashlib.sha256(KRAV.read_bytes()).hexdigest()
-        if not MARKOR.exists() or MARKOR.read_text() != summa:
-            print("Installerar paketen i requirements.txt ...")
-            subprocess.run([str(VENV_PY), "-m", "pip", "install", "-q", "-r", str(KRAV)], check=True)
-            MARKOR.write_text(summa)
+        if Path(sys.prefix).resolve() == VENV.resolve():
+            # körs redan i .venv (startaren har ordnat den): installera bara om requirements.txt ändrats
+            if not MARKOR.exists() or MARKOR.read_text() != summa:
+                saknas = installera(summa)
+                if saknas:
+                    sys.exit(f"Kunde inte installera paketen i {VENV}: {saknas}")
+            return
+        version = python_version(VENV_PY) if VENV_PY.exists() else None
+        provade, saknas = set(), None
+        if version:
+            if MARKOR.exists() and MARKOR.read_text() == summa:
+                return
+            saknas = installera(summa)
+            if not saknas:
+                return
+            provade.add(version)
+            print(f"Python {version} i .venv saknar färdiga paket ({saknas}); letar efter en annan Python ...")
+        elif VENV.exists():
+            print("Miljön i .venv är byggd med en Python som inte går att använda: bygger om den ...")
+        else:
+            print("Första gången: bygger miljön i .venv ...")
+        for py in [sys.executable, *andra_pythons()]:
+            version = python_version(py)
+            if not version or version in provade:
+                continue  # fel sorts Python, eller en version som redan saknat paket
+            provade.add(version)
+            print(f"Bygger .venv med Python {version} ({py}) ...")
+            subprocess.run([py, "-m", "venv", "--clear", str(VENV)], check=True)
+            saknas = installera(summa)
+            if not saknas:
+                return
+            print(f"Python {version} saknar färdiga paket ({saknas}); provar nästa ...")
     except (OSError, subprocess.CalledProcessError) as fel:
-        sys.exit(f"Kunde inte ordna miljön i {VENV}: {fel}")
+        tips = "\nPå Debian och Ubuntu behövs paketet python3-venv." if sys.platform.startswith("linux") else ""
+        sys.exit(f"Kunde inte ordna miljön i {VENV}: {fel}{tips}")
+    if sys.platform == "win32":
+        hur = ('Installera en ny Python från python.org med "Windows installer (64-bit)" och kryssa i\n'
+               '"Add python.exe to PATH". Kör sedan: py -m spektro')
+    else:
+        hur = "Installera en 64-bitars Python som paketen finns för och kör spektro med den."
+    orsak = f"\nSenast saknades: {saknas}" if saknas else ""
+    sys.exit(f"Hittade ingen Python på datorn som kan installera paketen utan att kompilera.{orsak}\n{hur}")
 
 
 def kor_i_miljon():
