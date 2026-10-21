@@ -42,7 +42,7 @@ def prepare(image, roi, axis, channel):
     Parametrar: image: bilden, (H, W, 3) uint8 i BGR och counts, eller float64 efter mörkeravdrag;
     roi: (x, y, width, height) i pixlar; axis: "horizontal" eller "vertical"; channel: ett namn i CHANNELS.
     Returnerar: tabellen, (rader, kolumner) float64 i counts, med spektrumet längs kolumnerna.
-    Fel: ValueError med input.invalid_argument om bilden, ROI:n, axis eller channel är fel.
+    Fel: ValueError med input.invalid_argument om bilden eller ROI:n är fel.
     """
     if not isinstance(image, np.ndarray) or image.dtype not in (np.uint8, np.float64):
         raise ValueError(
@@ -61,14 +61,6 @@ def prepare(image, roi, axis, channel):
     if x < 0 or y < 0 or x + width > w or y + height > h:
         raise ValueError(
             f"input.invalid_argument: roi {roi} ligger utanför bilden ({w} bred, {h} hög)"
-        )
-    if channel not in CHANNELS:
-        raise ValueError(
-            f"input.invalid_argument: okänd kanal {channel}, tillåtna är {CHANNELS}"
-        )
-    if axis not in ("horizontal", "vertical"):
-        raise ValueError(
-            f"input.invalid_argument: okänd riktning {axis}, tillåtna är ('horizontal', 'vertical')"
         )
     view = image[y : y + height, x : x + width]
     cut = view.astype(np.float64)
@@ -92,19 +84,7 @@ def extract_spectrum(table):
     Takes the average of the rows in the table, one amount per column.
     Parameters: Table: the table from prepare(), form (rows, columns), float64 (ndarray).
     Returns: Average per column, form (columns,), float64 (ndarray).
-    Error: ValueError with input.invalid_argument if table is not float 64, is inf, is NaN, does not have two dimensions or is empty.
     """
-
-    _check("table", table)
-
-    # Kontrollera form
-    if table.ndim != 2:
-        raise ValueError(
-            f"input.invalid_argument: table must have 2 dimensions, got shape {table.shape}"
-        )
-
-    if table.size == 0:
-        raise ValueError("input.invalid_argument: table is empty")
 
     # Spektrumet är medlet av raderna, ett värde per kolumn. Se rev7, RX05.
     return np.mean(table, axis=0)
@@ -115,16 +95,7 @@ def average_spectra(stack):
 
     Parametrar: stack: en float64-array med formen (N, P), en rad per bild.
     Returnerar: mean och stddev, båda (P,) float64; stddev är NaN när N är 1.
-    Fel: ValueError med input.invalid_argument om stack inte är 2D, inte float64 eller är tom.
     """
-    if stack.ndim != 2:
-        raise ValueError(
-            f"input.invalid_argument: stack måste vara 2D (en rad per bild), fick ndim {stack.ndim}"
-        )
-    if stack.dtype != np.float64:
-        raise ValueError("input.invalid_argument: stack måste vara en float64-array")
-    if stack.size == 0:
-        raise ValueError("input.invalid_argument: stack är tom")
     mean = np.mean(stack, axis=0)
     n = stack.shape[0]
     if n == 1:
@@ -170,10 +141,6 @@ def fit_wavelength(pixels, wavelengths, degree):
         )
     _check("pixels", pixels)
     _check("wavelengths", wavelengths)
-    if pixels.shape != wavelengths.shape:
-        raise ValueError(
-            f"input.invalid_argument: pixels och wavelengths har olika form, {pixels.shape} och {wavelengths.shape}"
-        )
     unique = np.unique(pixels)
     if unique.size < pixels.size:
         raise ValueError("input.invalid_argument: samma pixel står två gånger")
@@ -210,17 +177,8 @@ def build_response(wavelengths, measured, known_wavelengths, known_values):
     Parametrar: wavelengths: lampmätningens våglängder i nm, (P,); measured: lampmätningen i counts, (P,), får ha NaN;
     known_wavelengths: kända våglängder i stigande nm, (K,); known_values: känd relativ effekt, (K,).
     Returnerar: responsen, (P,) float64, normerad så att största värdet är 1, NaN där den inte går att räkna.
-    Fel: ValueError med input.invalid_argument vid olika form eller färre än två kända punkter,
-    och med input.missing_data om inget värde är giltigt eller toppen inte är större än 0.
+    Fel: ValueError med input.missing_data om inget värde är giltigt eller toppen inte är större än 0.
     """
-    if (
-        wavelengths.shape != measured.shape
-        or known_wavelengths.shape != known_values.shape
-        or known_wavelengths.size < 2
-    ):
-        raise ValueError(
-            "input.invalid_argument: olika form eller färre än två kända punkter"
-        )
     # Interpolation utan extrapolation: NaN utanför de kända punkterna. Se rev7, RX15.
     known_at_lamp = np.interp(
         wavelengths, known_wavelengths, known_values, left=np.nan, right=np.nan
@@ -244,21 +202,9 @@ def apply_response(signal, response, mask, min_response):
     Parametrar: signal: (P,) float64 i counts; response: (P,) float64, relativ, utan enhet;
     mask: (P,) bool, True där värdet duger; min_response: minsta giltiga respons, utan enhet.
     Returnerar: (values, mask): values (P,) float64, relativ, NaN där det inte går att räkna, och den nya masken (P,) bool.
-    Fel: ValueError med input.invalid_argument vid olika form, en mask som inte är bool, en tröskel som inte är
-    ändlig och större än 0, eller NaN och inf på en giltig plats.
+    Fel: ValueError med input.invalid_argument vid en tröskel som inte är ändlig och större än 0,
+    eller NaN och inf på en giltig plats.
     """
-    if signal.shape != response.shape:
-        raise ValueError(
-            f"input.invalid_argument: response har annan form än signal {signal.shape} {response.shape}"
-        )
-    if signal.shape != mask.shape:
-        raise ValueError(
-            f"input.invalid_argument: mask har annan form än signal {signal.shape} {mask.shape}"
-        )
-    if mask.dtype != np.bool_:
-        raise ValueError(
-            f"input.invalid_argument: mask måste vara en bool-array, fick {mask.dtype}"
-        )
     if not np.isfinite(min_response) or min_response <= 0:
         raise ValueError(
             f"input.invalid_argument: min_response måste vara ändligt och större än 0, fick {min_response}"
@@ -280,21 +226,9 @@ def transmission_ratio(sample, reference, mask, min_reference):
     mask: (P,) bool, True där värdet duger; min_reference: minsta giltiga referens i counts.
     Returnerar: (values, mask): transmissionen (P,) float64 som kvot, NaN där den inte går att räkna,
     och den nya masken (P,) bool.
-    Fel: ValueError med input.invalid_argument vid olika form, en mask som inte är bool, en tröskel som inte är
-    ändlig och större än 0, eller NaN och inf på en giltig plats.
+    Fel: ValueError med input.invalid_argument vid en tröskel som inte är ändlig och större än 0,
+    eller NaN och inf på en giltig plats.
     """
-    if sample.shape != reference.shape:
-        raise ValueError(
-            f"input.invalid_argument: reference har annan form än sample {sample.shape} {reference.shape}"
-        )
-    if sample.shape != mask.shape:
-        raise ValueError(
-            f"input.invalid_argument: mask har annan form än sample {sample.shape} {mask.shape}"
-        )
-    if mask.dtype != np.bool_:
-        raise ValueError(
-            f"input.invalid_argument: mask måste vara en bool-array, fick {mask.dtype}"
-        )
     if not np.isfinite(min_reference) or min_reference <= 0:
         raise ValueError(
             f"input.invalid_argument: min_reference måste vara ändligt och större än 0, fick {min_reference}"
@@ -315,35 +249,9 @@ def extract_median(table):
     Medianen bryr sig inte om en enstaka het pixel eller en rad med ströljus; medlet har mindre brus när raderna är lika.
     Parametrar: table: tabellen från prepare(), (rader, kolumner) float64.
     Returnerar: medianen per kolumn, (kolumner,) float64.
-    Fel: ValueError med input.invalid_argument om table inte är float64, har inf eller NaN, inte är 2D eller är tom.
     """
-    _check("table", table)
-    if table.ndim != 2 or table.size == 0:
-        raise ValueError(f"input.invalid_argument: table ska vara 2D och inte tom, fick formen {table.shape}")
     # Spektrumet är medianen av raderna, ett värde per kolumn (ROI-14; RX05 är medlet).
     return np.median(table, axis=0)
-
-
-def bin_spectrum(x, values, mask, n):
-    """Slår ihop n intilliggande positioner till en: medel av x och av values. Positionerna sist (färre än n) tas bort.
-
-    Parametrar: x: (P,) float64, pixel eller nm; values: (P,) float64, får vara NaN där mask är False; mask: (P,) bool;
-    n: positioner per grupp, från 1 till P.
-    Returnerar: (x, values, mask), (P // n,) vardera. En grupp är giltig bara om alla n positioner är det, annars NaN.
-    Fel: ValueError med input.invalid_argument om formerna skiljer sig, mask inte är bool eller n är utanför 1 till P.
-    """
-    if x.ndim != 1 or x.shape != values.shape or x.shape != mask.shape:
-        raise ValueError(f"input.invalid_argument: x, values och mask ska ha samma form (P,), fick {x.shape}")
-    if mask.dtype != np.bool_:
-        raise ValueError(f"input.invalid_argument: mask måste vara en bool-array, fick {mask.dtype}")
-    if not 1 <= n <= x.size:
-        raise ValueError(f"input.invalid_argument: n ska vara från 1 till {x.size}, fick {n}")
-    groups = x.size // n
-    used = slice(0, groups * n)
-    new_mask = mask[used].reshape(groups, n).all(axis=1)
-    new_x = x[used].reshape(groups, n).mean(axis=1)
-    sums = np.where(mask, values, 0.0)[used].reshape(groups, n).mean(axis=1)  # 0 i stället för NaN; maskas nedan
-    return new_x, np.where(new_mask, sums, np.nan), new_mask
 
 
 def side_background(image, roi, margin, channel, axis="horizontal"):

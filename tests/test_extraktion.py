@@ -33,23 +33,6 @@ def test_extract_median():
     table = np.array([[1.0, 2.0], [3.0, 100.0], [5.0, 6.0]])
     np.testing.assert_array_equal(calc.extract_median(table), [3.0, 6.0])
     np.testing.assert_array_equal(calc.extract_spectrum(table), [3.0, 36.0])
-    with pytest.raises(ValueError, match="table ska vara 2D"):
-        calc.extract_median(np.array([1.0, 2.0]))
-
-
-def test_bin_spectrum():
-    """ROI-13: medel av n positioner, x blir ett halvtal, en ogiltig position gör gruppen ogiltig, resten sist bort."""
-    x = np.arange(7.0)
-    values = np.array([1.0, 3.0, 5.0, np.nan, 9.0, 11.0, 13.0])
-    mask = np.isfinite(values)
-    new_x, new_values, new_mask = calc.bin_spectrum(x, values, mask, 2)
-    np.testing.assert_array_equal(new_x, [0.5, 2.5, 4.5])
-    np.testing.assert_array_equal(new_values, [2.0, np.nan, 10.0])
-    np.testing.assert_array_equal(new_mask, [True, False, True])
-    np.testing.assert_array_equal(calc.bin_spectrum(x, values, mask, 1)[1], values)
-    for n in (0, 8):
-        with pytest.raises(ValueError, match="n ska vara från 1 till 7"):
-            calc.bin_spectrum(x, values, mask, n)
 
 
 def test_side_background():

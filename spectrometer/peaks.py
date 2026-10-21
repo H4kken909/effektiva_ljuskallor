@@ -64,14 +64,9 @@ def match_peaks(peak_pixels, line_nm):
     Parametrar: peak_pixels: topparnas pixlar i hela bilden, (K,); line_nm: linjernas våglängder i nm, (L,), K <= L.
     Returnerar: (chosen, rms, next_rms): chosen, (K,) float64, linjen i nm för varje topp i stigande pixel;
     rms: bästa valets rms-avvikelse i nm; next_rms: näst bästa valets (inf om det bara fanns ett val).
-    Fel: ValueError med input.invalid_argument vid färre än två toppar eller fler toppar än linjer.
     """
     pixels = np.sort(np.asarray(peak_pixels, dtype=np.float64))
     lines = np.sort(np.asarray(line_nm, dtype=np.float64))
-    if pixels.size < 2:
-        raise ValueError(f"input.invalid_argument: parningen behöver minst två toppar, fick {pixels.size}")
-    if pixels.size > lines.size:
-        raise ValueError(f"input.invalid_argument: {pixels.size} toppar men bara {lines.size} linjer")
     tried = []
     for subset in itertools.combinations(lines, pixels.size):
         chosen = np.array(subset)

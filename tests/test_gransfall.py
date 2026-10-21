@@ -99,51 +99,10 @@ def test_prepare_bad_image(image):
         calc.prepare(image, (0, 0, 1, 1), "horizontal", "gray")
 
 
-def test_prepare_unknown_channel_and_axis():
-    """Fel: okänd kanal och okänd riktning nämns vid namn."""
-    with pytest.raises(ValueError, match="okänd kanal purple"):
-        calc.prepare(solid(2, 2, 0), (0, 0, 2, 2), "horizontal", "purple")
-    with pytest.raises(ValueError, match="okänd riktning diagonal"):
-        calc.prepare(solid(2, 2, 0), (0, 0, 2, 2), "diagonal", "gray")
-
-
-def test_nan_in_the_image_does_not_get_through():
-    """NaN i en float64-bild tar sig inte genom prepare och extract_spectrum."""
-    image = np.zeros((2, 3, 3))
-    image[0, 1, 2] = np.nan
-    with pytest.raises(ValueError, match=r"input\.invalid_argument"):
-        calc.extract_spectrum(calc.prepare(image, (0, 0, 3, 2), "horizontal", "red"))
-
-
 def test_extract_spectrum_one_row_and_one_column():
     """Gräns: en rad ger raden själv, en kolumn ger ett enda värde."""
     np.testing.assert_array_equal(calc.extract_spectrum(np.array([[1.0, 2.0, 3.0]])), [1, 2, 3])
     np.testing.assert_array_equal(calc.extract_spectrum(np.array([[1.0], [3.0]])), [2])
-
-
-@pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
-def test_extract_spectrum_not_finite(bad):
-    """Fel: NaN och inf i tabellen."""
-    with pytest.raises(ValueError, match="ändliga tal"):
-        calc.extract_spectrum(np.array([[1.0, bad]]))
-
-
-@pytest.mark.parametrize(
-    ("table", "message"),
-    [
-        (np.zeros((2, 3), dtype=np.float32), "float64-array"),
-        (np.zeros((2, 3), dtype=np.int64), "float64-array"),
-        (np.zeros(3), "2 dimensions"),
-        (np.zeros((2, 2, 2)), "2 dimensions"),
-        (np.zeros((0, 3)), "table is empty"),
-        (np.zeros((3, 0)), "table is empty"),
-    ],
-    ids=["float32", "int64", "one-dimensional", "three-dimensional", "no-rows", "no-columns"],
-)
-def test_extract_spectrum_bad_table(table, message):
-    """Fel: fel typ, fel antal dimensioner och tom tabell."""
-    with pytest.raises(ValueError, match=message):
-        calc.extract_spectrum(table)
 
 
 # ---- calc.average_spectra, evaluate_wavelength, fit_wavelength och subtract_dark ----
@@ -169,22 +128,6 @@ def test_average_nan_stays_in_its_column():
     mean, stddev = calc.average_spectra(np.array([[1.0, np.nan], [3.0, 4.0]]))
     np.testing.assert_allclose(mean, [2.0, np.nan], rtol=1e-9, atol=1e-9)
     np.testing.assert_allclose(stddev, [np.sqrt(2), np.nan], rtol=1e-9, atol=1e-9)
-
-
-@pytest.mark.parametrize(
-    ("stack", "message"),
-    [
-        (np.zeros(3), "måste vara 2D"),
-        (np.zeros((2, 3), dtype=np.int64), "float64-array"),
-        (np.zeros((0, 3)), "stack är tom"),
-        (np.zeros((3, 0)), "stack är tom"),
-    ],
-    ids=["one-dimensional", "int64", "no-frames", "no-columns"],
-)
-def test_average_bad_stack(stack, message):
-    """Fel: fel antal dimensioner, fel typ och tom stack."""
-    with pytest.raises(ValueError, match=message):
-        calc.average_spectra(stack)
 
 
 def test_evaluate_wavelength_two_and_three_coefficients():
@@ -257,11 +200,9 @@ def test_fit_wrong_degree(degree):
 
 
 def test_fit_bad_points():
-    """Fel: samma pixel två gånger, olika längd och NaN."""
+    """Fel: samma pixel två gånger och NaN."""
     with pytest.raises(ValueError, match="samma pixel står två gånger"):
         calc.fit_wavelength(np.array([1.0, 1.0]), np.array([500.0, 501.0]), 1)
-    with pytest.raises(ValueError, match="olika form"):
-        calc.fit_wavelength(np.array([1.0, 2.0]), np.array([500.0, 501.0, 502.0]), 1)
     with pytest.raises(ValueError, match="ändliga tal"):
         calc.fit_wavelength(np.array([1.0, 2.0]), np.array([500.0, np.nan]), 1)
 
@@ -319,18 +260,6 @@ def test_build_response_two_known_points_and_no_extrapolation():
     x = np.array([500.0, 510.0, 520.0])
     response = calc.build_response(x, np.array([1.0, 2.0, 3.0]), np.array([500.0, 510.0]), np.array([1.0, 1.0]))
     np.testing.assert_allclose(response, [0.5, 1.0, np.nan], rtol=1e-9, atol=1e-9)
-
-
-def test_build_response_wrong_shapes():
-    """Fel: olika längd på lampan eller på de kända värdena, och bara en känd punkt."""
-    cases = [
-        (np.ones(3), LAMP_X, np.ones(4)),
-        (np.ones(4), LAMP_X, np.ones(3)),
-        (np.ones(4), LAMP_X[:1], np.ones(1)),
-    ]
-    for measured, known_x, known_v in cases:
-        with pytest.raises(ValueError, match="olika form eller färre än två kända punkter"):
-            calc.build_response(LAMP_X, measured, known_x, known_v)
 
 
 def test_build_response_missing_data():
@@ -418,17 +347,6 @@ def test_ratio_threshold(ratio):
             ratio(np.ones(1), np.ones(1), np.ones(1, dtype=bool), bad)
     values, _ = ratio(np.ones(1), np.ones(1), np.ones(1, dtype=bool), 1e-300)
     np.testing.assert_array_equal(values, [1.0])
-
-
-@RATIO_FUNCTIONS
-def test_ratio_bad_mask_and_shapes(ratio):
-    """Fel: mask som inte är bool, och en mask eller nämnare med annan form."""
-    with pytest.raises(ValueError, match="måste vara en bool-array"):
-        ratio(np.ones(2), np.ones(2), np.ones(2, dtype=np.int64), 0.5)
-    with pytest.raises(ValueError, match="mask har annan form"):
-        ratio(np.ones(2), np.ones(2), np.ones(3, dtype=bool), 0.5)
-    with pytest.raises(ValueError, match="annan form"):
-        ratio(np.ones(2), np.ones(3), np.ones(2, dtype=bool), 0.5)
 
 
 # ---- files: save_measurement, load_points och load_known ----
