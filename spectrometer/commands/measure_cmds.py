@@ -213,7 +213,7 @@ def time_series(state, src, n):
     return np.array(reads), np.array(computes)
 
 
-@registry.command("perf", "[N]: tidta N mätningar (20) utan fönster: median, 95:e percentil, bilder/s")
+@registry.command("perf", "[N]: tidta N mätningar (20) utan fönster, läsning och räkning utan ritning: median, 95:e percentil, bilder/s")
 def cmd_perf(state, args):
     """Kommandot perf [N]: N mätningar med nuvarande källa, ROI, kanal och frames, utan fönster; skriver tiderna.
 

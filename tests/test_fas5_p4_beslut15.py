@@ -70,6 +70,7 @@ def test_help_texts_say_what_the_commands_do(capsys):
     assert "roi show spara senaste bilden med ROI-rutan som roi-ÅÅÅÅMMDD-HHMMSS.png i output_dir" in text
     assert "s spara, p paus, f frys, c rensa, y skala, n normera, h hjälp" in text
     assert "theme light|dark: fönstrets färger (theme ensam visar valet)" in text
+    assert "utan fönster, läsning och räkning utan ritning" in text  # B18
     registry.run_command(state, "help theme")
     assert "theme light eller theme dark" in capsys.readouterr().out
 
