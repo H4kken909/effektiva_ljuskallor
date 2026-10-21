@@ -35,8 +35,10 @@ def cmd_reset(state, args):
     if lost and not args and sys.stdin.isatty():
         out.say(f"Du förlorar {', '.join(lost)}. Skriv reset ja för att fortsätta.")
         return
+    start = state.get("start_settings")  # inställningarna vid start, med --output, --input och --camera
     state.clear()
-    state.update(session.new_state(session.DEFAULTS))
+    state.update(session.new_state(start or session.DEFAULTS))
+    state["start_settings"] = start
     out.say("Allt nollställt (som vid start).")
 
 
@@ -109,9 +111,10 @@ def cmd_clear(state, args):
     registry.need(args, ("NAMN",), "clear")
     name = args[0]
     if name == "all":
-        settings = state["settings"]
+        settings, start = state["settings"], state.get("start_settings")
         state.clear()
         state.update(session.new_state(settings))
+        state["start_settings"] = start
         out.say("Allt borttaget utom inställningarna.")
         return
     if name not in PARTS:

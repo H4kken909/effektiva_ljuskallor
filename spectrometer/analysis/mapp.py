@@ -21,7 +21,12 @@ def read(path):
     # 1.2.13: en mapp utan spectrum.csv, eller en sökväg som inte finns, ger en Fel-rad i stället för [Errno 2]
     csv_path = files.measurement_folder(path) if path.is_dir() or not path.exists() else path
     with open(csv_path, newline="", encoding="utf-8-sig") as f:  # newline="": både CRLF och LF går
-        rows = [row for row in csv.reader(f) if row]
+        reader = csv.reader(f)
+        numbered = [(reader.line_num, row) for row in reader if row]
+    for line_no, row in numbered[1:]:
+        if len(row) != len(numbered[0][1]):  # en rad med fel antal fält ger annars IndexError nedan
+            raise ValueError(f"input.invalid_argument: {csv_path.as_posix()} rad {line_no}: fel antal fält")
+    rows = [row for _, row in numbered]
     header, body = (rows[0], rows[1:]) if rows else ([], [])
     columns = {}
     for k, name in enumerate(header):

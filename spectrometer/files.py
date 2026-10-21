@@ -170,7 +170,13 @@ def save_png(path, image, roi=None):
         image = image.copy()
         x, y, width, height = roi
         cv2.rectangle(image, (x, y), (x + width - 1, y + height - 1), (0, 255, 0), 1)
-    if not cv2.imwrite(str(path), image):
+    try:
+        written, encoded = cv2.imencode(".png", image)  # imencode och tofile, inte imwrite: klarar åäö i Windows
+        if written:
+            encoded.tofile(path)
+    except OSError:
+        written = False
+    if not written:
         raise OSError(f"files.write_failed: {Path(path).name} kunde inte sparas: {path}")
 
 
@@ -465,9 +471,14 @@ def load_measurement(folder):
     """
     folder = Path(folder)
     with open(measurement_folder(folder), newline="", encoding="utf-8-sig") as f:  # 1.2.13: Fel-rad, inte [Errno 2]
-        rows = [row for row in csv.reader(f) if row]
-    if not rows:
+        reader = csv.reader(f)
+        numbered = [(reader.line_num, row) for row in reader if row]
+    if not numbered:
         raise ValueError(f"input.invalid_argument: {folder.as_posix()}/spectrum.csv är tom")
+    for line_no, row in numbered[1:]:
+        if len(row) != len(numbered[0][1]):  # en rad med fel antal fält ger annars IndexError i column
+            raise ValueError(f"input.invalid_argument: {folder.name}/spectrum.csv rad {line_no}: fel antal fält")
+    rows = [row for _, row in numbered]
     header, body = rows[0], rows[1:]
     x_col = "x_nm" if "x_nm" in header else "x_px"
     if x_col not in header or "value" not in header or "valid" not in header:

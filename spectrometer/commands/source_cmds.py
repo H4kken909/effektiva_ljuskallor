@@ -32,7 +32,7 @@ def cmd_source(state, args):
 
 @registry.command("roi", "X Y W H i pixlar, eller full för hela bilden", "roi X Y W H eller roi full")
 def cmd_roi(state, args):
-    """Kommandot roi X Y W H eller roi full; en ROI som inte ryms i senaste bilden ger fel och den gamla står kvar."""
+    """Kommandot roi X Y W H eller roi full; en ROI som inte ryms i senaste bilden, eller inte lämnar plats åt background N, ger fel och den gamla står kvar."""
     if args == ["full"]:
         session.set_setting(state, "roi", None)
         out.say("roi full")
@@ -44,7 +44,10 @@ def cmd_roi(state, args):
     height = registry.to_int("height", args[3], 1)
     new_roi = (x, y, width, height)
     if state["image"] is not None:
-        calc.prepare(state["image"], new_roi, state["settings"]["axis"], state["settings"]["channel"])
+        cfg = state["settings"]
+        calc.prepare(state["image"], new_roi, cfg["axis"], cfg["channel"])
+        if state["background"] is not None:  # background N ska fortfarande rymmas, annars kommer felet först vid step
+            calc.side_background(state["image"], new_roi, state["background"], cfg["channel"], cfg["axis"])
     else:
         out.say("ROI:n kontrolleras vid nästa mätning.")
     session.set_setting(state, "roi", new_roi)
@@ -118,7 +121,7 @@ def cmd_snap(state, args):
     """Kommandot snap [N]: läser N bilder ur källan och sparar dem som PNG; state ändras inte."""
     if len(args) > 1:
         raise ValueError("input.invalid_argument: snap tar högst ett ord (N)")
-    n = registry.to_int("N", args[0], 1) if args else 1
+    n = registry.to_frames(args[0]) if args else 1
     images = measure._with_source(state, None, lambda s: source.read_frames(s, n))
     for path in files.save_snaps(state["settings"]["output_dir"], images):
         out.say(f"Sparad: {path.as_posix()}")

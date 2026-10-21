@@ -115,6 +115,7 @@ def main(argv=None):
         state["settings"]["source"] = ("file", args.input)
     if args.output is not None:
         state["settings"]["output_dir"] = args.output
+    state["start_settings"] = state["settings"].copy()  # reset går tillbaka hit, med flaggorna kvar
     if args.path is not None:
         return run_file(state, args.path)
     if not args.avsluta:
