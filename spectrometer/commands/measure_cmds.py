@@ -127,11 +127,12 @@ def _settings_to_save(state, spectrum):
     return saved
 
 
-@registry.command("start", "[SEKUNDER]: live med kameran, Ctrl+C stoppar (med SEKUNDER: efter så lång tid)",
-                  "start [SEKUNDER]")
+@registry.command("start", "[SEKUNDER]: live med kameran tills Ctrl+C, q eller SEKUNDER; i fönstret: s spara, "
+                  "p paus, f frys, c rensa, y skala, n normera, h hjälp", "start [SEKUNDER]")
 def cmd_start(state, args):
-    """Kommandot start [SEKUNDER]: spektrumet live tills Ctrl+C, tills fönstret stängs eller efter SEKUNDER.
+    """Kommandot start [SEKUNDER]: spektrumet live tills Ctrl+C eller q, tills fönstret stängs eller efter SEKUNDER.
 
+    Tangenterna i fönstret: s spara, p paus, f frys, c rensa, y skala, n normera, h hjälp (_live_frame).
     Källan och fönstret stängs alltid. Fel: ValueError med input.invalid_argument om SEKUNDER inte är ett tal över 0.
     """
     registry.at_most_one(args, "start", "SEKUNDER")
