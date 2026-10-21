@@ -28,7 +28,7 @@ linearity, calibrate save, guide, pause, help limits.
 Hela help-texten med argument står ordagrant i `dev/baslinje/utdata/testa_04.txt` (rad 3–71; fyra rader ändrade med
 Elias ja i BESLUT 15A: image, start, theme, roi show). Beteende ändrat med samma ja: när referensen glöms i mode
 transmission blir mode direct (`mode: direct (ingen referens)`, facit_09), och `clear all` tar bara mörker,
-kalibrering, respons, referens och mode (BESLUT 9). Ordningen låses av
+kalibrering, respons, referens, mode och senaste mätningen (BESLUT 9). Ordningen låses av
 `tests/test_architecture.py` och av `FEATURES` i `spectrometer/commands/__init__.py`. Felmeddelandenas text
 (`Fel: <kod>: <text>`) är en del av gränssnittet: facit-filerna och många tester jämför dem ordagrant.
 
