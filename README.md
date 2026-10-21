@@ -138,8 +138,8 @@ Tabellen fylls av `python tools/gen_kommandon.py` ur koden (`--check` säger om 
 - `kalibrering/`: kända linjer (`hg_linjer.csv`), en känd lampa (`lampa_A.csv`) och mallen för punktfilen.
 - `demo/`: kommandofilerna och dokumenten för demon; läs `demo/README.md` först.
 - `tests/`: testerna (`python -m pytest -q -p no:cacheprovider`), Adrians kommandofiler med facit i `tests/kommandon/`.
-- `dev/`: allt som bara utvecklingen behöver (kontrollskript, baslinje, protokoll, verktyg, gamla skript). Se
-  `dev/README.md`. Den gamla, långa README:n ligger i `dev/README-gammal.md`.
+- `dev/` (finns bara på grenen `dev`): allt som bara utvecklingen behöver (kontrollskript, baslinje, protokoll,
+  verktyg, gamla skript). Se `dev/README.md` där. Den gamla, långa README:n ligger i `dev/README-gammal.md`.
 - `CHANGELOG.md`: versionerna.
 
 ## Begränsningar
