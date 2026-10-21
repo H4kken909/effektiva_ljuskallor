@@ -111,6 +111,7 @@ def cmd_clear(state, args):
     """Kommandot clear NAMN: tar bort mörker, kalibrering, respons, referens, eller allt utom inställningarna.
 
     Det som mättes med det borttagna glöms också: dark tar referensen, calibration tar respons och referens (x i nm).
+    Utan referens lämnas mode transmission (mode blir direct och det skrivs).
     Fel: ValueError med input.invalid_argument vid ett okänt namn.
     """
     registry.need(args, ("NAMN",), "clear")
@@ -132,6 +133,8 @@ def cmd_clear(state, args):
         state["use_response"] = False
     state["spectrum"] = None
     out.say(text)
+    if state["reference"] is None:
+        session.leave_transmission(state)
 
 
 @registry.command("set", "min_response TAL, min_reference TAL eller output_dir MAPP: ändra en gräns eller mappen",

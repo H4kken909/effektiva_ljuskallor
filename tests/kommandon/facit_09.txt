@@ -13,15 +13,16 @@ spektro> Referens: 1 bild, x från 10 till 12, topp 200, 2 av 3 under min_refere
 spektro> mode: transmission
 spektro> Topp 1 vid pixel 12 (1 bild)
 spektro> Referensen glömd. Kör reference igen.
+mode: direct (ingen referens)
 roi 10 0 2 2
-spektro> Fel: input.missing_data: ingen referens, kör reference först
+spektro> Topp 0 vid pixel 10 (1 bild)
 spektro> roi 10 0 3 2
 spektro> channel: green
-spektro> Fel: input.missing_data: ingen referens, kör reference först
+spektro> Topp 200 vid pixel 12 (1 bild)
 spektro> channel: red
 spektro> source file tests/kommandon/halv_x12.png
-spektro> Fel: input.missing_data: ingen referens, kör reference först
-spektro> Fel: input.missing_data: Ingen mätning än. Kör step först.
+spektro> Topp 100 vid pixel 12 (1 bild)
+spektro> Sparad i data/ÅÅÅÅMMDD-HHMMSS
 spektro> källa: fil tests/kommandon/halv_x12.png
 roi: 10 0 3 2
 axis: horizontal
@@ -34,11 +35,11 @@ kalibrering: nej
 mörker: ja
 respons: nej, off
 referens: nej
-mode: transmission
-mätning: nej
+mode: direct
+mätning: ja
 spektro> source file tests/kommandon/svart.png
 spektro> mörker: 1 bild, medel 0
-spektro> Fel: input.missing_data: ingen referens, kör reference först
+spektro> Topp 0 vid pixel 10 (1 bild)
 spektro> mode: direct
 spektro> source file tests/data/bilder/rand_x12.png
 spektro> Topp 200 vid pixel 12 (1 bild)
