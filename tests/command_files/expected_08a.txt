@@ -1,0 +1,10 @@
+Type help for the commands. quit or Ctrl+D exits.
+spektro> source file tests/data/images/rand_x12.png
+spektro> roi 10 0 3 2 (checked at the next measurement)
+spektro> channel: red
+spektro> Peak 200 at pixel 12 (1 frame)
+spektro> Error: N must be 1 to 1000
+spektro> dark: 1 frame(s), mean 10
+Warning: the dark frame is as bright as the image. Was the light path blocked?
+spektro> Peak 0 at pixel 10 (1 frame)
+spektro> Quitting.

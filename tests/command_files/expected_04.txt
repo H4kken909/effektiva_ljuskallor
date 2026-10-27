@@ -1,0 +1,15 @@
+Type help for the commands. quit or Ctrl+D exits.
+spektro> source file tests/data/images/rand_x12.png
+spektro> roi full
+spektro> roi 0 0 20 10 (checked at the next measurement)
+spektro> Error: usage: roi X Y W H or roi full
+spektro> Error: usage: channel gray, sum, red, green, blue
+spektro> channel: red
+spektro> axis: vertical
+spektro> Error: unknown command foo. Type help for a list.
+spektro> source file data/measurement 1.png
+spektro> file data/measurement 1.png · roi 0 0 20 10 · red · direct
+axis: vertical · frames: 1 · output_dir: data
+calibration no · dark no · response no
+reference no · mode direct · measurement no
+spektro> Quitting.

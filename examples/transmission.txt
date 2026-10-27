@@ -1,0 +1,10 @@
+# Transmission: reference without a sample (rand_x12.png), then the sample (half_x12.png lets half through).
+source file tests/command_files/black.png
+dark 1
+source file tests/data/images/rand_x12.png
+roi 10 0 3 2
+channel red
+reference 1
+mode transmission
+source file tests/command_files/half_x12.png
+step

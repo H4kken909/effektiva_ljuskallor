@@ -1,159 +1,75 @@
-"""Startar programmet: python -m spectrometer.main ger prompten spektro>, med en bildfil mäts den en gång."""
-
 import argparse
-import logging
-import os
 import sys
-from logging.handlers import RotatingFileHandler
-from pathlib import Path
 
-import numpy as np
-
-from spectrometer import (
-    __version__,
-    calc,
-    commands,
-    files,
-    measure,
-    out,
-    plot,
-    registry,
-    session,
-)
-
-log = logging.getLogger("spektro")
+from spectrometer import __version__, commands
+from spectrometer.core import out, registry, session
+from spectrometer.visual import gui, viewfile
 
 
-def open_log():
-    """Loggfilen logs/spektro.log (1 MB, tre gamla sparas); skapas först när något loggas."""
-    if log.handlers:
-        return
-    Path("logs").mkdir(exist_ok=True)
-    handler = RotatingFileHandler(
-        Path("logs") / "spektro.log", maxBytes=1_000_000, backupCount=3, encoding="utf-8", delay=True
-    )
-    handler.setFormatter(logging.Formatter("%(asctime)s spektro " + __version__ + " %(message)s"))
-    log.addHandler(handler)
-    log.setLevel(logging.INFO)
-
-
-def run_file(state, path):
-    """Mäter en bildfil en gång: skriver toppen, sparar mätningen och ritar spektrumet. Ger slutkoden 0 eller 1."""
-    state["settings"]["source"] = ("file", path)
-    try:
-        spectrum = measure.measure(state)
-        i = np.argmax(spectrum["values"])
-        out.say(f"Topp {spectrum['values'][i]:g} vid pixel {spectrum['x'][i]:g}")
-        folder = files.save_measurement(state["settings"]["output_dir"], spectrum, state["image"], state["settings"])
-        out.say(f"Sparad i {folder.as_posix()}")
-        win = plot.open_plot()
-        plot.draw(win, spectrum["x"], calc.masked_values(spectrum), spectrum["x_label"], spectrum["y_label"])
-        plot.show()
-    except (ValueError, RuntimeError, OSError) as error:
-        out.error(error)
-        return 1
-    return 0
-
-
-START_FILE = "spektro-start.txt"  # körs före första prompten när den finns i arbetsmappen och stdin är en terminal
-
-
-def start_files(kor):
-    """Kommandofilerna före första prompten: spektro-start.txt (i en terminal, om den finns), sedan --kor FIL."""
-    paths = [START_FILE] if sys.stdin.isatty() and Path(START_FILE).is_file() else []
-    return paths + ([kor] if kor is not None else [])
-
-
-def run_at_start(state, path):
-    """Kör kommandofilen path med run före första prompten. Ger (quit, fel): om filen körde quit, om en rad gav Fel:."""
-    out.say(f"Kör {path}")
-    try:
-        return bool(registry.lookup("run").run(state, [path])), False
-    except (ValueError, RuntimeError, OSError) as error:
-        out.error(error)
-        return False, True
-    except KeyboardInterrupt:
-        out.say("Avbrutet.")
-        return False, True
+def no_console():
+    path = viewfile.log_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    sys.stdout = sys.stderr = open(path, "a", encoding="utf-8", errors="replace", buffering=1)
 
 
 def main(argv=None):
-    """Kör prompten spektro> tills quit, Ctrl+D eller Ctrl+C vid prompten; ett fel blir en rad Fel:.
-
-    Med en sökväg mäts bara den bildfilen en gång (run_file). Flaggorna visar -h. argv: orden efter programnamnet,
-    None läser sys.argv. Slutkoden är 1 om ett kommando gav Fel: och stdin inte är en terminal (en kommandofil eller
-    ett rör), annars 0. Med --avsluta är den 1 om en rad i filen gav Fel:; argparse ger 2 vid en felaktig flagga.
-    """
     for stream in (sys.stdout, sys.stdin):
-        if hasattr(stream, "reconfigure"):  # pytest byter ut sys.stdin mot ett objekt utan reconfigure
-            stream.reconfigure(encoding="utf-8")  # samma bytes på Windows och Arch, vilken kodsida konsolen än har
-    try:
-        import readline  # noqa: F401  (Linux: pil upp ger historik och radredigering i prompten)
-    except ImportError:
-        pass  # Windows har inte readline; prompten fungerar ändå
-    parser = argparse.ArgumentParser(
-        prog="python -m spectrometer.main",
-        description="Utan sökväg: prompten spektro>. Med sökväg: läser bildfilen, skriver toppen, sparar mätningen "
-        "och ritar spektrumet.",
-    )
-    parser.add_argument("path", nargs="?", help="sökvägen till en bildfil (utan den startar prompten)")
-    parser.add_argument(
-        "--version", action="version", version=f"spektro {__version__}", help="skriv versionen och avsluta"
-    )
-    parser.add_argument("--kor", metavar="FIL", help="kör kommandofilen FIL (som run FIL) före första prompten")
-    parser.add_argument("--avsluta", action="store_true", help="med --kor: avsluta efter filen, slutkod 0 eller 1")
-    where = parser.add_mutually_exclusive_group()
-    where.add_argument("--camera", type=int, metavar="N", help="källan är kamera N (som source camera N)")
-    where.add_argument("--input", metavar="PATH", help="källan är bildfilen PATH (som source file PATH)")
-    parser.add_argument("--output", metavar="DIR", help="mappen för mätmapparna (output_dir, annars data)")
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
+    parser = argparse.ArgumentParser(prog="python -m spectrometer.main")
+    parser.add_argument("--version", action="version", version=f"spektro {__version__}")
+    parser.add_argument("--run", metavar="FILE", help="run the command file FILE before the first prompt")
+    parser.add_argument("--exit", dest="exit_after", action="store_true", help="with --run: exit after the file")
+    parser.add_argument("--terminal", action="store_true", help="the prompt in the terminal instead of the window")
+    parser.add_argument("--gui", action="store_true", help="only the window, output goes to spektro.log")
+    parser.add_argument("--no-splash", action="store_true", help="with --gui: no splash screen")
+    parser.add_argument("--delay", type=float, metavar="SEC", help="with --gui: seconds between splash parts")
+    if "--gui" in (sys.argv[1:] if argv is None else argv):
+        no_console()
     args = parser.parse_args(argv)
-    if args.avsluta and args.kor is None:
-        parser.error("--avsluta kräver --kor FIL")
     registry.load(commands.modules())
     state = session.new_state(session.DEFAULTS)
-    if args.camera is not None:
-        state["settings"]["source"] = ("camera", args.camera)
-    if args.input is not None:
-        state["settings"]["source"] = ("file", args.input)
-    if args.output is not None:
-        state["settings"]["output_dir"] = args.output
-    state["start_settings"] = state["settings"].copy()  # reset går tillbaka hit, med flaggorna kvar
-    if args.path is not None:
-        return run_file(state, args.path)
-    if not args.avsluta:
-        out.say("Skriv help för kommandona. quit eller Ctrl+D avslutar.")
+    if not args.exit_after and (args.gui or gui.wanted(args.terminal)):
+        window, why = gui.open_window(state)
+        if window is not None:
+            parts = None
+            if args.gui and not args.no_splash:
+                from spectrometer.visual.splash import screen
+
+                parts = screen.splash_parts
+            return window.run([] if args.run is None else [args.run], parts, args.delay)
+        out.say(f"The window does not open: {why}.")
+        if args.gui:
+            return 1
+        out.say("The prompt runs in the terminal.")
+    if not args.exit_after:
+        out.say("Type help for the commands. quit or Ctrl+D exits.")
     failed = False
     quit_now = False
-    for path in start_files(args.kor):
-        quit_now, error = run_at_start(state, path)
-        failed = failed or error
-        if quit_now:
-            break
-    if args.avsluta or quit_now:
+    if args.run is not None:
+        out.say(f"Running {args.run}")
+        try:
+            quit_now = registry.COMMANDS["run"][1](state, [args.run])
+        except Exception as error:
+            out.error(error)
+            failed = True
+    if args.exit_after or quit_now:
         return 1 if failed else 0
     while True:
         try:
-            out.status(session.status_text(state))
             line = out.ask("spektro> ")
         except (EOFError, KeyboardInterrupt):
             out.say()
             break
         try:
-            if registry.run_line(state, line):  # som run_command, och raden hamnar i history och undo
+            if registry.run_command(state, line):
                 break
-        except (ValueError, RuntimeError, OSError) as error:
+        except KeyboardInterrupt:
+            out.say("Cancelled.")
+        except Exception as error:
             out.error(error)
             failed = True
-        except KeyboardInterrupt:
-            out.say("Avbrutet.")
-        except Exception as error:  # oväntat: en rad och loggen, aldrig ut ur programmet
-            if os.environ.get("SPEKTRO_DEBUG"):
-                raise  # hela tracebacken, som förut
-            open_log()
-            log.exception("%s", line)
-            out.error(f"oväntat fel ({type(error).__name__}: {error}), detaljer i logs/spektro.log")
-            failed = True
-    return 1 if failed and not sys.stdin.isatty() else 0
+    return 1 if failed and not out.tty(sys.stdin) else 0
 
 
 if __name__ == "__main__":

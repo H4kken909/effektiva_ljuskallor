@@ -1,8 +1,0 @@
-source camera 0
-roi 0 200 640 40
-frames 16
-calibrate exempel/kalibrering/punkter.csv
-step
-toppar
-save
-quit

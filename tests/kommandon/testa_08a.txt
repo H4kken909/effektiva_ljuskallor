@@ -1,8 +1,0 @@
-source file tests/data/bilder/rand_x12.png
-roi 10 0 3 2
-channel red
-step
-dark 0
-dark 1
-step
-quit

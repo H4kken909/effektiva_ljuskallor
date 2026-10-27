@@ -1,0 +1,10 @@
+# Dark, calibration and response on the test images: the same chain as at the rig, but with files.
+source file tests/command_files/black.png
+dark 1  # black.png instead of a blocked light path
+source file tests/data/images/rand_x12.png
+roi 10 0 3 2
+channel red
+calibrate tests/command_files/x12_500.csv
+response build tests/command_files/x12_known.csv 1
+response on
+step

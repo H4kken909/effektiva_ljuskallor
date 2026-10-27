@@ -1,19 +1,19 @@
-"""Gemensamt för testerna: kommandoregistret laddas före varje test, som när programmet startar."""
-
 import pytest
 
-from spectrometer import commands, registry
+from spectrometer import commands
+from spectrometer.core import registry
 
 
 @pytest.fixture(autouse=True)
-def kommandon():
-    """Alla kommandon i registret."""
+def load_commands():
     registry.load(commands.modules())
 
 
 @pytest.fixture(autouse=True)
-def utan_farg(monkeypatch):
-    """Ingen färg i testerna, inte ens med pytest -s i en terminal: utskriften jämförs tecken för tecken."""
-    from spectrometer import out
+def own_settings_folder(monkeypatch, tmp_path_factory):
+    monkeypatch.setenv("SPEKTRO_CONFIG", str(tmp_path_factory.mktemp("settings")))
 
-    monkeypatch.setattr(out, "FARG", False)
+
+@pytest.fixture(autouse=True)
+def terminal_only(monkeypatch):
+    monkeypatch.setenv("SPEKTRO_TERMINAL", "1")

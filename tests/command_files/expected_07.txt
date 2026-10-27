@@ -1,0 +1,24 @@
+Type help for the commands. quit or Ctrl+D exits.
+spektro> source file tests/data/images/rand_x12.png
+spektro> roi 10 0 5 10 (checked at the next measurement)
+spektro> channel: red
+spektro> Peak 200 at pixel 12 (1 frame)
+spektro> a0: 400 nm
+a1: 1 nm/pixel
+fitted: pixel 100 to 200
+valid: pixel 0 to 300
+residual: 0
+residual: 0
+not checked: no check points in the file
+spektro> Peak 200 at wavelength (nm) 412 (1 frame)
+spektro> a0: 400 nm
+a1: 1 nm/pixel
+fitted: pixel 100 to 200
+valid: pixel 0 to 300
+residual: 0
+residual: 0
+check error at pixel 180: 1.5
+Warning: the check error 1.5 nm is larger than one pixel
+check error at pixel 150: 0.4
+spektro> Error: semicolon.csv: wrong header, expected pixel,wavelength_nm,check
+spektro> Quitting.

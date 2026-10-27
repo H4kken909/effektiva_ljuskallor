@@ -1,0 +1,15 @@
+Type help for the commands. quit or Ctrl+D exits.
+spektro> source file tests/data/images/rand_x12.png
+spektro> Error: No measurement yet. Run step first.
+spektro> Peak 200 at pixel 12 (1 frame)
+spektro> frames: 3
+spektro> Peak 200 at pixel 12 (3 frames)
+spektro> roi 10 0 5 10 (checked at the next measurement)
+spektro> Peak 200 at pixel 12 (3 frames)
+spektro> axis: vertical
+spektro> Peak 40 at pixel 0 (3 frames)
+spektro> axis: horizontal
+spektro> Peak 200 at pixel 12 (3 frames)
+spektro> Saved in data/YYYYMMDD-HHMMSS
+spektro> Saved in data/YYYYMMDD-HHMMSS-2
+spektro> Quitting.

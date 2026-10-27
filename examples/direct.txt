@@ -1,0 +1,7 @@
+# Direct measurement on the test image: a bright column at pixel 12. Run from the project folder: run examples/direct.txt
+source file tests/data/images/rand_x12.png
+roi 10 0 5 10  # the strip around the line
+channel red
+frames 3
+step
+save

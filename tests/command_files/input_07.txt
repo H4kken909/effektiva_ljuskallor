@@ -1,0 +1,9 @@
+source file tests/data/images/rand_x12.png
+roi 10 0 5 10
+channel red
+step
+calibrate tests/data/point_files/t04.csv
+step
+calibrate tests/command_files/check.csv
+calibrate tests/command_files/semicolon.csv
+quit

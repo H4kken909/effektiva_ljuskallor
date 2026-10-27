@@ -1,0 +1,10 @@
+dark
+calibrate examples/demo/points.csv
+pause Remove the cardboard and put the lamp with the known distribution in front of the slit
+response build examples/demo/known.csv
+response on
+pause Put the LED or the lamp to be measured in front of the slit
+step
+save
+color
+figure data/figure.png

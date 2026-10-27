@@ -1,78 +1,90 @@
-"""Toppar, linjebredd och area ur ett spektrum. Ren NumPy; vet inget om state eller filer."""
+import itertools
 
 import numpy as np
 
-MIN_FRACTION = 0.05  # en topp ska vara minst så stor andel av högsta värdet
-MIN_DISTANCE = 3  # toppar närmare än så (punkter) slås ihop till den högsta
+from spectrometer.measurement import calc
 
 
-def find_peaks(y, mask):
-    """Lokala maxima över MIN_FRACTION·max, minst MIN_DISTANCE punkter isär. Ger index, störst först."""
-    yy = np.where(mask, y, -np.inf)
-    if len(yy) and np.all(yy == yy[0]):
-        return []  # helt platt kurva: ingen topp, inte heller i sista pixeln
-    finite = yy[np.isfinite(yy)]
-    limit = MIN_FRACTION * (finite.max() if finite.size else 0.0)
-    # Utanför kanten räknas som lägre: första och sista pixeln kan vara toppar.
-    around = np.pad(yy, 1, constant_values=-np.inf)
-    hits = []
-    for i in range(len(yy)):
-        if around[i + 1] >= around[i] and around[i + 1] > around[i + 2] and yy[i] >= limit and np.isfinite(yy[i]):
-            hits.append(i)
-    hits.sort(key=lambda i: -yy[i])
+def find_peaks(values, mask, min_fraction=0.05, min_distance=3, middle=False):
+    if not mask.any():
+        return []
+    v = np.where(mask, values, np.nan)
+    min_height = min_fraction * np.nanmax(v)
+    found = []
+    if middle:
+        i = 0
+        while i < len(v):
+            if (i == 0 or v[i] > v[i - 1]) and v[i] >= min_height:
+                j = i
+                while j + 1 < len(v) and v[j + 1] == v[i]:
+                    j += 1
+                if (j + 1 == len(v) and i > 0) or (j + 1 < len(v) and v[j + 1] < v[i]):
+                    found.append((i + j) // 2)
+                i = j + 1
+            else:
+                i += 1
+    else:
+        y = np.where(mask, values, -np.inf)
+        if np.all(y == y[0]):
+            return []
+        for i in range(len(y)):
+            left = y[i - 1] if i > 0 else -np.inf
+            right = y[i + 1] if i < len(y) - 1 else -np.inf
+            if y[i] >= left and y[i] > right and y[i] >= min_height:
+                found.append(i)
     kept = []
-    for i in hits:
-        if all(abs(i - j) >= MIN_DISTANCE for j in kept):
-            kept.append(i)
+    for k in sorted(found, key=lambda k: -v[k]):
+        if all(abs(k - other) >= min_distance for other in kept):
+            kept.append(k)
     return kept
 
 
+def refine_peak(values, i):
+    if i <= 0 or i >= len(values) - 1:
+        return float(i)
+    left, top, right = values[i - 1], values[i], values[i + 1]
+    if not np.all(np.isfinite([left, top, right])) or left == top or right == top:
+        return float(i)
+    return float(i + 0.5 * (left - right) / (left - 2 * top + right))
+
+
+def match_peaks(peak_pixels, line_nm):
+    pixels = np.sort(np.asarray(peak_pixels, dtype=np.float64))
+    tried = []
+    for chosen in itertools.combinations(np.sort(line_nm), pixels.size):
+        chosen = np.array(chosen)
+        fitted = calc.evaluate_wavelength(pixels, calc.fit_wavelength(pixels, chosen, 1))
+        tried.append((float(np.sqrt(np.mean((chosen - fitted) ** 2))), chosen))
+    tried.sort(key=lambda t: t[0])
+    next_rms = tried[1][0] if len(tried) > 1 else float("inf")
+    return tried[0][1], tried[0][0], next_rms
+
+
 def centroid(x, y, i):
-    """Toppens läge som tyngdpunkt över tre punkter (sub-pixel)."""
     lo, hi = max(i - 1, 0), min(i + 2, len(x))
     w = np.clip(y[lo:hi], 0, None)
-    total = np.sum(w)
-    return float(np.sum(x[lo:hi] * w) / total) if total > 0 else float(x[i])
+    if np.sum(w) <= 0:
+        return float(x[i])
+    return float(np.sum(x[lo:hi] * w) / np.sum(w))
 
 
-def bases(y, i):
-    """Toppens baspunkter (vänster, höger): lägsta punkten på var sida innan nästa lika höga topp.
-
-    Som prominensen i katalogen: gå från toppen åt var sida tills ett högre värde, en lucka (NaN) eller kanten
-    kommer, och ta den lägsta punkten på vägen. Ett lika högt värde efter en dal är också en annan topp; en platå vid
-    toppen (samma tal i rad, vanligt med 8 bitar) är det inte. Brus på flanken stoppar alltså inte sökningen.
-    """
-    found = []
-    for step in (-1, 1):
-        j = low = i
-        while 0 <= j + step < len(y) and np.isfinite(y[j + step]):
-            following = y[j + step]
-            if following > y[i] or (following == y[i] and y[low] < y[i]):
-                break
-            j += step
-            if following < y[low]:
-                low = j
-        found.append(low)
-    return found[0], found[1]
+def foot(y, i, step):
+    j = low = i
+    while 0 <= j + step < len(y) and np.isfinite(y[j + step]):
+        nxt = y[j + step]
+        if nxt > y[i] or (nxt == y[i] and y[low] < y[i]):
+            break
+        j += step
+        if nxt < y[low]:
+            low = j
+    return low
 
 
-def width(x, y, i, saturated=None):
-    """FWHM över en rak baslinje mellan toppens baspunkter, som rev7: (bredd, None) eller (NaN, orsak).
-
-    Baslinjen dras mellan baspunkterna (bases) och dras av; halva höjden är halva toppens höjd över baslinjen, och
-    korsningarna interpoleras linjärt på var sida. Ogiltig (rev7: inget tal hellre än ett påhittat) när toppen är
-    mättad (saturated sant mellan baspunkterna) och när kurvan inte går ner till halva höjden på båda sidor: toppen
-    vid kanten, en lucka eller en topp intill med dalen över halva höjden.
-    """
-    if not np.isfinite(y[i]):
-        return float("nan"), "okänd (ingen topp)"
-    left, right = bases(y, i)
+def fwhm(x, y, i):
+    left, right = foot(y, i, -1), foot(y, i, 1)
     floor = min(y[left], y[right])
-    height = y[i] - floor
-    if left == i or right == i or height <= 0 or max(y[left], y[right]) - floor >= height / 2:
-        return float("nan"), "okänd (kurvan når inte halva höjden)"
-    if saturated is not None and np.any(saturated[left:right + 1]):
-        return float("nan"), "ogiltig (toppen är mättad)"
+    if left == i or right == i or y[i] <= floor or max(y[left], y[right]) - floor >= (y[i] - floor) / 2:
+        return float("nan")
     line = y[left] + (y[right] - y[left]) * (x - x[left]) / (x[right] - x[left])
     z = y - line
     half = z[i] / 2
@@ -84,43 +96,10 @@ def width(x, y, i, saturated=None):
     while z[j + 1] > half:
         j += 1
     high = x[j] + (z[j] - half) * (x[j + 1] - x[j]) / (z[j] - z[j + 1])
-    return float(high - low), None
-
-
-def fwhm(x, y, i):
-    """Full bredd vid halva höjden över baslinjen kring index i (bara bredden ur width); NaN om den är ogiltig."""
-    return width(x, y, i)[0]
+    return float(high - low)
 
 
 def area(x, y, mask):
-    """Trapetsarea under kurvan där masken är sann."""
     if np.count_nonzero(mask) < 2:
         return float("nan")
     return float(np.trapezoid(y[mask], x[mask]))
-
-
-def fwhm_sigma(x, y, i, sigma):
-    """Slumpfelet i fwhm(x, y, i) när varje position har osäkerheten sigma (oberoende), till första ordningen.
-
-    Varje position nära toppen flyttas lite upp och ner; ändringen i FWHM gånger sigma är dess bidrag, och bidragen
-    läggs ihop i kvadrat. Ger NaN när FWHM saknas eller sigma saknas där den behövs. Bara slumpbruset: kalibrering
-    och instrumentets bredd ingår inte.
-    """
-    full = fwhm(x, y, i)
-    if not np.isfinite(full):
-        return float("nan")
-    reach = full + 2 * float(np.median(np.abs(np.diff(x))))  # korsningarna och punkterna bredvid dem
-    total = 0.0
-    for k in np.flatnonzero(np.abs(x - x[i]) <= reach):
-        if not np.isfinite(y[k]):
-            continue
-        if not np.isfinite(sigma[k]):
-            return float("nan")
-        if sigma[k] == 0:
-            continue
-        step = 1e-3 * sigma[k]
-        up, down = y.copy(), y.copy()
-        up[k] += step
-        down[k] -= step
-        total += ((fwhm(x, up, i) - fwhm(x, down, i)) / (2 * step) * sigma[k]) ** 2
-    return float(np.sqrt(total))

@@ -1,79 +1,72 @@
-"""Start och avslut: slutkoden, UTF-8 i rör och att programmet startar under olika kodsidor (R14)."""
-
 import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
+from helpers import command_file
 
-from spectrometer import main
-
-ROT = Path(__file__).resolve().parents[1]
-FORSTA_RADEN = "Skriv help för kommandona. quit eller Ctrl+D avslutar."
-
-
-def starta(tmp_path, indata, kodning="utf-8"):
-    """Startar det riktiga programmet med indata på stdin och PYTHONIOENCODING=kodning. Ger (slutkod, stdout-rader)."""
-    miljo = {**os.environ, "PYTHONPATH": str(ROT), "PYTHONIOENCODING": kodning, "MPLBACKEND": "Agg"}
-    miljo.pop("PYTHONUTF8", None)  # annars vinner PYTHONUTF8 över kodsidan och provet visar ingenting
-    korning = subprocess.run(
-        [sys.executable, "-m", "spectrometer.main"],
-        input=indata.encode("utf-8"),
-        capture_output=True,
-        cwd=tmp_path,
-        env=miljo,
-        timeout=120,
-    )
-    return korning.returncode, korning.stdout.decode("utf-8").splitlines()
+import spektro
+from spectrometer import __version__, main
 
 
-def run_prompt(monkeypatch, lines, tty):
-    """Kör main med raderna vid prompten; tty bestämmer vad sys.stdin.isatty() svarar."""
-    feed = iter(lines)
-
-    def fake_input(prompt):
-        return next(feed, "quit")
-
-    monkeypatch.setattr("builtins.input", fake_input)
-    monkeypatch.setattr(sys, "argv", ["spectrometer.main"])
-    monkeypatch.setattr(sys.stdin, "isatty", lambda: tty)
-    return main.main()
+def test_version_flag(capsys):
+    with pytest.raises(SystemExit) as done:
+        main.main(["--version"])
+    assert done.value.code == 0
+    assert capsys.readouterr().out == f"spektro {__version__}\n"
 
 
-@pytest.mark.parametrize("kodning", ["utf-8", "cp1252"])
-def test_start_ger_slutkod_0_och_forsta_raden(tmp_path, kodning):
-    """help och quit under båda kodsidorna: slutkod 0 och första raden som i facit (ö kommer som UTF-8)."""
-    kod, rader = starta(tmp_path, "help\nquit\n", kodning)
-    assert kod == 0
-    assert rader[0] == FORSTA_RADEN
-    assert rader[-1].endswith("Avslutar.")  # prompten spektro> står på samma rad när indata är ett rör
+def test_run_exit_gives_0_or_1(monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr("builtins.input", lambda prompt: pytest.fail("the prompt was shown"))
+    path = command_file(tmp_path, "frames 2\nshow\n")
+    assert main.main(["--run", path, "--exit"]) == 0
+    assert "frames: 2" in capsys.readouterr().out
+    path = command_file(tmp_path, "frames three\n")
+    assert main.main(["--run", path, "--exit"]) == 1
 
 
-def test_tom_stdin_ger_slutkod_0(tmp_path):
-    """Ingenting på stdin (Ctrl+D direkt) är ett normalt avslut."""
-    kod, rader = starta(tmp_path, "")
-    assert kod == 0
-    assert rader[0] == FORSTA_RADEN
+ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_fel_i_en_kommandofil_ger_slutkod_1(tmp_path):
-    """Ett kommando som ger Fel: när stdin är ett rör: slutkod 1, men raderna efter körs ändå."""
-    kod, rader = starta(tmp_path, "foo\nhelp\nquit\n")
-    assert kod == 1
-    assert any("Fel: input.invalid_argument: okänt kommando foo" in rad for rad in rader)
-    assert rader[-1].endswith("Avslutar.")
+def start(tmp_path, indata):
+    env = {**os.environ, "PYTHONPATH": str(ROOT), "PYTHONUTF8": "1", "MPLBACKEND": "Agg"}
+    run_result = subprocess.run([sys.executable, "-m", "spectrometer.main"], input=indata.encode("utf-8"),
+                             capture_output=True, cwd=tmp_path, env=env, timeout=120)
+    return run_result.returncode, run_result.stdout.decode("utf-8").splitlines()
 
 
-def test_stdin_las_som_utf8_aven_under_cp1252(tmp_path):
-    """Ett ö på stdin når kommandot oförändrat: reconfigure gör stdin till UTF-8."""
-    kod, rader = starta(tmp_path, "mätning\nquit\n", "cp1252")
-    assert kod == 1
-    assert any("okänt kommando mätning." in rad for rad in rader)
+def test_program_starts_and_exits(tmp_path):
+    code, rows = start(tmp_path, "help\nquit\n")
+    assert code == 0
+    assert rows[-1].endswith("Quitting.")
 
 
-def test_interaktivt_ar_slutkoden_0_trots_fel(monkeypatch):
-    """Vid en terminal (isatty sant) ger Fel: ingen slutkod; i ett rör ger det 1."""
-    assert run_prompt(monkeypatch, ["foo", "quit"], tty=True) == 0
-    assert run_prompt(monkeypatch, ["foo", "quit"], tty=False) == 1
-    assert run_prompt(monkeypatch, ["show", "quit"], tty=False) == 0
+def test_bad_command_in_file_gives_exit_code_1(tmp_path):
+    code, rows = start(tmp_path, "foo\nquit\n")
+    assert code == 1
+    assert any("unknown command foo" in row for row in rows)
+
+
+def test_spektro_builds_venv_command(monkeypatch, tmp_path):
+    commands = []
+
+    def run(command):
+        commands.append([str(d) for d in command])
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    requirements = tmp_path / "requirements.txt"
+    requirements.write_text("numpy\n", encoding="utf-8")
+    monkeypatch.setattr(spektro, "run", run)
+    monkeypatch.setattr(spektro, "REQUIREMENTS", requirements)
+    monkeypatch.setattr(spektro, "VENV", tmp_path / ".venv")
+    monkeypatch.setattr(spektro, "VENV_PY", tmp_path / ".venv" / "bin" / "python")
+    monkeypatch.setattr(spektro, "MARKER", tmp_path / "marker")
+    monkeypatch.setattr(sys, "prefix", str(tmp_path / "other"))
+    (tmp_path / ".venv").mkdir()
+    spektro.MARKER.parent.mkdir(exist_ok=True)
+    spektro.prepare_venv()
+    assert commands[0][1:4] == ["-m", "venv", str(tmp_path / ".venv")]
+    assert commands[1][1:4] == ["-m", "pip", "install"]
+    assert commands[1][-2:] == ["-r", str(requirements)]

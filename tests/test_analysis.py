@@ -1,5 +1,3 @@
-"""Analysfunktionerna mot kända tal."""
-
 import numpy as np
 
 from spectrometer.analysis import bandgap, color, peaks, series
@@ -15,7 +13,7 @@ def test_peaks_fwhm_area():
     m = np.ones_like(x, dtype=bool)
     idx = peaks.find_peaks(y, m)
     assert [round(x[i]) for i in idx] == [450, 600]
-    assert abs(peaks.fwhm(x, y, idx[0]) - 2.3548 * 5) < 0.2  # FWHM = 2.3548·σ
+    assert abs(peaks.fwhm(x, y, idx[0]) - 2.3548 * 5) < 0.2
     assert abs(peaks.centroid(x, y, idx[1]) - 600) < 0.01
     assert abs(peaks.area(x, y, m) - (100 * 5 + 50 * 10) * np.sqrt(2 * np.pi)) / 3000 < 0.01
 
@@ -24,8 +22,8 @@ def test_color_equal_energy_is_white():
     x = np.arange(380.0, 781.0, 1.0)
     X, Y, Z = color.xyz(x, np.ones_like(x), np.ones_like(x, dtype=bool))
     cx, cy = color.xy(X, Y, Z)
-    assert abs(cx - 1 / 3) < 0.01 and abs(cy - 1 / 3) < 0.01  # E-vitpunkten
-    assert 5000 < color.cct_mccamy(cx, cy) < 6000
+    assert abs(cx - 1 / 3) < 0.01 and abs(cy - 1 / 3) < 0.01
+    assert color.cct_line(cx, cy).startswith("color temperature: 5")
 
 
 def test_droop_normalised():
@@ -37,6 +35,6 @@ def test_droop_normalised():
 
 def test_bandgap_edge():
     x = np.arange(380.0, 781.0, 2.0)
-    T = 1 / (1 + np.exp((x - 550) / -4))  # transmission faller brant vid 550 nm (2,254 eV)
-    eg, unc, _ = bandgap.edge(x, bandgap.absorbance(T, np.ones_like(x, dtype=bool)), 2.0)
+    T = 1 / (1 + np.exp((x - 550) / -4))
+    eg, unc = bandgap.edge(x, bandgap.absorbance(T, np.ones_like(x, dtype=bool)), 2.0)
     assert abs(eg - 2.254) < 0.05 and unc < 0.01

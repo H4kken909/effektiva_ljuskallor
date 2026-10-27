@@ -1,0 +1,18 @@
+source file examples/demo/images/dark.png
+roi full
+channel gray
+frames 1
+dark 1
+source file examples/demo/images/fluorescent.png
+calibrate examples/demo/points.csv
+step
+source file examples/demo/images/known_lamp.png
+response build examples/demo/known.csv
+response on
+step
+source file examples/demo/images/reference.png
+reference 1
+source file examples/demo/images/sample.png
+mode transmission
+step
+save

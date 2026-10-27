@@ -1,0 +1,14 @@
+source file tests/data/images/rand_x12.png
+save
+step
+frames 3
+step
+roi 10 0 5 10
+step
+axis vertical
+step
+axis horizontal
+step
+save
+save
+quit

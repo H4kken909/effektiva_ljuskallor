@@ -1,3 +1,1 @@
-"""Paketet spectrometer: programmet som gör en kamerabild till ett spektrum."""
-
-__version__ = "1.2.16"
+__version__ = "1.5.2"

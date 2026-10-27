@@ -4,7 +4,5 @@ __pycache__/
 .ruff_cache/
 /data/
 .vscode/
-todo.txt
 logs/
 .pytest-tmp/
-dev/check-logg/
